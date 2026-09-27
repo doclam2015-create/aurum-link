@@ -1,0 +1,1 @@
+{"name": "Aurum Link", "short_name": "Aurum", "start_url": "./", "display": "standalone", "background_color": "#100b13", "theme_color": "#100b13", "icons": [{"src": "icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any"}]}
