@@ -1,0 +1,356 @@
+import { sfx } from './audio.js';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js';
+import { sleep } from './reels.js';
+import XLink from './games/xlink.js';
+import Avalanche from './games/avalanche.js';
+import FireWheel from './games/firewheel.js';
+import Legion from './games/legion.js';
+
+const GAMES = [XLink, Avalanche, FireWheel, Legion];
+const BETS = [10, 20, 30, 50, 100, 200, 500];
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+const SAVE_KEY = 'aurumlink.v2';
+
+const state = {
+  balance: 10000, betIdx: 2, game: null, sound: true, music: true, turbo: false, jp: {}, stats: { spins: 0, bet: 0, won: 0, best: 0 }
+};
+try {
+  const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+  if (s && typeof s.balance === 'number' && isFinite(s.balance)) Object.assign(state, s);
+} catch (e) { /* almacenamiento no disponible */ }
+state.betIdx = clamp(state.betIdx | 0, 0, BETS.length - 1);
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { } }
+
+// ---------- Canvas ----------
+const stage = $('stage'), gctx = stage.getContext('2d', { alpha: true });
+const fxc = $('fx'), fctx = fxc.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W = 0, H = 0, FW = 0, FH = 0, boardRect = { left: 0, top: 0 };
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const b = $('board').getBoundingClientRect();
+  boardRect = b;
+  W = Math.floor(b.width); H = Math.floor(b.height);
+  stage.width = Math.round(W * DPR); stage.height = Math.round(H * DPR);
+  stage.style.width = W + 'px'; stage.style.height = H + 'px';
+  FW = window.innerWidth; FH = window.innerHeight;
+  fxc.width = Math.round(FW * DPR); fxc.height = Math.round(FH * DPR);
+  fxc.style.width = FW + 'px'; fxc.style.height = FH + 'px';
+  clearSpriteCache();
+  if (game) game.resize(W, H, DPR);
+}
+
+// ---------- App API expuesta a los juegos ----------
+const fx = new Particles();
+let game = null, busy = false, autoLeft = 0, overlay = null, flashA = 0, flashColor = '#fff', skipReq = false;
+const meter = { win: 0, winShown: 0, credit: state.balance, creditShown: state.balance };
+
+const app = {
+  sfx, fx, fmt,
+  get dpr() { return DPR; },
+  get turbo() { return state.turbo; },
+  get bet() { return BETS[state.betIdx]; },
+  get skip() { return skipReq; },
+  message(t) { $('msg').innerHTML = t || ''; },
+  addWin(v) { meter.win += v; },
+  toFx(x, y) { return [boardRect.left + x, boardRect.top + y]; },
+  winTarget() { const r = $('win').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; },
+  // Monedas que vuelan desde el tablero al medidor de premio
+  flyCoins(x, y, n = 6, type = 'coin', color) {
+    const [fx0, fy0] = app.toFx(x, y), tgt = app.winTarget();
+    for (let i = 0; i < n; i++) {
+      fx.add({ type, color: color || '#ffd76a', sx: fx0 + rand(-10, 10), sy: fy0 + rand(-10, 10), x: fx0, y: fy0, target: tgt, arc: rand(-80, 80), life: 0.55 + i * 0.05 + Math.random() * 0.15, size: type === 'coin' ? 11 : 16, vr: 10 });
+    }
+  },
+  burst(x, y, n, opts) { const [a, b] = app.toFx(x, y); fx.burst(a, b, n, opts); },
+  popText(x, y, text, size = 28, colors) { const [a, b] = app.toFx(x, y); fx.add({ type: 'text', text, x: a, y: b, life: 1.2, size, colors }); },
+  flash(color = '#fff', a = 0.8) { flashColor = color; flashA = a; },
+  shake(strong) {
+    const el = $('board'); el.classList.remove('shake', 'shake2'); void el.offsetWidth; el.classList.add(strong ? 'shake2' : 'shake');
+  },
+  jackpot(key) {
+    const d = (game.jackpots || []).find(j => j.key === key); if (!d) return 0;
+    return app.bet * (d.base + (d.grow ? (state.jp[game.id] && state.jp[game.id][key]) || 0 : 0));
+  },
+  resetJackpot(key) { if (state.jp[game.id]) state.jp[game.id][key] = 0; renderPots(true); },
+  highlightPot(key) { const el = document.querySelector('.pot[data-k="' + key + '"]'); if (el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } },
+  banner(title, sub, opts = {}) { return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 }); },
+  celebrate(amount, bet, label) { return showOverlay({ kind: 'big', amount, bet, label, t: 0, dur: 4.5 }); },
+  setSpinLabel(t, sub) { $('spinLabel').textContent = t; $('spinSub').textContent = sub || ''; },
+  wait(ms) { return sleep(state.turbo ? ms * 0.55 : ms); },
+  pulseMeter(id) { const el = $(id); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+};
+
+// ---------- Overlays de celebración en el canvas FX ----------
+function showOverlay(o) {
+  return new Promise(res => { o.done = res; overlay = o; skipReq = false; });
+}
+const TIERS = [[100, 'ÉPICO', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff']], [50, 'MEGA PREMIO', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff']], [25, 'SÚPER PREMIO', ['#fff', '#ffb27a', '#ff4b1f', '#ffe2c0']], [10, 'GRAN PREMIO', null]];
+function drawOverlay(x, dt) {
+  const o = overlay; if (!o) return;
+  o.t += dt;
+  const bigDur = o.kind === 'big' ? o.dur : o.dur / 1000;
+  if (skipReq && o.kind === 'big' && o.t < bigDur - 1.2) { o.t = bigDur - 1.2; skipReq = false; }
+  if (skipReq && o.kind === 'banner') { o.t = bigDur; }
+  const t = o.t, inA = Math.min(1, t / 0.3), outA = Math.min(1, Math.max(0, (bigDur - t) / 0.35)), a = inA * outA;
+  const cx = FW / 2, cy = FH * 0.44;
+  x.save();
+  x.globalAlpha = a * 0.72; x.fillStyle = '#05020a'; x.fillRect(0, 0, FW, FH);
+  // Rayos de luz giratorios
+  x.globalAlpha = a * 0.5; x.globalCompositeOperation = 'lighter';
+  x.translate(cx, cy); x.rotate(t * 0.4);
+  const rays = 14, R = Math.max(FW, FH);
+  for (let i = 0; i < rays; i++) {
+    x.rotate(Math.PI * 2 / rays);
+    const g = x.createLinearGradient(0, 0, R * 0.7, 0);
+    g.addColorStop(0, o.kind === 'big' ? 'rgba(255,200,80,0.55)' : 'rgba(120,220,255,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.lineTo(R, -R * 0.09); x.lineTo(R, R * 0.09); x.closePath(); x.fill();
+  }
+  x.setTransform(DPR, 0, 0, DPR, 0, 0);
+  x.globalCompositeOperation = 'source-over'; x.globalAlpha = a;
+  const pop = ease.outBack(Math.min(1, t / 0.5));
+  const size = Math.min(FW * 0.13, 64);
+  if (o.kind === 'banner') {
+    x.drawImage(glow(o.color, 128), cx - FW * 0.5, cy - size * 2, FW, size * 4);
+    goldText(x, o.title, cx, cy - size * 0.35, size * pop * (1 + Math.sin(t * 5) * 0.03), { maxW: FW * 0.9, glowColor: o.color });
+    if (o.sub) goldText(x, o.sub, cx, cy + size * 0.75, size * 0.42 * pop, { colors: ['#fff', '#fff', '#e8f6ff', '#fff'], stroke: '#10183a', maxW: FW * 0.9 });
+    if (t > bigDur) finishOverlay();
+  } else {
+    const ratio = o.amount / o.bet;
+    const tier = TIERS.find(tt => ratio >= tt[0]) || TIERS[3];
+    const countT = clamp((t - 0.3) / (o.dur - 1.6), 0, 1), shown = o.amount * ease.outCubic(countT);
+    if (countT < 1 && Math.random() < 0.5) sfx.tick(countT);
+    if (countT >= 1 && !o.landed) { o.landed = true; sfx.win(3); fx.burst(cx, cy, 60, { type: 'spark', color: '#ffd76a', speed: 700, life: 1.2, size: 14 }); }
+    // Lluvia de monedas
+    if (Math.random() < 0.9) fx.add({ type: 'coin', x: rand(0, FW), y: -20, vx: rand(-40, 40), vy: rand(100, 300), g: 900, life: 2.2, size: rand(9, 16), vr: rand(6, 14) });
+    if (Math.random() < 0.35) fx.add({ type: 'coin', x: cx + rand(-40, 40), y: FH + 20, vx: rand(-250, 250), vy: rand(-1100, -800), g: 1000, life: 2.2, size: rand(10, 18), vr: rand(6, 14) });
+    goldText(x, o.label || tier[1], cx, cy - size * 1.05, size * 0.8 * pop * (1 + Math.sin(t * 6) * 0.04), { colors: tier[2], maxW: FW * 0.92, glowColor: '#ff9d2e' });
+    goldText(x, fmt(shown), cx, cy + size * 0.35, size * 1.15 * pop, { maxW: FW * 0.92, glowColor: '#ffcc40' });
+    x.font = '700 13px ' + FONT; x.fillStyle = 'rgba(255,255,255,0.6)'; x.textAlign = 'center';
+    x.fillText('Toca para continuar', cx, cy + size * 1.6);
+    if (t > o.dur) finishOverlay();
+  }
+  x.restore();
+}
+function finishOverlay() { const o = overlay; overlay = null; skipReq = false; if (o && o.done) o.done(); }
+
+// ---------- Bucle de render ----------
+let last = performance.now(), frameSkip = 0, running = true;
+function frame(now) {
+  if (!running) return;
+  requestAnimationFrame(frame);
+  let dt = (now - last) / 1000; last = now;
+  if (dt > 0.1) dt = 0.1;
+  // Contadores
+  if (meter.winShown !== meter.win) {
+    const d = meter.win - meter.winShown;
+    meter.winShown = Math.abs(d) < 1 ? meter.win : meter.winShown + d * Math.min(1, dt * 7);
+    $('win').textContent = fmt(meter.winShown);
+  }
+  if (meter.creditShown !== state.balance) {
+    const d = state.balance - meter.creditShown;
+    meter.creditShown = Math.abs(d) < 1 ? state.balance : meter.creditShown + d * Math.min(1, dt * 6);
+    $('credit').textContent = fmt(meter.creditShown);
+  }
+  if (!game) return;
+  game.update(dt);
+  // Sin animación activa: dibujar a 30 fps para ahorrar batería
+  const idle = !busy && !fx.active && !overlay && !game.animating;
+  if (!idle || (frameSkip++ & 1) === 0) {
+    gctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    gctx.clearRect(0, 0, W, H);
+    game.draw(gctx);
+  }
+  fx.update(dt);
+  const fxNeeded = fx.active || !!overlay || flashA > 0;
+  if (fxNeeded || fxDrawn) {
+    fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    fctx.clearRect(0, 0, FW, FH);
+    if (overlay) drawOverlay(fctx, dt);
+    fx.draw(fctx);
+    if (flashA > 0) { fctx.globalAlpha = flashA; fctx.fillStyle = flashColor; fctx.fillRect(0, 0, FW, FH); fctx.globalAlpha = 1; flashA = Math.max(0, flashA - dt * 2.5); }
+    fxDrawn = fxNeeded;
+  }
+}
+let fxDrawn = false;
+
+// ---------- HUD ----------
+function renderPots(valuesOnly) {
+  const pots = $('pots');
+  const js = game.jackpots;
+  if (!valuesOnly) {
+    pots.innerHTML = js ? js.map(j => '<div class="pot ' + j.cls + '" data-k="' + j.key + '"><b>' + j.label + '</b><strong></strong></div>').join('') : '';
+    pots.hidden = !js;
+    document.body.classList.toggle('no-pots', !js);
+  }
+  if (js) js.forEach(j => { const el = pots.querySelector('[data-k="' + j.key + '"] strong'); if (el) el.textContent = fmt(app.jackpot(j.key)); });
+}
+function renderHud() {
+  $('bet').textContent = fmt(app.bet);
+  $('credit').textContent = fmt(meter.creditShown);
+  $('btnTurbo').classList.toggle('on', state.turbo);
+  $('btnSound').classList.toggle('off', !state.sound);
+  $('btnAuto').classList.toggle('on', autoLeft > 0);
+  $('autoCount').textContent = autoLeft > 0 ? (autoLeft === Infinity ? '∞' : autoLeft) : '';
+  $('betDown').disabled = busy || game.locked; $('betUp').disabled = busy || game.locked;
+  const ex = game.extra;
+  $('btnExtra').hidden = !ex;
+  if (ex) { $('extraLabel').textContent = ex.label; $('extraSub').textContent = ex.sub(app.bet); }
+  renderPots(true);
+}
+
+function growJackpots() {
+  if (!game.jackpots) return;
+  const jp = state.jp[game.id] || (state.jp[game.id] = {});
+  game.jackpots.forEach(j => { if (j.grow) jp[j.key] = (jp[j.key] || 0) + j.grow * (0.6 + Math.random() * 0.8); });
+}
+
+async function spin(paid = true) {
+  sfx.unlock();
+  if (busy) { skipReq = true; if (game.slam) game.slam(); return; }
+  const bet = app.bet;
+  const free = game.freeRound;
+  if (paid && !free && state.balance < bet) { autoLeft = 0; renderHud(); openCredits(); return; }
+  busy = true; document.body.classList.add('busy');
+  if (!free) {
+    state.balance -= bet; meter.creditShown = state.balance; $('credit').textContent = fmt(state.balance);
+    state.stats.spins++; state.stats.bet += bet;
+    growJackpots();
+  }
+  if (!game.keepWin) { meter.win = 0; meter.winShown = 0; $('win').textContent = fmt(0); }
+  renderHud();
+  let res;
+  try { res = await game.play(bet); } catch (e) { console.error(e); res = { win: 0 }; }
+  const win = res && res.win || 0;
+  if (win > 0 && !res.celebrated && win >= bet * 10) await app.celebrate(win, bet);
+  if (win > 0) {
+    state.balance += win; state.stats.won += win; state.stats.best = Math.max(state.stats.best, win);
+    app.pulseMeter('credit');
+  }
+  save();
+  busy = false; document.body.classList.remove('busy');
+  if (autoLeft > 0 && !game.freeRound) autoLeft--;
+  renderHud();
+  if (game.freeRound || autoLeft > 0) {
+    await app.wait(game.freeRound ? 500 : 350);
+    if (!busy && (game.freeRound || autoLeft > 0) && !document.hidden) spin();
+  }
+}
+
+// ---------- Hojas (paneles) ----------
+function openSheet(title, html) {
+  $('sheetTitle').textContent = title; $('sheetBody').innerHTML = html;
+  $('sheet').classList.add('open');
+}
+function closeSheet() { $('sheet').classList.remove('open'); }
+function openCredits() {
+  openSheet('Créditos agotados', '<p>Estos son créditos ficticios, sin valor real. ¿Recargar?</p><div class="choices"><button data-reload="10000">+ $10.000</button><button data-reload="50000">+ $50.000</button></div>');
+}
+function openAuto() {
+  openSheet('Giros automáticos', '<p>Se detiene si no alcanza el crédito. Las funciones especiales se juegan solas.</p><div class="choices">' + [10, 25, 50, 100].map(n => '<button data-auto="' + n + '">' + n + '</button>').join('') + '<button data-auto="inf">∞</button></div>');
+}
+function openInfo() {
+  openSheet(game.name, game.info(app.bet, fmt) + '<p class="fine">Créditos ficticios de entretenimiento. Sin dinero real, sin compras. Guardado en este dispositivo.</p>');
+}
+function openInstall() {
+  openSheet('Instalar en iPhone / iPad', '<ol class="steps"><li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> <span class="kbd">⬆︎</span>.</li><li>Elige <b>Agregar a pantalla de inicio</b>.</li><li>Ábrela desde el ícono: se ejecuta a pantalla completa y funciona sin conexión.</li></ol><p class="fine">Si no oyes sonido, revisa que el interruptor de silencio del iPhone esté desactivado.</p>');
+}
+
+// ---------- Lobby ----------
+function buildLobby() {
+  $('lobbyGrid').innerHTML = GAMES.map(G => {
+    const icons = G.lobby.icons.map(i => '<i style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>').join('');
+    return '<button class="card" data-game="' + G.id + '" style="--c1:' + G.lobby.c1 + ';--c2:' + G.lobby.c2 + '"><div class="icons">' + icons + '</div><b>' + G.name + '</b><em>' + G.lobby.mechanic + '</em><small>' + G.lobby.desc + '</small></button>';
+  }).join('');
+}
+function openLobby() { if (busy) return; $('lobby').classList.add('open'); sfx.stopMusic(); }
+function selectGame(id) {
+  const G = GAMES.find(g => g.id === id) || GAMES[0];
+  if (game && game.destroy) game.destroy();
+  game = new G(app);
+  state.game = G.id; save();
+  document.body.dataset.game = G.id;
+  $('gameName').textContent = G.name;
+  $('gameTag').textContent = G.lobby.mechanic;
+  $('lobby').classList.remove('open');
+  renderPots(false);
+  meter.win = 0; meter.winShown = 0; $('win').textContent = fmt(0);
+  requestAnimationFrame(() => { resize(); renderHud(); });
+  app.message(game.hint || '');
+  app.setSpinLabel('GIRAR');
+  sfx.unlock();
+  if (state.music) sfx.music(G.music);
+}
+
+// ---------- Eventos ----------
+function bind() {
+  const tap = (id, fn) => $(id).addEventListener('click', e => { sfx.unlock(); fn(e); });
+  $('btnSpin').addEventListener('pointerdown', e => { e.preventDefault(); if (autoLeft > 0 && !busy) { autoLeft = 0; renderHud(); } spin(); });
+  tap('betDown', () => { if (busy) return; state.betIdx = Math.max(0, state.betIdx - 1); sfx.click(); renderHud(); save(); });
+  tap('betUp', () => { if (busy) return; state.betIdx = Math.min(BETS.length - 1, state.betIdx + 1); sfx.click(); renderHud(); save(); });
+  tap('btnTurbo', () => { state.turbo = !state.turbo; sfx.button(); renderHud(); save(); });
+  tap('btnAuto', () => { if (autoLeft > 0) { autoLeft = 0; renderHud(); return; } if (!busy) openAuto(); });
+  tap('btnInfo', openInfo);
+  tap('btnLobby', openLobby);
+  tap('btnSound', () => {
+    state.sound = !state.sound; sfx.setEnabled(state.sound);
+    if (state.sound && state.music) sfx.music(game.constructor.music); else sfx.stopMusic();
+    renderHud(); save();
+  });
+  tap('btnMusic', () => { state.music = !state.music; sfx.musicOn = state.music; if (state.music) sfx.music(game.constructor.music); else sfx.stopMusic(); $('btnMusic').classList.toggle('off', !state.music); save(); });
+  tap('btnInstall', openInstall);
+  tap('btnExtra', async () => {
+    if (busy || !game.extra) return;
+    const cost = game.extra.cost(app.bet);
+    if (state.balance < cost) { openCredits(); return; }
+    busy = true; document.body.classList.add('busy');
+    state.balance -= cost; meter.creditShown = state.balance; $('credit').textContent = fmt(state.balance); state.stats.bet += cost;
+    meter.win = 0; meter.winShown = 0; renderHud();
+    let res; try { res = await game.extra.run(app.bet); } catch (e) { console.error(e); res = { win: 0 }; }
+    const win = res && res.win || 0;
+    if (win >= app.bet * 10 && !res.celebrated) await app.celebrate(win, app.bet);
+    state.balance += win; state.stats.won += win; save();
+    busy = false; document.body.classList.remove('busy'); renderHud();
+    if (game.freeRound) spin();
+  });
+  tap('sheetClose', closeSheet);
+  $('sheet').addEventListener('click', e => {
+    const t = e.target;
+    if (t === $('sheet')) closeSheet();
+    if (t.dataset.reload) { state.balance += +t.dataset.reload; save(); closeSheet(); sfx.bigWin(0); }
+    if (t.dataset.auto) { autoLeft = t.dataset.auto === 'inf' ? Infinity : +t.dataset.auto; closeSheet(); renderHud(); spin(); }
+  });
+  $('lobbyGrid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) selectGame(c.dataset.game); });
+  $('lobbyClose').addEventListener('click', () => { if (game) { $('lobby').classList.remove('open'); if (state.music) sfx.music(game.constructor.music); } });
+  $('fx').addEventListener('pointerdown', () => { skipReq = true; });
+  document.addEventListener('pointerdown', () => { if (overlay) skipReq = true; }, true);
+  document.addEventListener('keydown', e => { if (e.code === 'Space' && !$('sheet').classList.contains('open')) { e.preventDefault(); spin(); } });
+  window.addEventListener('resize', () => requestAnimationFrame(resize));
+  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { sfx.suspend(); running = false; autoLeft = 0; }
+    else { sfx.resume(); running = true; last = performance.now(); requestAnimationFrame(frame); renderHud(); }
+  });
+  // Evita el zoom por doble toque / gesto en iOS
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  let lastTouch = 0;
+  document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 350 && !e.target.closest('.sheet-body')) e.preventDefault(); lastTouch = n; }, { passive: false });
+}
+
+// ---------- Arranque ----------
+async function boot() {
+  sfx.enabled = state.sound; sfx.musicOn = state.music;
+  $('btnMusic').classList.toggle('off', !state.music);
+  buildLobby();
+  bind();
+  try { await loadAtlas('assets/symbols.webp'); } catch (e) { console.warn('atlas', e); }
+  $('loader').classList.add('gone');
+  selectGame(state.game || GAMES[0].id);
+  if (!state.game || !localStorage.getItem(SAVE_KEY + '.seen')) { openLobby(); try { localStorage.setItem(SAVE_KEY + '.seen', '1'); } catch (e) { } }
+  requestAnimationFrame(frame);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+}
+window.AURUM = { app, get game() { return game; }, state };
+boot();

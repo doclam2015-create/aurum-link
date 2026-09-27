@@ -1,6 +1,20 @@
-var CACHE='aurum-v11';
-self.addEventListener('install',function(e){e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(['./index.html','./manifest.webmanifest','./icon.png']);}).then(function(){return self.skipWaiting();}));});
-self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(keys){return Promise.all(keys.filter(function(k){return k.indexOf('aurum-v')===0&&k!==CACHE;}).map(function(k){return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});
-self.addEventListener('fetch',function(e){if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;
-if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(function(r){if(r.ok){var copy=r.clone();e.waitUntil(caches.open(CACHE).then(function(c){return c.put('./index.html',copy);}));}return r;}).catch(function(){return caches.open(CACHE).then(function(c){return c.match('./index.html');});}));return;}
-e.respondWith(caches.open(CACHE).then(function(c){return c.match(e.request).then(function(r){return r||fetch(e.request);});}));});
+// Caché offline: la app funciona sin conexión una vez abierta.
+const CACHE = 'aurum-v20';
+const FILES = ['./', './index.html', './css/app.css?v=20', './js/app.js?v=20', './js/audio.js', './js/gfx.js', './js/reels.js',
+  './js/games/xlink.js', './js/games/avalanche.js', './js/games/firewheel.js', './js/games/legion.js',
+  './assets/symbols.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+// Red primero para que las actualizaciones lleguen; caché si no hay conexión.
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  e.respondWith(fetch(req).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+    return res;
+  }).catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then(r => r || caches.match('./index.html'))));
+});
