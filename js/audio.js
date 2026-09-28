@@ -35,6 +35,7 @@ class Sfx {
       this.verbSend.connect(this.verb); this.verb.connect(this.master);
       this.noiseBuf = this._noise(2);
       this.crackleBuf = this._crackle(1.2);
+      this.brownBuf = this._brown(4);
       // Buffer silencioso: requisito de iOS para habilitar el audio
       const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
       s.buffer = b; s.connect(ctx.destination); s.start(0);
@@ -72,6 +73,12 @@ class Sfx {
   _noise(sec) {
     const ctx = this.ctx, len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  _brown(sec) {
+    // Ruido marrón (grave y profundo): base del retumbo de los truenos
+    const ctx = this.ctx, len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let last = 0; for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; } }
     return b;
   }
   _crackle(sec) {
@@ -219,17 +226,48 @@ class Sfx {
     this.noise(dur, { at, vol, buf: this.crackleBuf, type: 'highpass', freq: 1800, q: 0.7 });
     this.noise(dur * 0.6, { at, vol: vol * 0.6, type: 'bandpass', freq: 5000, freqEnd: 1200, q: 4 });
   }
+  // Retumbo que "rueda": ruido marrón filtrado con varias oleadas irregulares de volumen
+  rumble(dur = 3, vol = 0.5, at = 0, cutoff = 220) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + at, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = this.brownBuf; s.loop = true;
+    f.type = 'lowpass'; f.frequency.setValueAtTime(cutoff * 2.2, t0); f.frequency.exponentialRampToValueAtTime(cutoff * 0.45, t0 + dur); f.Q.value = 0.7;
+    f2.type = 'highshelf'; f2.frequency.value = 400; f2.gain.value = -8;
+    g.gain.setValueAtTime(0.0001, t0);
+    // oleadas: cada una sube rápido y cae lento, más débiles hacia el final
+    let t = t0 + 0.02; const n = 3 + (Math.random() * 3 | 0);
+    for (let i = 0; i < n && t < t0 + dur - 0.3; i++) {
+      const peak = vol * (1 - i / (n + 1)) * (0.6 + Math.random() * 0.4);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak), t + 0.06 + Math.random() * 0.18);
+      t += 0.35 + Math.random() * (dur / n);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.001, peak * 0.25), Math.min(t, t0 + dur - 0.2));
+    }
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(f); f.connect(f2); f2.connect(g); g.connect(this.sfxBus);
+    const v = ctx.createGain(); v.gain.value = 0.6; g.connect(v); v.connect(this.verbSend);
+    s.start(t0, Math.random() * 2); s.stop(t0 + dur + 0.1);
+  }
+  // Chasquido del rayo: estallido seco de banda ancha + desgarro que baja
+  crack(vol = 0.5, at = 0) {
+    this.noise(0.035, { at, vol, type: 'highpass', freq: 900, q: 0.5 });
+    this.noise(0.06, { at: at + 0.03, vol: vol * 0.7, type: 'bandpass', freq: 3200, q: 0.8 });
+    this.noise(0.4, { at: at + 0.02, vol: vol * 0.45, buf: this.crackleBuf, type: 'bandpass', freq: 2600, freqEnd: 500, q: 0.9 });
+    this.noise(0.25, { at: at + 0.04, vol: vol * 0.6, type: 'lowpass', freq: 1200, freqEnd: 150, q: 0.5 });
+  }
+  // Trueno realista: chasquido cercano y retumbo largo que rueda
   thunder(vol = 0.7) {
-    this.noise(2.2, { vol, type: 'lowpass', freq: 900, freqEnd: 60, q: 0.5, verb: 0.5 });
-    this.tone(70, 1.1, { type: 'sine', vol: 0.5, slide: 0.4 });
-    this.zap(0.6, 0.3);
+    this.crack(vol * 0.75);
+    this.rumble(3.2, vol * 0.9, 0.05, 240);
+    this.tone(48, 1.4, { type: 'sine', vol: vol * 0.35, slide: 0.6, at: 0.05, attack: 0.03 });
   }
   // Rayo corto con trueno para cada bola cobrada (sube de tono con el conteo)
+  // Cada bola cobrada: chasquido + retumbo. Los retumbos se encadenan como una tormenta;
+  // se van atenuando para no saturar cuando hay muchas bolas seguidas
   lightning(n = 0, big = false) {
-    this.noise(0.18, { vol: 0.32, buf: this.crackleBuf, type: 'highpass', freq: 2200, q: 0.7 });
-    this.noise(0.12, { vol: 0.28, type: 'bandpass', freq: 6000, freqEnd: 900, q: 3 });
-    this.noise(big ? 1.6 : 0.9, { at: 0.04, vol: big ? 0.55 : 0.32, type: 'lowpass', freq: 700, freqEnd: 50, q: 0.6, verb: 0.4 });
-    this.tone(62 + (n % 8) * 3, big ? 0.9 : 0.5, { vol: big ? 0.45 : 0.28, slide: 0.45, at: 0.03 });
+    const k = big ? 1 : Math.max(0.45, 1 - n * 0.03);
+    this.crack((big ? 0.6 : 0.42) * k);
+    this.rumble(big ? 3.4 : 2 + Math.random() * 0.8, (big ? 0.75 : 0.34) * k, 0.03 + Math.random() * 0.05, big ? 200 : 260);
+    if (big) this.tone(44, 1.6, { type: 'sine', vol: 0.35, slide: 0.6, at: 0.05, attack: 0.03 });
   }
   rowUnlock(level = 0) {
     if (this.theme === 'china') { this.gong(98 * Math.pow(2, level / 12), 2.2, 0.35); [0, 1, 2, 3].forEach(i => this.pluck(this._scale(5 + level + i), 0.2 + i * 0.07, 0.1)); return; }
