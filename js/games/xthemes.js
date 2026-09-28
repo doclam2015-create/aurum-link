@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=38';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=38';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=39';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=39';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar

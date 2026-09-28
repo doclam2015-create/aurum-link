@@ -162,9 +162,25 @@ class Sfx {
   firecrackers(n = 14, at = 0, vol = 0.3) { for (let i = 0; i < n; i++) { const t = at + i * 0.06 + Math.random() * 0.05; this.noise(0.05, { at: t, vol: vol * (0.5 + Math.random() * 0.5), type: 'highpass', freq: 1500, q: 0.7 }); this.tone(180 + Math.random() * 120, 0.05, { type: 'square', vol: vol * 0.25, at: t, slide: 0.4 }); } }
   // Viento helado: ruido filtrado que sube y baja
   wind(dur = 1.6, vol = 0.18, at = 0) { this.noise(dur, { at, vol, type: 'bandpass', freq: 500, freqEnd: 1800, q: 3, verb: 0.4 }); this.noise(dur * 0.8, { at: at + 0.2, vol: vol * 0.6, type: 'bandpass', freq: 1400, freqEnd: 600, q: 5 }); }
+  // Aullido de lobo: voz que sube, sostiene con vibrato y cae, con un poco de aire
+  howl(at = 0, vol = 0.22, f0 = 330) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + at, d = 2.2, o = ctx.createOscillator(), o2 = ctx.createOscillator(), vib = ctx.createOscillator(), vg = ctx.createGain(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o2.type = 'sine';
+    [o, o2].forEach((os, i) => { const m = i ? 2 : 1; os.frequency.setValueAtTime(f0 * 0.7 * m, t0); os.frequency.exponentialRampToValueAtTime(f0 * 1.35 * m, t0 + 0.45); os.frequency.setValueAtTime(f0 * 1.35 * m, t0 + 1.4); os.frequency.exponentialRampToValueAtTime(f0 * 0.8 * m, t0 + d); });
+    vib.frequency.value = 5; vg.gain.value = f0 * 0.02; vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    f.type = 'bandpass'; f.frequency.value = f0 * 2.6; f.Q.value = 1.4;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.3); g.gain.setValueAtTime(vol, t0 + 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    o.connect(f); o2.connect(f); f.connect(g); g.connect(this.sfxBus);
+    const v = ctx.createGain(); v.gain.value = 0.9; g.connect(v); v.connect(this.verbSend);
+    [o, o2, vib].forEach(n => { n.start(t0); n.stop(t0 + d + 0.05); });
+    this.noise(d * 0.8, { at: at + 0.1, vol: vol * 0.12, type: 'bandpass', freq: f0 * 3, q: 2 });
+  }
+  // Tambor de ceremonia
+  drum(at = 0, vol = 0.5, f = 90) { this.tone(f, 0.35, { vol, at, slide: 0.55, attack: 0.003 }); this.noise(0.08, { at, vol: vol * 0.3, type: 'lowpass', freq: 900, q: 0.7 }); }
   // Escalas pentatónicas de los temas
   _scale(i) {
-    const china = [0, 2, 4, 7, 9], snow = [0, 3, 5, 7, 10], sc = this.theme === 'snow' ? snow : china, base = this.theme === 'snow' ? 293.66 : 220;
+    const china = [0, 2, 4, 7, 9], snow = [0, 3, 5, 7, 10], sc = this.theme === 'snow' || this.theme === 'wolf' ? snow : china, base = this.theme === 'snow' ? 293.66 : 220;
     return base * Math.pow(2, (sc[((i % 5) + 5) % 5] + 12 * Math.floor(i / 5)) / 12);
   }
 
@@ -175,6 +191,7 @@ class Sfx {
   spinStart(turbo) {
     if (!this.ok) return;
     if (this.theme === 'china') { [0, 1, 2, 3, 4, 5].forEach(i => this.pluck(this._scale(i), i * 0.035, 0.07, 0.5)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
+    if (this.theme === 'wolf') { this.drum(0, 0.35, 110); this.drum(0.08, 0.25, 90); this.noise(0.35, { vol: 0.12, type: 'highpass', freq: 5000, q: 0.6 }); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     if (this.theme === 'gold') { this.noise(0.3, { vol: 0.22, freq: 400, freqEnd: 5000, q: 3 }); this.tone(220, 0.25, { type: 'sawtooth', vol: 0.08, slide: 2 }); this.coin(0.05); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     if (this.theme === 'snow') { this.wind(0.6, 0.14); [7, 6, 5, 4].forEach((n, i) => this.celesta(this._scale(n), i * 0.04, 0.035, 0.6)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     this.noise(0.25, { vol: 0.25, freq: 300, freqEnd: 2400, q: 2 });
@@ -202,6 +219,7 @@ class Sfx {
     l.s.stop(t + 0.3); l.lfo.stop(t + 0.3);
   }
   reelStop(i = 0, last = false) {
+    if (this.theme === 'wolf') { this.drum(0, 0.45, 96 - i * 4); this.noise(0.05, { vol: 0.18, freq: 2600, q: 2 }); if (last) this.stopLoop('reels'); return; }
     if (this.theme === 'gold') { this.tone(120 - i * 5, 0.18, { vol: 0.5, slide: 0.4 }); this.noise(0.05, { vol: 0.25, freq: 3000, q: 2 }); this.tone(1760 + i * 110, 0.15, { vol: 0.05, verb: 0.3 }); if (last) this.stopLoop('reels'); return; }
     if (this.theme === 'china') { this.wood(0, 0.2, 820 + i * 60); this.tone(95, 0.2, { vol: 0.35, slide: 0.5 }); if (last) this.stopLoop('reels'); return; }
     if (this.theme === 'snow') { this.celesta(this._scale(5 + i), 0, 0.05, 0.5); this.tone(130 - i * 5, 0.14, { vol: 0.3, slide: 0.5 }); this.noise(0.04, { vol: 0.12, type: 'highpass', freq: 6000 }); if (last) this.stopLoop('reels'); return; }
@@ -295,6 +313,7 @@ class Sfx {
     [1, 1.25, 1.5, 2].forEach((m, i) => this.tone(base * m, 0.9, { type: 'triangle', vol: 0.12, at: 0.25 + i * 0.07, verb: 0.5 }));
   }
   featureStart() {
+    if (this.theme === 'wolf') { this.howl(0, 0.3, 300); this.howl(0.5, 0.2, 380); for (let i = 0; i < 10; i++) this.drum(0.2 + i * 0.16, 0.5, i % 2 ? 80 : 110); this.brass([220, 261.6, 329.6, 440], 1.6, 1.4); return; }
     if (this.theme === 'china') { this.gong(82, 3.5, 0.5); this.firecrackers(18, 0.3); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => this.pluck(this._scale(i + 3), 0.9 + i * 0.06, 0.09)); this.brass([293.7, 370, 440, 587.3], 1.5, 1.4); return; }
     if (this.theme === 'snow') { this.wind(2.4, 0.22); this.shatter(3); for (let i = 0; i < 12; i++) this.celesta(this._scale(14 - i), 0.3 + i * 0.07, 0.07); for (let i = 0; i < 8; i++) this.jingle(0.4 + i * 0.12, 0.08); this.brass([293.7, 349.2, 440, 587.3], 1.3, 1.6); return; }
     this.thunder(0.8);
@@ -316,6 +335,7 @@ class Sfx {
     }));
   }
   win(level = 0) {
+    if (this.theme === 'wolf') { for (let i = 0; i < 3 + level * 2; i++) this.tone(this._scale(5 + i) , 0.35, { type: 'triangle', vol: 0.09, at: i * 0.08, verb: 0.5 }); this.drum(0, 0.4, 100); if (level >= 2) this.howl(0.2, 0.18, 360); return; }
     if (this.theme === 'gold') { const ch = [[261.6, 329.6, 392], [293.7, 370, 440], [329.6, 415.3, 493.9]]; this.brass(ch[Math.min(2, level)], 0, 0.35); this.brass(ch[Math.min(2, level)].map(f => f * 1.5), 0.18, 0.5); for (let i = 0; i < 3 + level * 2; i++) this.coin(0.1 + i * 0.07); return; }
     if (this.theme === 'china') { for (let i = 0; i < 4 + level * 2; i++) this.pluck(this._scale(5 + i), i * 0.07, 0.1); if (level >= 2) this.gong(147, 2, 0.2); return; }
     if (this.theme === 'snow') { for (let i = 0; i < 4 + level * 2; i++) this.celesta(this._scale(5 + i), i * 0.07, 0.09); if (level >= 1) this.jingle(0.1, 0.09); return; }
@@ -422,6 +442,13 @@ class Sfx {
       goldBonus: { bpm: 140, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45,
         scale: [0, 2, 4, 7, 9], mel: 'synth', claps: true,
         melody: [5, 7, 8, 10, 8, 7, 5, -2, 6, 8, 9, -2, 8, 7, 6, -2, 7, 9, 10, 12, 10, 9, 7, -2, 8, 7, 6, 5, 5, -2, -2, -1] },
+      // Carrera del Lobo: flauta nativa, tambores de ceremonia y sonajas
+      wolf: { bpm: 84, root: 45, prog: [[0, M], [10, J], [8, J], [7, M]], kick: 'x.......x.x.....', snare: '................', hat: '..x...x...x...x.', bass: [0, -1, -1, 7, -1, -1, 10, -1], arp: 'updown', lead: 'triangle', pad: 'sine', bells: 0.15, toms: true,
+        scale: [0, 3, 5, 7, 10], mel: 'dizi', wood: 'x...x..xx...x...',
+        melody: [7, -2, 8, 7, 5, -2, -2, -1, 5, 7, 8, -2, 10, -2, 8, -2, 7, -2, 5, 3, 5, -2, -2, -1, 3, 5, 7, 5, 3, -2, 2, -2] },
+      wolfBonus: { bpm: 128, root: 45, prog: [[0, M], [8, J], [10, J], [7, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 0, 7, 0, 12, 10, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.25, toms: true,
+        scale: [0, 3, 5, 7, 10], mel: 'dizi', wood: 'x.xxx.xxx.xxx.xx',
+        melody: [5, 7, 8, 10, 8, 7, 5, -2, 7, 8, 10, -2, 12, -2, 10, 8, 7, 8, 10, 8, 7, 5, 3, -2, 5, 7, 5, 3, 2, -2, -2, -1] },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];

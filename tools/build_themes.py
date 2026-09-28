@@ -37,26 +37,27 @@ def fit(im, pad=6):
 def square(im, box, size=T):
     return im.convert('RGBA').crop(box).resize((size, size), Image.LANCZOS)
 
-tiles = {}
-# Sueño Rojo
-noble = Image.open(SRC + 'noble.jpg')
-tiles['noble'] = fit(flood_key(noble, lambda p: min(p) > 232))
-tea = Image.open(SRC + 'tea.jpg').convert('RGB')
-tiles['tea'] = fit(flood_key(tea, near(tea.getpixel((4, 4)), 40)))
-# Papiro: fondo de cuadros blanco/gris (poca saturación y claro)
-tiles['scroll'] = fit(flood_key(Image.open(SRC + 'scroll.jpg'), lambda p: max(p) - min(p) < 14 and min(p) > 185))
-tiles['lotus'] = fit(flood_key(Image.open(SRC + 'lotus.jpg'), lambda p: min(p) > 238, feather=3), pad=2)
-# Reino de Nieve (retratos cuadrados)
-tiles['wolf'] = square(Image.open(SRC + 'wolf.png'), (0, 0, 222, 222))
-tiles['leopard'] = square(Image.open(SRC + 'leopard.jpg'), (92, 0, 392, 300))
-tiles['falcon'] = square(Image.open(SRC + 'falcon.png'), (0, 0, 225, 225))
-tiles['antelope'] = square(Image.open(SRC + 'antelope.jpg'), (6, 0, 212, 206))
-lady = Image.open(SRC + 'lady.jpg')
-# Noble de azul (Sueño Rojo): retrato con su fondo (el marco lacado se dibuja en el juego)
-tiles['lady'] = square(lady, (0, 0, 189, 189))
-tiles['snowflake'] = fit(flood_key(Image.open(SRC + 'snowflake.png').convert('RGB'), lambda p: min(p) > 238), pad=4)
-ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'lady', 'snowflake']
-A = Image.new('RGBA', (1000, 400), (0, 0, 0, 0))
-for n, k in enumerate(ORDER): A.alpha_composite(tiles[k], ((n % 5) * T, (n // 5) * T))
-A.save('assets/themes.webp', 'WEBP', quality=82, method=6)
-print(ORDER, A.size)
+if __name__ == '__main__':
+    tiles = {}
+    # Sueño Rojo
+    noble = Image.open(SRC + 'noble.jpg')
+    tiles['noble'] = fit(flood_key(noble, lambda p: min(p) > 232))
+    tea = Image.open(SRC + 'tea.jpg').convert('RGB')
+    tiles['tea'] = fit(flood_key(tea, near(tea.getpixel((4, 4)), 40)))
+    # Papiro: fondo de cuadros blanco/gris (poca saturación y claro)
+    tiles['scroll'] = fit(flood_key(Image.open(SRC + 'scroll.jpg'), lambda p: max(p) - min(p) < 14 and min(p) > 185))
+    tiles['lotus'] = fit(flood_key(Image.open(SRC + 'lotus.jpg'), lambda p: min(p) > 238, feather=3), pad=2)
+    # Reino de Nieve (retratos cuadrados)
+    tiles['wolf'] = square(Image.open(SRC + 'wolf.png'), (0, 0, 222, 222))
+    tiles['leopard'] = square(Image.open(SRC + 'leopard.jpg'), (92, 0, 392, 300))
+    tiles['falcon'] = square(Image.open(SRC + 'falcon.png'), (0, 0, 225, 225))
+    tiles['antelope'] = square(Image.open(SRC + 'antelope.jpg'), (6, 0, 212, 206))
+    lady = Image.open(SRC + 'lady.jpg')
+    # Noble de azul (Sueño Rojo): retrato con su fondo (el marco lacado se dibuja en el juego)
+    tiles['lady'] = square(lady, (0, 0, 189, 189))
+    tiles['snowflake'] = fit(flood_key(Image.open(SRC + 'snowflake.png').convert('RGB'), lambda p: min(p) > 238), pad=4)
+    ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'lady', 'snowflake']
+    A = Image.new('RGBA', (1000, 400), (0, 0, 0, 0))
+    for n, k in enumerate(ORDER): A.alpha_composite(tiles[k], ((n % 5) * T, (n // 5) * T))
+    A.save('assets/themes.webp', 'WEBP', quality=82, method=6)
+    print(ORDER, A.size)
