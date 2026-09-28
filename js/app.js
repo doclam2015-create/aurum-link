@@ -1,12 +1,14 @@
-import { sfx } from './audio.js?v=28';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=28';
-import { sleep } from './reels.js?v=28';
-import XLink from './games/xlink.js?v=28';
-import Avalanche from './games/avalanche.js?v=28';
-import FireWheel from './games/firewheel.js?v=28';
-import Legion from './games/legion.js?v=28';
+import { sfx } from './audio.js?v=29';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=29';
+import { sleep } from './reels.js?v=29';
+import XLink from './games/xlink.js?v=29';
+import Avalanche from './games/avalanche.js?v=29';
+import FireWheel from './games/firewheel.js?v=29';
+import Legion from './games/legion.js?v=29';
+import Bull from './games/bull.js?v=29';
+import Dragon from './games/dragon.js?v=29';
 
-const GAMES = [XLink, Avalanche, FireWheel, Legion];
+const GAMES = [XLink, Avalanche, FireWheel, Legion, Bull, Dragon];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');

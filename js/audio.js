@@ -273,6 +273,10 @@ class Sfx {
       fire: { bpm: 142, root: 40, prog: [[0, J], [1, J], [0, J], [-2, J]], kick: 'x..x..x.x..x..x.', snare: '....x.......x..x', hat: 'xxxxxxxxxxxxxxxx', bass: [0, 0, 12, 0, 1, 0, 12, 0], arp: 'down', lead: 'sawtooth', pad: 'sawtooth', bells: 0.1 },
       // Legión: épico, timbales, metales
       rome: { bpm: 96, root: 36, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x.....x.x.......', snare: '....x.......x.xx', hat: '..x...x...x...x.', bass: [0, -1, 0, 7, 0, -1, 3, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.2, toms: true },
+      // Toro Dorado: western/country, galope
+      ranch: { bpm: 112, root: 43, prog: [[0, J], [5, J], [7, J], [0, J]], kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, -1, 7, -1, 0, -1, 7, 5], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.3 },
+      // Caminos del Dragón: escala pentatónica oriental
+      orient: { bpm: 100, root: 45, prog: [[0, M], [5, M], [3, J], [10, J]], kick: 'x.......x.x.....', snare: '....x.......x...', hat: '..x...x...x...xx', bass: [0, -1, 7, -1, 10, -1, 7, 3], arp: 'updown', lead: 'triangle', pad: 'sine', bells: 0.55, toms: true },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];

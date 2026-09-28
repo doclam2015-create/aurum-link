@@ -1,6 +1,6 @@
 # Aurum Link
 
-Colección de 4 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
+Colección de 6 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
 
 | Juego | Dinámica |
 |---|---|
@@ -8,9 +8,11 @@ Colección de 4 tragamonedas para iPhone / iPad (Safari), con **créditos fictic
 | **Avalancha Glacial** | 6×5 sin líneas: 8+ iguales en cualquier lugar. Cascadas con multiplicador x1→x5; 4 copos = 10 giros gratis con multiplicador progresivo. |
 | **Rueda de Fuego** | Clásica 3×3, 5 líneas. Wild de fuego expansivo x2; 3 soles = rueda de multiplicadores y jackpots. |
 | **Legión Dorada** | 5×4, 1024 formas. Fénix = giros gratis con coronas pegajosas x2/x3 que se multiplican. |
+| **Toro Dorado** | 5×3, 20 líneas + **recolección**: monedas con premio en los rodillos 1-4 y el toro del rodillo 5 las recoge todas. 3 tréboles = *Estampida*: 10 giros gratis donde cada toro sube el multiplicador. |
+| **Caminos del Dragón** | 6 rodillos de **altura variable** (2 a 7 símbolos por giro): hasta 117.649 formas. Llamaradas wild x2/x3/x5; 4+ perlas = giros gratis con todos los rodillos al máximo. |
 
-**Todos los juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
-Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) y Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales).
+**Los 6 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
+Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) y Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI).
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 
