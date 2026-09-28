@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=32';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=32';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=33';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=33';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
@@ -116,11 +116,11 @@ export class SnowKingdom extends XLink {
   static theme = SNOW;
   static lobby = {
     icons: [S.QUEEN, S.SNOW, S.DIAMOND], c1: '#bfe8ff', c2: '#0a2a6e', mechanic: 'La Reina abre filas · estilo Snow Kingdom',
-    desc: 'Reino helado con nevada. Cada pila de 2 Reinas derrite el hielo y abre una fila (hasta 100 líneas). Golden Spins con 4 jackpots.'
+    desc: 'Reino helado con lobos, leopardos y halcones. Cada Reina de 2 filas sube la cortina de hielo, en cadena (hasta 100 líneas). Giros gratis y Golden Spins.'
   };
   constructor(app) {
     super(app);
-    this.hint = 'Cada <b>pila de 2 Reinas</b> derrite el hielo y abre 1 fila. 6 bolas doradas = <b>GOLDEN SPINS</b>.';
+    this.hint = 'Cada <b>Reina de 2 filas</b> sube la cortina 1 fila, <b>en cadena</b>. 3 cristales = <b>10 giros gratis</b>.';
     this.flakes = []; for (let i = 0; i < 55; i++) this.flakes.push({ x: Math.random(), y: Math.random(), v: rand(0.03, 0.09), s: rand(1.2, 3.2), p: Math.random() * 6 });
     this.icicles = []; for (let i = 0; i < 24; i++) this.icicles.push({ u: (i + Math.random() * 0.6) / 24, l: rand(0.35, 1) });
   }
@@ -302,3 +302,161 @@ RED.names = Object.assign({}, RED.names, { scat: 'Flor de loto' });
 SNOW.scatter = { w: 1.6, name: 'cristales de hielo', color: '#8fd8ff', pay: [5, 20] };
 SNOW.draw = Object.assign({}, SNOW.draw || {}, { scat: drawCrystal });
 SNOW.names = Object.assign({}, SNOW.names, { scat: 'Cristal de hielo' });
+
+// ---------- Figuras emblema (dibujos propios, estilo azulejo de color) ----------
+// Azulejo redondeado con degradado y brillo interior
+function tile(x, s, c1, c2) {
+  const m = s * 0.04, r = s * 0.12;
+  const g = x.createLinearGradient(0, 0, s, s); g.addColorStop(0, c1); g.addColorStop(1, c2);
+  x.beginPath(); x.moveTo(m + r, m); x.arcTo(s - m, m, s - m, s - m, r); x.arcTo(s - m, s - m, m, s - m, r); x.arcTo(m, s - m, m, m, r); x.arcTo(m, m, s - m, m, r); x.closePath();
+  x.fillStyle = g; x.fill();
+  x.save(); x.clip();
+  const gl = x.createRadialGradient(s * 0.35, s * 0.3, 0, s * 0.35, s * 0.3, s * 0.7);
+  gl.addColorStop(0, 'rgba(255,255,255,0.35)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = gl; x.fillRect(0, 0, s, s);
+  x.restore();
+  x.lineWidth = s * 0.025; x.strokeStyle = 'rgba(255,255,255,0.55)'; x.stroke();
+}
+// Trazo de un polígono en coordenadas relativas (0..1)
+function poly(x, s, pts, close = true) { x.beginPath(); pts.forEach(([u, v], i) => i ? x.lineTo(u * s, v * s) : x.moveTo(u * s, v * s)); if (close) x.closePath(); }
+function furGrad(x, s, a, b) { const g = x.createLinearGradient(0, s * 0.1, 0, s * 0.95); g.addColorStop(0, a); g.addColorStop(1, b); return g; }
+
+// LOBO: cabeza de frente, antifaz gris, hocico blanco y ojos ámbar, sobre violeta
+export const drawWolf = drawn('wolf', (x, s) => {
+  tile(x, s, '#8a5ad8', '#3a1a78');
+  const ink = '#241a3a';
+  // orejas en punta
+  [-1, 1].forEach(d => {
+    poly(x, s, [[0.5 + d * 0.1, 0.3], [0.5 + d * 0.3, 0.08], [0.5 + d * 0.33, 0.36]]);
+    x.fillStyle = '#7a7890'; x.fill(); x.strokeStyle = ink; x.lineWidth = s * 0.012; x.stroke();
+    poly(x, s, [[0.5 + d * 0.16, 0.3], [0.5 + d * 0.28, 0.15], [0.5 + d * 0.29, 0.33]]); x.fillStyle = '#e8d8e8'; x.fill();
+  });
+  // cabeza con mejillas anchas (pelaje hacia afuera)
+  poly(x, s, [[0.5, 0.24], [0.66, 0.28], [0.8, 0.42], [0.86, 0.56], [0.76, 0.6], [0.8, 0.7], [0.66, 0.76], [0.58, 0.92], [0.5, 0.95], [0.42, 0.92], [0.34, 0.76], [0.2, 0.7], [0.24, 0.6], [0.14, 0.56], [0.2, 0.42], [0.34, 0.28]]);
+  x.fillStyle = furGrad(x, s, '#f2f2fa', '#c0c0d4'); x.fill(); x.strokeStyle = ink; x.lineWidth = s * 0.012; x.stroke();
+  // antifaz gris sobre la frente y entre los ojos
+  poly(x, s, [[0.5, 0.25], [0.64, 0.3], [0.7, 0.44], [0.6, 0.5], [0.54, 0.6], [0.5, 0.64], [0.46, 0.6], [0.4, 0.5], [0.3, 0.44], [0.36, 0.3]]);
+  x.fillStyle = '#6e6c86'; x.fill();
+  // hocico blanco y nariz negra
+  poly(x, s, [[0.44, 0.58], [0.56, 0.58], [0.6, 0.76], [0.5, 0.86], [0.4, 0.76]]); x.fillStyle = '#ffffff'; x.fill();
+  x.fillStyle = '#141018'; x.beginPath(); x.ellipse(s * 0.5, s * 0.66, s * 0.055, s * 0.035, 0, 0, 7); x.fill();
+  x.strokeStyle = '#141018'; x.lineWidth = s * 0.01; x.beginPath(); x.moveTo(s * 0.5, s * 0.69); x.lineTo(s * 0.5, s * 0.76); x.moveTo(s * 0.44, s * 0.79); x.quadraticCurveTo(s * 0.5, s * 0.76, s * 0.56, s * 0.79); x.stroke();
+  // ojos ámbar rasgados
+  [-1, 1].forEach(d => {
+    x.save(); x.translate(s * (0.5 + d * 0.11), s * 0.45); x.rotate(d * 0.35);
+    x.fillStyle = '#ffb81a'; x.beginPath(); x.ellipse(0, 0, s * 0.045, s * 0.022, 0, 0, 7); x.fill();
+    x.fillStyle = '#141018'; x.beginPath(); x.arc(0, 0, s * 0.013, 0, 7); x.fill();
+    x.strokeStyle = '#141018'; x.lineWidth = s * 0.008; x.beginPath(); x.ellipse(0, 0, s * 0.045, s * 0.022, 0, 0, 7); x.stroke();
+    x.restore();
+  });
+});
+// LEOPARDO DE LAS NIEVES: cabeza de frente con manchas, sobre rosa
+export const drawLeopard = drawn('leopard', (x, s) => {
+  tile(x, s, '#ff7ac0', '#8a1a6a');
+  const cx = s / 2, cy = s * 0.52;
+  // orejas
+  [-1, 1].forEach(d => { x.beginPath(); x.ellipse(cx + d * s * 0.24, cy - s * 0.24, s * 0.09, s * 0.1, d * 0.4, 0, 7); x.fillStyle = '#e8e4f0'; x.fill(); x.fillStyle = '#c8a0b8'; x.beginPath(); x.ellipse(cx + d * s * 0.24, cy - s * 0.23, s * 0.045, s * 0.055, d * 0.4, 0, 7); x.fill(); });
+  // cabeza
+  x.beginPath(); x.ellipse(cx, cy, s * 0.3, s * 0.3, 0, 0, 7);
+  x.fillStyle = furGrad(x, s, '#ffffff', '#c8c4d8'); x.fill();
+  x.lineWidth = s * 0.012; x.strokeStyle = '#4a2a4a'; x.stroke();
+  // manchas (rosetas)
+  x.strokeStyle = '#3a3040'; x.lineWidth = s * 0.018;
+  [[0.36, 0.34], [0.5, 0.3], [0.64, 0.34], [0.3, 0.5], [0.7, 0.5], [0.34, 0.66], [0.66, 0.66], [0.43, 0.4], [0.57, 0.4]].forEach(([u, v]) => { x.beginPath(); x.arc(u * s, v * s, s * 0.022, 0.3, 5.5); x.stroke(); });
+  // ojos verdes
+  [-1, 1].forEach(d => { x.fillStyle = '#9ad86a'; x.beginPath(); x.ellipse(cx + d * s * 0.1, cy - s * 0.02, s * 0.045, s * 0.03, 0, 0, 7); x.fill(); x.fillStyle = '#101010'; x.beginPath(); x.ellipse(cx + d * s * 0.1, cy - s * 0.02, s * 0.012, s * 0.026, 0, 0, 7); x.fill(); });
+  // hocico, nariz y bigotes
+  x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(cx, cy + s * 0.13, s * 0.1, s * 0.07, 0, 0, 7); x.fill();
+  poly(x, s, [[0.46, 0.6], [0.54, 0.6], [0.5, 0.65]]); x.fillStyle = '#e07a9a'; x.fill();
+  x.strokeStyle = '#6a5a6a'; x.lineWidth = s * 0.006;
+  [-1, 1].forEach(d => [0, 1, 2].forEach(i => { x.beginPath(); x.moveTo(cx + d * s * 0.06, cy + s * (0.14 + i * 0.02)); x.lineTo(cx + d * s * 0.28, cy + s * (0.1 + i * 0.05)); x.stroke(); }));
+});
+// HALCÓN BLANCO: busto de perfil con pico ganchudo, sobre azul hielo
+export const drawFalcon = drawn('falcon', (x, s) => {
+  tile(x, s, '#4ac0ff', '#0a3a8a');
+  const ink = '#1a3050';
+  // cuerpo y cabeza de perfil mirando a la izquierda
+  poly(x, s, [[0.3, 0.97], [0.3, 0.72], [0.36, 0.55], [0.34, 0.46], [0.36, 0.3], [0.46, 0.18], [0.6, 0.16], [0.7, 0.24], [0.74, 0.38], [0.78, 0.56], [0.86, 0.76], [0.9, 0.97]]);
+  x.fillStyle = furGrad(x, s, '#ffffff', '#c8dcf0'); x.fill(); x.strokeStyle = ink; x.lineWidth = s * 0.012; x.stroke();
+  // ala plegada con plumas
+  poly(x, s, [[0.62, 0.5], [0.8, 0.56], [0.9, 0.8], [0.9, 0.97], [0.66, 0.97], [0.58, 0.7]]);
+  x.fillStyle = '#dde8f4'; x.fill(); x.stroke();
+  x.strokeStyle = 'rgba(30,60,100,0.5)'; x.lineWidth = s * 0.009;
+  [0.62, 0.7, 0.78, 0.86].forEach(v => { x.beginPath(); x.moveTo(s * 0.62, s * v); x.quadraticCurveTo(s * 0.76, s * (v - 0.02), s * 0.88, s * (v + 0.06)); x.stroke(); });
+  // pecho moteado
+  x.fillStyle = 'rgba(40,60,90,0.55)';
+  [[0.4, 0.62], [0.46, 0.7], [0.38, 0.78], [0.5, 0.8], [0.44, 0.88], [0.52, 0.6], [0.36, 0.9]].forEach(([u, v]) => { poly(x, s, [[u - 0.018, v - 0.01], [u, v + 0.012], [u + 0.018, v - 0.01]], false); x.lineWidth = s * 0.009; x.strokeStyle = 'rgba(40,60,90,0.6)'; x.stroke(); });
+  // pico ganchudo amarillo y gris
+  poly(x, s, [[0.36, 0.3], [0.24, 0.32], [0.18, 0.38], [0.21, 0.43], [0.25, 0.38], [0.3, 0.4], [0.35, 0.4]]);
+  x.fillStyle = '#ffcc3a'; x.fill(); x.strokeStyle = ink; x.lineWidth = s * 0.01; x.stroke();
+  poly(x, s, [[0.24, 0.32], [0.18, 0.38], [0.21, 0.43], [0.23, 0.37]]); x.fillStyle = '#3a4050'; x.fill();
+  // ojo con anillo amarillo y "bigote" oscuro de halcón
+  x.fillStyle = '#ffcc3a'; x.beginPath(); x.arc(s * 0.45, s * 0.3, s * 0.045, 0, 7); x.fill();
+  x.fillStyle = '#0a0a10'; x.beginPath(); x.arc(s * 0.45, s * 0.3, s * 0.03, 0, 7); x.fill();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(s * 0.44, s * 0.29, s * 0.009, 0, 7); x.fill();
+  poly(x, s, [[0.43, 0.35], [0.5, 0.35], [0.46, 0.48], [0.41, 0.46]]); x.fillStyle = 'rgba(60,80,110,0.7)'; x.fill();
+});
+// ANTÍLOPE (gamuza): cabeza de perfil con cuernos curvos, sobre verde
+export const drawChamois = drawn('chamois', (x, s) => {
+  tile(x, s, '#2ec48a', '#0a5a3a');
+  // montaña de fondo
+  poly(x, s, [[0, 0.9], [0.3, 0.6], [0.5, 0.75], [0.75, 0.5], [1, 0.8], [1, 1], [0, 1]]); x.fillStyle = 'rgba(255,255,255,0.25)'; x.fill();
+  // cuernos en gancho
+  x.strokeStyle = '#1a1208'; x.lineCap = 'round'; x.lineWidth = s * 0.035;
+  [[0.52, 0.02], [0.6, 0.03]].forEach(([dx, dy]) => { x.beginPath(); x.moveTo(s * dx, s * 0.3); x.quadraticCurveTo(s * (dx - 0.02), s * (0.08 + dy), s * (dx + 0.1), s * 0.1); x.stroke(); });
+  // cabeza y cuello
+  poly(x, s, [[0.72, 0.95], [0.74, 0.62], [0.66, 0.38], [0.6, 0.28], [0.48, 0.28], [0.36, 0.4], [0.24, 0.56], [0.22, 0.64], [0.3, 0.68], [0.42, 0.62], [0.46, 0.72], [0.44, 0.95]]);
+  x.fillStyle = furGrad(x, s, '#e8c890', '#8a5a2a'); x.fill(); x.strokeStyle = '#3a2410'; x.lineWidth = s * 0.012; x.stroke();
+  // franja oscura característica de la cara
+  poly(x, s, [[0.56, 0.3], [0.5, 0.3], [0.36, 0.44], [0.28, 0.58], [0.34, 0.6], [0.44, 0.48]]); x.fillStyle = '#2a1a0a'; x.fill();
+  // oreja, ojo y nariz
+  poly(x, s, [[0.64, 0.32], [0.78, 0.24], [0.7, 0.38]]); x.fillStyle = '#c89a60'; x.fill(); x.stroke();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(s * 0.5, s * 0.38, s * 0.022, 0, 7); x.fill();
+  x.fillStyle = '#101010'; x.beginPath(); x.arc(s * 0.5, s * 0.38, s * 0.012, 0, 7); x.fill();
+  x.beginPath(); x.arc(s * 0.245, s * 0.6, s * 0.015, 0, 7); x.fill();
+});
+// NOBLE CHINO: busto estilizado con túnica roja, cuello dorado y cinta roja en la frente
+export const drawNoble = drawn('noble', (x, s) => {
+  tile(x, s, '#ffcf8a', '#c8501a');
+  const cx = s / 2;
+  // túnica
+  poly(x, s, [[0.12, 0.98], [0.2, 0.74], [0.38, 0.66], [0.62, 0.66], [0.8, 0.74], [0.88, 0.98]]);
+  let g = x.createLinearGradient(0, s * 0.66, 0, s); g.addColorStop(0, '#e0281a'); g.addColorStop(1, '#8a0808');
+  x.fillStyle = g; x.fill();
+  x.strokeStyle = '#ffd06a'; x.lineWidth = s * 0.02; poly(x, s, [[0.4, 0.66], [0.5, 0.8], [0.6, 0.66]], false); x.stroke();
+  x.fillStyle = '#ffd06a'; [0.78, 0.86, 0.94].forEach(v => { x.beginPath(); x.arc(cx + s * 0.04, s * v, s * 0.012, 0, 7); x.fill(); });
+  // cuello y cabeza
+  x.fillStyle = '#f0c8a0'; x.fillRect(cx - s * 0.06, s * 0.56, s * 0.12, s * 0.12);
+  g = x.createRadialGradient(cx - s * 0.05, s * 0.38, s * 0.02, cx, s * 0.42, s * 0.18); g.addColorStop(0, '#ffe0c0'); g.addColorStop(1, '#d8a078');
+  x.fillStyle = g; x.beginPath(); x.ellipse(cx, s * 0.42, s * 0.14, s * 0.17, 0, 0, 7); x.fill();
+  // cabello, moño y cinta roja
+  x.fillStyle = '#141014';
+  x.beginPath(); x.ellipse(cx, s * 0.3, s * 0.155, s * 0.1, 0, Math.PI, Math.PI * 2); x.fill();
+  x.fillRect(cx - s * 0.155, s * 0.3, s * 0.035, s * 0.22); x.fillRect(cx + s * 0.12, s * 0.3, s * 0.035, s * 0.22);
+  x.beginPath(); x.arc(cx, s * 0.16, s * 0.055, 0, 7); x.fill();
+  x.fillStyle = '#d8201a'; x.fillRect(cx - s * 0.155, s * 0.28, s * 0.31, s * 0.035);
+  x.fillStyle = '#ffd06a'; x.beginPath(); x.arc(cx, s * 0.297, s * 0.016, 0, 7); x.fill();
+  // rostro
+  x.fillStyle = '#2a1a10';
+  [-1, 1].forEach(d => { x.beginPath(); x.ellipse(cx + d * s * 0.055, s * 0.41, s * 0.022, s * 0.009, 0, 0, 7); x.fill(); x.fillRect(cx + d * s * 0.055 - s * 0.03, s * 0.375, s * 0.06, s * 0.008); });
+  x.strokeStyle = '#a0603a'; x.lineWidth = s * 0.008; x.beginPath(); x.moveTo(cx, s * 0.43); x.lineTo(cx - s * 0.01, s * 0.48); x.lineTo(cx + s * 0.01, s * 0.48); x.stroke();
+  x.strokeStyle = '#a0402a'; x.lineWidth = s * 0.01; x.beginPath(); x.moveTo(cx - s * 0.03, s * 0.52); x.quadraticCurveTo(cx, s * 0.535, cx + s * 0.03, s * 0.52); x.stroke();
+});
+
+// Símbolos y pagos según importancia
+// Sueño Rojo: noble china > noble chino > tetera > papiro > huevo de jade > campanas > K > Q > J
+RED.icon = Object.assign({}, RED.icon, { s7r: S.GEISHA, grapes: S.BELL, plum: S.K, orange: S.Q, cherry: S.J });
+RED.draw = Object.assign({}, RED.draw, { s7b: drawNoble, bar: drawTea, bell: drawScroll, melon: drawEgg });
+RED.names = Object.assign({}, RED.names, { s7r: 'Noble china', s7b: 'Noble chino', bar: 'Tetera y tazas', bell: 'Papiro de la suerte', melon: 'Huevo de la suerte', grapes: 'Campanas', plum: 'K', orange: 'Q', cherry: 'J' });
+// Reino de Nieve: Reina > lobo > leopardo > halcón > antílope > K > Q > J > 10
+SNOW.draw = Object.assign({}, SNOW.draw, { s7b: drawWolf, bar: drawLeopard, bell: drawFalcon, melon: drawChamois });
+SNOW.variant = {};
+SNOW.names = Object.assign({}, SNOW.names, { s7r: 'Reina de hielo', s7b: 'Lobo', bar: 'Leopardo de las nieves', bell: 'Halcón blanco', melon: 'Antílope' });
+SNOW.pay = Object.assign({}, PAY, {
+  s7r: [0, 0, 0, 30, 100, 400], s7b: [0, 0, 0, 25, 90, 300], bar: [0, 0, 0, 20, 70, 250], bell: [0, 0, 0, 15, 50, 200], melon: [0, 0, 0, 12, 40, 160],
+  grapes: [0, 0, 0, 8, 25, 100], plum: [0, 0, 0, 8, 25, 100], orange: [0, 0, 0, 5, 20, 80], cherry: [0, 0, 2, 5, 20, 80]
+});
+// Calibrado por simulación (la Reina aparece en cadena y paga más): mismo equilibrio que la original
+SNOW.lineScale = 0.58;
+SNOW.ball = 0.99;
+SNOW.scatter = Object.assign({}, SNOW.scatter, { w: 1.45 });
