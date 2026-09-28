@@ -1,10 +1,10 @@
-import { sfx } from './audio.js?v=25';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=25';
-import { sleep } from './reels.js?v=25';
-import XLink from './games/xlink.js?v=25';
-import Avalanche from './games/avalanche.js?v=25';
-import FireWheel from './games/firewheel.js?v=25';
-import Legion from './games/legion.js?v=25';
+import { sfx } from './audio.js?v=26';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=26';
+import { sleep } from './reels.js?v=26';
+import XLink from './games/xlink.js?v=26';
+import Avalanche from './games/avalanche.js?v=26';
+import FireWheel from './games/firewheel.js?v=26';
+import Legion from './games/legion.js?v=26';
 
 const GAMES = [XLink, Avalanche, FireWheel, Legion];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -300,6 +300,14 @@ function openInstall() {
   openSheet('Instalar en iPhone / iPad', '<ol class="steps"><li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> <span class="kbd">⬆︎</span>.</li><li>Elige <b>Agregar a pantalla de inicio</b>.</li><li>Ábrela desde el ícono: se ejecuta a pantalla completa y funciona sin conexión.</li></ol><p class="fine">Si no oyes sonido, revisa que el interruptor de silencio del iPhone esté desactivado.</p>');
 }
 
+// Diseño automático: horizontal cuando el equipo está girado, vertical cuando está derecho
+const landscapeMQ = window.matchMedia('(orientation: landscape)');
+function applyLayout() {
+  const h = window.innerWidth > window.innerHeight * 1.15;
+  document.body.classList.toggle('layout-h', h);
+  document.body.classList.toggle('layout-v', !h);
+  requestAnimationFrame(resize);
+}
 function speedLabel(v) { return (v === 0.75 ? '¾' : v === 0.5 ? '½' : v === 1.5 ? '1½' : String(v)) + '×'; }
 function setLight(on) {
   state.light = on; save();
@@ -353,6 +361,7 @@ function bind() {
   tap('btnTurbo', () => { state.speed = SPEEDS[(SPEEDS.indexOf(state.speed) + 1) % SPEEDS.length]; sfx.button(); renderHud(); save(); });
   tap('btnTheme', () => { setLight(!state.light); sfx.button(); });
   tap('btnSettings', openSettings);
+  if (landscapeMQ.addEventListener) landscapeMQ.addEventListener('change', applyLayout); else landscapeMQ.addListener(applyLayout);
   tap('btnAuto', () => { if (autoLeft > 0) { autoLeft = 0; renderHud(); return; } if (!busy) openAuto(); });
   tap('btnInfo', openInfo);
   tap('btnLobby', openLobby);
@@ -403,8 +412,9 @@ function bind() {
   stage.addEventListener('pointerdown', e => { if (game && game.onTap && !overlay) { const r = stage.getBoundingClientRect(); game.onTap(e.clientX - r.left, e.clientY - r.top); } });
   document.addEventListener('pointerdown', () => { if (overlay) skipReq = true; }, true);
   document.addEventListener('keydown', e => { if (e.code === 'Space' && !$('sheet').classList.contains('open')) { e.preventDefault(); spin(); } });
-  window.addEventListener('resize', () => requestAnimationFrame(resize));
-  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+  window.addEventListener('resize', applyLayout);
+  // iOS actualiza las medidas con retraso tras girar: re-medir varias veces
+  window.addEventListener('orientationchange', () => [100, 350, 700].forEach(t => setTimeout(applyLayout, t)));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { sfx.suspend(); running = false; autoLeft = 0; }
     else { sfx.resume(); running = true; last = performance.now(); requestAnimationFrame(frame); renderHud(); }
@@ -420,6 +430,7 @@ async function boot() {
   sfx.enabled = state.sound; sfx.musicOn = state.music;
   sfx.setVolumes(state.sfxVol, state.musicVol);
   document.body.classList.toggle('light', state.light);
+  applyLayout();
   buildLobby();
   $('verLabel').textContent = 'v' + VERSION;
   bind();

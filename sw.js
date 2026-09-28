@@ -1,6 +1,6 @@
 // Caché offline: la app funciona sin conexión una vez abierta.
-const CACHE = 'aurum-v25';
-const V = '?v=25';
+const CACHE = 'aurum-v26';
+const V = '?v=26';
 const FILES = ['./', './index.html', './css/app.css' + V, './js/app.js' + V, './js/audio.js' + V, './js/gfx.js' + V, './js/reels.js' + V,
   './js/games/xlink.js' + V, './js/games/avalanche.js' + V, './js/games/firewheel.js' + V, './js/games/legion.js' + V,
   './assets/symbols.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];

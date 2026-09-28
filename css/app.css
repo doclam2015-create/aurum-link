@@ -168,23 +168,29 @@ body.busy #btnExtra,body.busy #btnInfo{opacity:.4}
   .msg{font-size:15px;min-height:28px}
 }
 /* Horizontal: tablero a la izquierda, controles a la derecha */
-@media (orientation:landscape) and (min-aspect-ratio:4/3){
-  #app{max-width:none;grid-template-columns:minmax(0,1fr) minmax(250px,31%);grid-template-rows:auto auto minmax(0,1fr) auto;column-gap:12px}
-  .top{grid-column:1}
-  .pots{grid-column:1}
-  .board{grid-column:1;grid-row:3/5}
-  .msg{grid-column:2;grid-row:1;align-self:center;white-space:normal;max-height:44px}
-  .hud{grid-column:2;grid-row:2/5;align-self:end;max-height:100%;overflow:hidden}
-  .meters{grid-template-columns:1fr;gap:6px}
-  .controls{flex-wrap:wrap;justify-content:center}
-  .controls .ctl{flex:1 1 28%}
-  .spin{order:-1;margin:4px calc(50% - 45px) 6px}
-}
-@media (orientation:landscape) and (max-height:500px){
-  .top{height:34px}.icon{width:32px;height:32px}.logo small{display:none}
-  .pots{margin:2px 0}.pot b{font-size:8px}.pot strong{font-size:13px}
-  .meter{padding:2px}.meter b{font-size:15px}
-  .ctl{height:40px}.spin{width:70px;height:70px}
+/* Diseño horizontal */
+body.layout-h #app{max-width:none;grid-template-columns:minmax(0,1fr) minmax(250px,31%);grid-template-rows:auto auto minmax(0,1fr) auto;column-gap:12px}
+body.layout-h .top{grid-column:1}
+body.layout-h .pots{grid-column:1}
+body.layout-h .board{grid-column:1;grid-row:3/5}
+body.layout-h .msg{grid-column:2;grid-row:1;align-self:center;white-space:normal;max-height:44px}
+body.layout-h .hud{grid-column:2;grid-row:2/5;align-self:end;max-height:100%;overflow:hidden}
+body.layout-h .meters{grid-template-columns:1fr;gap:6px}
+body.layout-h .controls{flex-wrap:wrap;justify-content:center}
+body.layout-h .controls .ctl{flex:1 1 28%}
+body.layout-h .spin{order:-1;margin:4px calc(50% - 45px) 6px}
+/* Diseño horizontal */
+@media (max-height:500px){
+body.layout-h .top{height:34px}
+body.layout-h .icon{width:32px;height:32px}
+body.layout-h .logo small{display:none}
+body.layout-h .pots{margin:2px 0}
+body.layout-h .pot b{font-size:8px}
+body.layout-h .pot strong{font-size:13px}
+body.layout-h .meter{padding:2px}
+body.layout-h .meter b{font-size:15px}
+body.layout-h .ctl{height:40px}
+body.layout-h .spin{width:70px;height:70px}
 }
 @media (prefers-reduced-motion:reduce){.pot::after,body:not(.busy) .spin{animation:none}}
 
@@ -235,12 +241,22 @@ body.light .ctl.on{background:linear-gradient(#ffcf4a,#d07a10)}
 .ver{opacity:.6}
 
 /* Horizontal (iPad/Mac/iPhone girado): todo centrado y compacto, sin franja vacía al medio */
-@media (orientation:landscape) and (min-aspect-ratio:4/3){
-  #app{grid-template-columns:minmax(0,1fr) minmax(250px,310px);grid-template-rows:auto auto minmax(0,1fr);
+/* Diseño horizontal */
+body.layout-h #app{grid-template-columns:minmax(0,1fr) minmax(250px,310px);grid-template-rows:auto auto minmax(0,1fr);
     max-width:calc(100vh * 0.82 + 340px);margin:0 auto;column-gap:14px}
-  body[data-game=avalanche] #app,body[data-game=legion] #app,body[data-game=firewheel] #app{max-width:calc(100vh * 1.2 + 340px)}
-  .top,.pots{grid-column:1/-1}
-  .board{grid-column:1;grid-row:3}
-  .msg{grid-column:2;grid-row:3;align-self:start;margin-top:8px;max-height:none;white-space:normal}
-  .hud{grid-column:2;grid-row:3;align-self:end}
-}
+body.layout-h[data-game=avalanche] #app,body.layout-h[data-game=legion] #app,body.layout-h[data-game=firewheel] #app{max-width:calc(100vh * 1.2 + 340px)}
+body.layout-h .top,body.layout-h .pots{grid-column:1/-1}
+body.layout-h .board{grid-column:1;grid-row:3}
+body.layout-h .msg{grid-column:2;grid-row:3;align-self:start;margin-top:8px;max-height:none;white-space:normal}
+body.layout-h .hud{grid-column:2;grid-row:3;align-self:end}
+
+/* Botón de diseño: muestra el diseño al que se cambiará */
+#btnLayout .lh{display:none}
+body.layout-v #btnLayout .lv{display:none}body.layout-v #btnLayout .lh{display:inline}
+#btnLayout.on{background:rgba(255,236,170,.2)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#140a1b;border-radius:12px;padding:4px}
+.seg button{height:40px;border-radius:9px;font-weight:800;font-size:14px;color:var(--muted)}
+.seg button.on{background:linear-gradient(#fff3c0,var(--accent) 55%,#b8741a);color:#2a1400}
+/* Vertical forzado en pantalla apaisada: columna centrada */
+@media (orientation:landscape){body.layout-v #app{max-width:min(760px,calc(100vh * 0.62))}}
+@media (max-width:380px){.top .icon{width:32px;height:32px}.top{gap:3px}}
