@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=24';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=24';
+import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=25';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=25';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -464,6 +464,7 @@ export default class XLink {
     balls.forEach(b => { this.base.grid[b.c][b.row - 5] = b.s; this.base.columns[b.c].syms[b.row - 5 + 1] = b.s; });
     for (let i = 0; i < balls.length; i++) { const [px, py] = this.cellCenter(balls[i].c, balls[i].row); app.sfx.ballLand(i); app.burst(px, py, 14, { color: '#ffd76a', speed: 260, size: 9 }); await app.wait(160); }
     const w = await this.golden(bet, balls, BASE_R);
+    app.setSpinLabel('GIRAR');
     return { win: w, celebrated: w > 0 };
   }
 

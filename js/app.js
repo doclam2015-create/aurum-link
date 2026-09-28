@@ -1,10 +1,10 @@
-import { sfx } from './audio.js?v=24';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=24';
-import { sleep } from './reels.js?v=24';
-import XLink from './games/xlink.js?v=24';
-import Avalanche from './games/avalanche.js?v=24';
-import FireWheel from './games/firewheel.js?v=24';
-import Legion from './games/legion.js?v=24';
+import { sfx } from './audio.js?v=25';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=25';
+import { sleep } from './reels.js?v=25';
+import XLink from './games/xlink.js?v=25';
+import Avalanche from './games/avalanche.js?v=25';
+import FireWheel from './games/firewheel.js?v=25';
+import Legion from './games/legion.js?v=25';
 
 const GAMES = [XLink, Avalanche, FireWheel, Legion];
 const BETS = [10, 20, 30, 50, 100, 200, 500];

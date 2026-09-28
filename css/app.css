@@ -233,3 +233,14 @@ body.light .ctl.on{background:linear-gradient(#ffcf4a,#d07a10)}
 .surprise{background:rgba(120,210,255,.12);border:1px solid rgba(120,210,255,.4);border-radius:12px;padding:8px 10px;margin:8px 0}
 .gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 10px}.gallery figure{margin:0;text-align:center}.gallery img{width:100%;max-width:72px;display:block;margin:0 auto}.gallery figcaption{font-size:10px;color:var(--muted);line-height:1.2}
 .ver{opacity:.6}
+
+/* Horizontal (iPad/Mac/iPhone girado): todo centrado y compacto, sin franja vacía al medio */
+@media (orientation:landscape) and (min-aspect-ratio:4/3){
+  #app{grid-template-columns:minmax(0,1fr) minmax(250px,310px);grid-template-rows:auto auto minmax(0,1fr);
+    max-width:calc(100vh * 0.82 + 340px);margin:0 auto;column-gap:14px}
+  body[data-game=avalanche] #app,body[data-game=legion] #app,body[data-game=firewheel] #app{max-width:calc(100vh * 1.2 + 340px)}
+  .top,.pots{grid-column:1/-1}
+  .board{grid-column:1;grid-row:3}
+  .msg{grid-column:2;grid-row:3;align-self:start;margin-top:8px;max-height:none;white-space:normal}
+  .hud{grid-column:2;grid-row:3;align-self:end}
+}
