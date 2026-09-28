@@ -1,6 +1,6 @@
 # Aurum Link
 
-Colección de 6 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
+Colección de 8 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
 
 | Juego | Dinámica |
 |---|---|
@@ -10,9 +10,11 @@ Colección de 6 tragamonedas para iPhone / iPad (Safari), con **créditos fictic
 | **Legión Dorada** | 5×4, 1024 formas. Fénix = giros gratis con coronas pegajosas x2/x3 que se multiplican. |
 | **Toro Dorado** | 5×3, 20 líneas + **recolección**: monedas con premio en los rodillos 1-4 y el toro del rodillo 5 las recoge todas. 3 tréboles = *Estampida*: 10 giros gratis donde cada toro sube el multiplicador. |
 | **Caminos del Dragón** | 6 rodillos de **altura variable** (2 a 7 símbolos por giro): hasta 117.649 formas. Llamaradas wild x2/x3/x5; 4+ perlas = giros gratis con todos los rodillos al máximo. |
+| **Códice del Sol** | Templo en la selva, 5×3 y 10 líneas. El Códice es wild y dispersor: 3+ = 10 giros gratis con un **símbolo especial que se expande** a todo el rodillo y paga en las 10 líneas. |
+| **Arrecife de Gemas** | Fondo marino, 7×7 con **grupos** de 5+ gemas conectadas y cascadas. Donde estalla un grupo queda una marca que se vuelve **multiplicador** (x2 → x128). 3+ perlas = giros gratis con marcas fijas. |
 
-**Los 6 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
-Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) y Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI).
+**Los 8 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
+Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) y Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND).
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 
