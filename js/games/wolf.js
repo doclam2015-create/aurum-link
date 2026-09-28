@@ -3,8 +3,8 @@
 // Los símbolos altos también caen apilados. Atrapasueños BONUS solo en los rodillos 2, 3 y 4:
 // 3 = 5 giros gratis con WILDS APILADOS REFORZADOS (se repiten: +5).
 // Progresivos: rodillos llenos de WILD a la vez → 2 MINI · 3 MINOR · 4 MAJOR · 5 GRAND.
-import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=39';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=39';
+import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=40';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=40';
 
 const COLS = 5, ROWS = 4;
 // 40 líneas: los 20 patrones de 3 filas en las bandas de arriba y de abajo, sin repetir, más zigzags
@@ -314,7 +314,7 @@ export default class Wolf {
         if (final[c][0].full) {
           full++; this.fullCols.push(c);
           const [px, py] = this.cellCenter(c, 1.5);
-          sfx.howl(0, 0.2, 300 + full * 30); app.burst(px, py, 22, { type: 'spark', color: '#d8b0ff', speed: 320, size: 12 }); app.flash('#e8d0ff', 0.2);
+          if (full === 1) sfx.howl(0, 0.22, 330); else sfx.bell(660 + full * 110, 1, 0.12); app.burst(px, py, 22, { type: 'spark', color: '#d8b0ff', speed: 320, size: 12 }); app.flash('#e8d0ff', 0.2);
         }
         final[c].forEach((s, r) => { if (s.k === 'bonus') { const [px, py] = this.cellCenter(c, r); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 14, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); } });
       }
