@@ -103,6 +103,21 @@ const app = {
   celebrate(amount, bet, label) { return showOverlay({ kind: 'big', amount, bet, label, t: 0, dur: 4.5 }); },
   setSpinLabel(t, sub) { $('spinLabel').textContent = t; $('spinSub').textContent = sub || ''; },
   wait(ms) { return sleep(ms / state.speed); },
+  // Rayo que cae desde arriba sobre un punto del tablero
+  strike(x, y, color = '#9feaff') {
+    const [a, b] = app.toFx(x, y);
+    fx.add({ type: 'bolt', x1: a + rand(-60, 60), y1: -10, x2: a, y2: b, life: 0.5, w: 2.8, color });
+    fx.burst(a, b, 16, { type: 'spark', color, speed: 320, size: 11 });
+    fx.add({ type: 'ring', x: a, y: b, size: 8, grow: 70, width: 6, life: 0.45, color });
+    sfx.zap(0.4, 0.3); sfx.tone(90, 0.3, { vol: 0.35, slide: 0.5 });
+  },
+  // Presentación del BONO SORPRESA (aleatorio en cualquier giro pagado)
+  async mysteryIntro(sub) {
+    sfx.thunder(0.9); sfx.siren(1.2);
+    app.flash('#d8f6ff', 0.85); app.shake(true);
+    for (let i = 0; i < 5; i++) fx.add({ type: 'bolt', x1: rand(0, FW), y1: -10, x2: rand(0, FW), y2: rand(FH * 0.3, FH * 0.8), life: 0.6 + i * 0.1, w: 3, color: '#bff0ff' });
+    await showOverlay({ kind: 'banner', title: '¡BONO SORPRESA!', sub: sub || 'Los rayos activan el bono', color: '#7fe0ff', dur: 2000, t: 0, jp: true });
+  },
   pulseMeter(id) { const el = $(id); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
 };
 
@@ -278,7 +293,7 @@ function openAuto() {
   openSheet('Giros automáticos', '<p>Se detiene si no alcanza el crédito. Las funciones especiales se juegan solas.</p><div class="choices">' + [10, 25, 50, 100].map(n => '<button data-auto="' + n + '">' + n + '</button>').join('') + '<button data-auto="inf">∞</button></div>');
 }
 function openInfo() {
-  openSheet(game.name, game.info(app.bet, fmt) + '<p class="fine">Créditos ficticios de entretenimiento. Sin dinero real, sin compras. Guardado en este dispositivo.</p>');
+  openSheet(game.name, '<p class="surprise">⚡ <b>BONO SORPRESA:</b> en cualquier giro pagado pueden caer rayos que activan el bono de este juego al azar. En total el bono aparece cerca de 1 vez cada 60–90 giros.</p>' + game.info(app.bet, fmt) + '<p class="fine">Créditos ficticios de entretenimiento. Sin dinero real, sin compras. Guardado en este dispositivo.</p>');
 }
 function openInstall() {
   openSheet('Instalar en iPhone / iPad', '<ol class="steps"><li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> <span class="kbd">⬆︎</span>.</li><li>Elige <b>Agregar a pantalla de inicio</b>.</li><li>Ábrela desde el ícono: se ejecuta a pantalla completa y funciona sin conexión.</li></ol><p class="fine">Si no oyes sonido, revisa que el interruptor de silencio del iPhone esté desactivado.</p>');

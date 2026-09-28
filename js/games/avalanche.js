@@ -7,14 +7,15 @@ import { weighted } from '../reels.js';
 
 const COLS = 6, ROWS = 5;
 export const PAY = {
-  queen: [4.4, 10.56, 22], diamond: [1.1, 4.4, 10.56], bstar: [0.88, 2.2, 7.04], gstar: [0.66, 0.88, 5.28],
-  K: [0.44, 0.66, 4.4], Q: [0.35, 0.53, 3.52], J: [0.22, 0.44, 2.2], ten: [0.13, 0.35, 0.88]
+  queen: [3.65, 8.76, 18.26], diamond: [0.91, 3.65, 8.76], bstar: [0.73, 1.83, 5.84], gstar: [0.55, 0.73, 4.38],
+  K: [0.37, 0.55, 3.65], Q: [0.29, 0.44, 2.92], J: [0.18, 0.37, 1.83], ten: [0.11, 0.29, 0.73]
 };
 export const WEIGHTS = { queen: 4, diamond: 7, bstar: 9, gstar: 11, K: 13, Q: 14, J: 16, ten: 18, snow: 2.1 };
 const ICON = { queen: S.QUEEN, diamond: S.DIAMOND, bstar: S.BSTAR, gstar: S.GSTAR, K: S.K, Q: S.Q, J: S.J, ten: S.TEN, snow: S.SNOW };
 const LADDER = [1, 2, 3, 5];
 // Bolas de hielo con jackpot: muy raras, pagan su jackpot al final del giro
 export const ORB_P = 0.00005;
+export const MYSTERY_P = 1 / 150;
 const ORB_JP = { mini: 70, minor: 22, major: 7, grand: 1 };
 const ORB_COLOR = { mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' };
 export function tier(n) { return n >= 12 ? 2 : n >= 10 ? 1 : n >= 8 ? 0 : -1; }
@@ -256,7 +257,22 @@ export default class Avalanche {
       s.hl = 0;
     }
     // Copos (dispersores)
-    const snows = this.grid.flat().filter(s => s.k === 'snow').length;
+    let snows = this.grid.flat().filter(s => s.k === 'snow').length;
+    // BONO SORPRESA: rayos congelan casillas en copos hasta completar 4
+    if (!free && !this.inFree && snows < 4 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+      app._forceMystery = false;
+      await app.mysteryIntro('Los rayos congelan copos de nieve');
+      const cand = [];
+      this.grid.forEach((col, c) => col.forEach((s, r) => { if (s.k !== 'snow' && s.k !== 'orb') cand.push([c, r]); }));
+      for (let i = cand.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [cand[i], cand[j]] = [cand[j], cand[i]]; }
+      while (snows < 4 && cand.length) {
+        const [c, r] = cand.pop();
+        this.grid[c][r].k = 'snow'; snows++;
+        app.strike(this.gx + c * this.cs + this.cs / 2, this.gy + r * this.cs + this.cs / 2, '#d6f4ff');
+        sfx.shatter(snows);
+        await app.wait(300);
+      }
+    }
     let celebrated = false;
     if (snows >= (this.inFree ? 3 : 4)) {
       this.grid.forEach(col => col.forEach(s => { if (s.k === 'snow') s.hl = 1; }));

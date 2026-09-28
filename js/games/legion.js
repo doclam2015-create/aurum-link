@@ -10,11 +10,12 @@ export const PAY = {
   K: [0, 0, 0, 5, 12, 35], Q: [0, 0, 0, 5, 10, 30], J: [0, 0, 0, 4, 8, 22], ten: [0, 0, 0, 4, 8, 20]
 };
 const BASEW = { emperor: 4, bull: 6, dragon: 7, rstar: 8, K: 12, Q: 12, J: 14, ten: 14, phoenix: 1.25, coin: 0.9 };
+export const MYSTERY_P = 1 / 140;
 export const PICK_W = { mini: 60, minor: 28, major: 10, grand: 2 };
 const JPC = { mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' };
 export const W_REEL = [0, 1, 2, 3, 4].map(c => Object.assign({}, BASEW, (c >= 1 && c <= 3) ? { wild: 2.2 } : {}));
 const ICON = { emperor: S.EMPEROR, bull: S.BULL, dragon: S.DRAGON, rstar: S.RSTAR, K: S.K, Q: S.Q, J: S.J, ten: S.TEN, wild: S.WILD, phoenix: S.PHOENIX };
-const UNIT = 1 / 72;
+const UNIT = 1 / 110;
 
 // g[col][row] = {k, m?}; devuelve ganadores por símbolo con multiplicador de wilds (producto por columna)
 export function evalWays(g, bet) {
@@ -158,7 +159,7 @@ export default class Legion {
           const px = this.gx + c * this.cw + this.cw / 2, py = this.gy + r * this.ch + this.ch / 2;
           if (s.k === 'phoenix') { sfx.bell(660 + c * 110, 1, 0.12); app.burst(px, py, 16, { type: 'ember', color: '#ff8a20', speed: 280, size: 11, lift: 60 }); }
           if (s.k === 'wild' && this.inFree && !this.sticky[r * COLS + c]) {
-            this.sticky[r * COLS + c] = { m: Math.random() < 0.7 ? 2 : 3, t: 0 }; wildsNew++;
+            this.sticky[r * COLS + c] = { m: Math.random() < 0.9 ? 2 : 3, t: 0 }; wildsNew++;
             sfx.sticky(); app.burst(px, py, 20, { type: 'spark', color: '#ffb030', speed: 300, size: 10 });
           }
         });
@@ -187,7 +188,24 @@ export default class Legion {
       total += v; if (this.inFree) this.fsTotal += v;
     }
     // Fénix
-    const phoenix = grid.flat().filter(s => s.k === 'phoenix').length;
+    let phoenix = grid.flat().filter(s => s.k === 'phoenix').length;
+    // BONO SORPRESA: rayos invocan fénix hasta completar 3
+    if (!free && !this.inFree && phoenix < 3 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+      app._forceMystery = false;
+      await app.wait(wins.length ? 900 : 300);
+      this.wins = null;
+      await app.mysteryIntro('Los rayos invocan al fénix');
+      const cand = [];
+      grid.forEach((col, c) => col.forEach((s, r) => { if (s.k !== 'phoenix' && !this.sticky[r * COLS + c]) cand.push([c, r]); }));
+      for (let i = cand.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [cand[i], cand[j]] = [cand[j], cand[i]]; }
+      while (phoenix < 3 && cand.length) {
+        const [c, r] = cand.pop(), ph = { k: 'phoenix' };
+        grid[c][r] = ph; this.reels.setCell(c, r, ph); phoenix++;
+        app.strike(this.gx + c * this.cw + this.cw / 2, this.gy + r * this.ch + this.ch / 2, '#ffb04a');
+        sfx.bell(660 + phoenix * 110, 1, 0.12);
+        await app.wait(320);
+      }
+    }
     if (!this.inFree && phoenix >= 3) {
       await app.wait(wins.length ? 1200 : 400);
       const n = phoenix >= 5 ? 20 : phoenix === 4 ? 12 : 8;

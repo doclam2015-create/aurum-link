@@ -328,6 +328,8 @@ export class Particles {
         x.globalCompositeOperation = 'source-over';
         const sc = t < 0.15 ? ease.outBack(t / 0.15) : 1;
         goldText(x, p.text, p.x, p.y - t * 30, p.size * sc, { colors: p.colors });
+      } else if (p.type === 'bolt') {
+        if (Math.random() < 0.85) bolt(x, p.x1, p.y1, p.x2, p.y2, p.w || 2.5, p.color, p.alpha * fade);
       } else if (p.type === 'snow') {
         x.globalCompositeOperation = 'lighter';
         x.drawImage(glow('rgba(200,235,255,0.9)', 32), p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);

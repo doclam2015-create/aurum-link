@@ -4,13 +4,14 @@
 import { S, sym, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js';
 import { ReelSet, LINES_3x3, weighted, weightedIdx } from '../reels.js';
 
-export const PAY = { seven: 80, bell: 32, melon: 24, grapes: 24, plum: 12, orange: 12, cherry: 8 };
+export const PAY = { seven: 60, bell: 24, melon: 18, grapes: 18, plum: 9, orange: 9, cherry: 6 };
 const W_REEL = [
   { seven: 3, bell: 6, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, sun: 2.4 },
   { seven: 3, bell: 6, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, sun: 2.4, wild: 2.2 },
   { seven: 3, bell: 6, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, sun: 2.4 }
 ];
 const ICON = { seven: S.SEVEN, bell: S.BELL, melon: S.MELON, grapes: S.GRAPES, plum: S.PLUM, orange: S.ORANGE, cherry: S.CHERRY, sun: S.SUN, wild: S.BURST };
+export const MYSTERY_P = 1 / 90;
 export const WHEEL = [
   { t: 'x10', m: 10, w: 20 }, { t: 'x20', m: 20, w: 12 }, { t: 'MINI', jp: 'mini', w: 8, col: '#34c24d' },
   { t: 'x15', m: 15, w: 16 }, { t: 'x50', m: 50, w: 6 }, { t: 'MINOR', jp: 'minor', w: 4, col: '#1fb7d8' },
@@ -197,7 +198,24 @@ export default class FireWheel {
       app.flyCoins(this.gx + this.cs * 1.5, this.gy + this.cs * 1.5, Math.min(14, 3 + wins.length * 2));
       app.message('Premio: <b>' + app.fmt(total) + '</b>' + (this.expanded ? ' · WILD x2' : ''));
     } else app.message(this.hint);
-    const suns = grid.flat().filter(s => s.k === 'sun').length;
+    let suns = grid.flat().filter(s => s.k === 'sun').length;
+    // BONO SORPRESA: rayos de fuego encienden soles hasta completar 3
+    if (suns < 3 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+      app._forceMystery = false;
+      await app.wait(wins.length ? 900 : 300);
+      this.wins = null;
+      await app.mysteryIntro('Los rayos encienden los soles');
+      const cand = [];
+      for (let c = 0; c < 3; c++) if (c !== 1 || !this.expanded) for (let r = 0; r < 3; r++) if (grid[c][r].k !== 'sun') cand.push([c, r]);
+      for (let i = cand.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [cand[i], cand[j]] = [cand[j], cand[i]]; }
+      while (suns < 3 && cand.length) {
+        const [c, r] = cand.pop(), sn = { k: 'sun' };
+        grid[c][r] = sn; this.reels.setCell(c, r, sn); suns++;
+        app.strike(this.gx + c * this.cs + this.cs / 2, this.gy + r * this.cs + this.cs / 2, '#ffc04a');
+        sfx.bell(880 + suns * 220, 0.8, 0.12);
+        await app.wait(320);
+      }
+    }
     let celebrated = false;
     if (suns >= 3) {
       await app.wait(wins.length ? 1300 : 500);

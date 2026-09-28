@@ -17,6 +17,8 @@ export class ReelSet {
     this.time = 0;
     this._resolve = null;
   }
+  // Reemplaza el símbolo visible de una celda (para efectos como el Bono Sorpresa)
+  setCell(c, r, sym) { this.grid[c][r] = sym; this.columns[c].syms[r + 1] = sym; }
   layout(x, y, cw, ch) { this.x = x; this.y = y; this.cw = cw; this.ch = ch; }
 
   // speed: 0.5 (lento) … 3 (muy rápido)

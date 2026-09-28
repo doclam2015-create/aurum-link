@@ -16,7 +16,7 @@ export const PAY = {
 };
 const W_BASE = { s7r: 3, s7b: 4, bar: 5, bell: 7, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, ball: 6.15, g1: 1.1, g2: 0.6, g3: 0.3 };
 const W_UP = Object.assign({}, W_BASE, { g1: 0, g2: 0, g3: 0, ball: 7.5 });
-const VALS = [1, 2, 3, 4, 5, 8, 10, 15, 20, 50];
+const VALS = [0.5, 1, 1.5, 2, 2.5, 4, 5, 8, 10, 25];
 const VAL_W = [26, 22, 16, 10, 9, 6, 4, 2.5, 1.5, 0.3];
 const JP_W = { mini: 2.2, minor: 0.8, major: 0.12, grand: 0.01 };
 const ICON = { s7r: S.SEVEN, s7b: S.SEVEN, bell: S.BELL, melon: S.MELON, grapes: S.GRAPES, plum: S.PLUM, orange: S.ORANGE, cherry: S.CHERRY, g1: S.GSTAR, g2: S.BSTAR, g3: S.RSTAR };
@@ -33,6 +33,8 @@ export function linesFor(rows) {
 }
 
 // Probabilidades de especiales dentro de Golden Spins (por bola que cae)
+// Probabilidad de BONO SORPRESA por giro pagado
+export const MYSTERY_P = 1 / 110;
 export const SPECIAL_W = { extra: 0.05, launch: 0.03, upgrade: 0.025 };
 // jpBoost > 1 aumenta la chance de jackpot (bolas lanzadas por el Multiplicador)
 export function makeBall(bet, inBonus, jpBoost = 1, noSpecial = false) {
@@ -418,6 +420,25 @@ export default class XLink {
     // Bolas en área activa
     const balls = [];
     grid.forEach((col, c) => col.forEach((s, r) => { if (s.ball) balls.push({ c, row: r + off, s }); }));
+    // BONO SORPRESA: rayos convierten casillas en bolas hasta completar 6
+    if (balls.length < 6 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+      app._forceMystery = false;
+      await app.wait(wins.length ? 900 : 300);
+      this.wins = null;
+      await app.mysteryIntro('Los rayos traen bolas doradas');
+      const free = [];
+      for (let c = 0; c < COLS; c++) for (let r = 0; r < BASE_R; r++) if (!final[c][r].ball) free.push([c, r]);
+      for (let i = free.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [free[i], free[j]] = [free[j], free[i]]; }
+      while (balls.length < 6 && free.length) {
+        const [c, r] = free.pop(), sb = makeBall(bet, false);
+        this.base.setCell(c, r, sb); final[c][r] = sb;
+        balls.push({ c, row: r + 5, s: sb });
+        const [px, py] = this.cellCenter(c, r + 5);
+        app.strike(px, py); sfx.ballLand(balls.length);
+        await app.wait(280);
+      }
+      await app.wait(400);
+    }
     if (balls.length >= 6) {
       await app.wait(wins.length ? 1400 : 500);
       this.wins = null;
@@ -479,7 +500,7 @@ export default class XLink {
       await app.wait(600);
       empties.sort((a, z) => a[0] - z[0] || z[1] - a[1]);
       // Probabilidad por celda: más difícil con tablero grande
-      const p = 0.08 - Math.min(0.028, b.count * 0.0009);
+      const p = 0.072 - Math.min(0.025, b.count * 0.0009);
       let got = 0;
       const step = Math.max(35, Math.min(90, 900 / empties.length)) / app.speed;
       for (let i = 0; i < empties.length; i++) {
