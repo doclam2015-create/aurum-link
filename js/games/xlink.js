@@ -88,14 +88,15 @@ export function hiddenStars(bet) {
 }
 // Modo FORMAS (temas tipo Red Dream): paga iguales en rodillos contiguos desde la izquierda en
 // cualquier fila activa; el premio se multiplica por la cantidad de formas. El wild sustituye.
-export const WAYS_UNIT = 1 / 328;
+export const WAYS_UNIT = 1 / 185;
 export function evalWays(grid, rows, bet, PAY = PAYT) {
   const wins = [];
   for (const k in PAY) {
     let ways = 1, n = 0; const cells = [];
     for (let c = 0; c < COLS; c++) {
       let cnt = 0;
-      for (let r = 0; r < rows; r++) { const s = grid[c][r]; if (s && (s.k === k || (s.k === 'wild' && c > 0))) { cnt++; cells.push([c, r]); } }
+      const hc = Array.isArray(rows) ? rows[c] : rows;
+      for (let r = 0; r < hc; r++) { const s = grid[c][r]; if (s && (s.k === k || (s.k === 'wild' && c > 0))) { cnt++; cells.push([c, r]); } }
       if (!cnt) break;
       ways *= cnt; n++;
     }
@@ -135,8 +136,9 @@ export default class XLink {
     const drawSym = (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o);
     this.base = new ReelSet({ cols: COLS, rows: BASE_R, pick: c => pickSym(this.wFor(c), app.bet), drawSym });
     this.upper = new ReelSet({ cols: COLS, rows: 5, pick: c => pickSym(this.wFor(c, true), app.bet), drawSym });
-    this.expand = 0;         // filas superiores activas en el juego base
+    this.expand = 0; this.expandCols = null;         // filas superiores activas en el juego base
     this.glass = [1, 1, 1, 1, 1]; // opacidad del vidrio por fila superior (0 = arriba)
+    this.glassC = [0, 1, 2, 3, 4].map(() => [1, 1, 1, 1, 1]); // lo mismo por rodillo (apertura por rodillo)
     this.bonus = null;
     this.wins = null; this.winT = 0;
     this.time = 0;
@@ -252,6 +254,29 @@ export default class XLink {
     }
     return cache[key];
   }
+  // Figura alta de 2 casillas con marco helado en punta (tema tipo Snow Kingdom)
+  stackImg(k, w, h) {
+    const key = k + '|' + w + '|' + h, cache = this._stack || (this._stack = {});
+    if (cache[key]) return cache[key];
+    const c = makeCanvas(w, h), x = c.getContext('2d'), m = w * 0.05, peak = h * 0.1;
+    const shape = () => { x.beginPath(); x.moveTo(m, peak + m); x.lineTo(w / 2, m); x.lineTo(w - m, peak + m); x.lineTo(w - m, h - m); x.lineTo(m, h - m); x.closePath(); };
+    let g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#cfe9ff'); g.addColorStop(1, '#8fc4f0');
+    shape(); x.fillStyle = g; x.fill();
+    // Interior con la figura
+    x.save(); shape(); x.clip();
+    g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2a4a8a'); g.addColorStop(1, '#0a1a4a');
+    x.fillStyle = g; x.fillRect(m * 2.2, m * 2.2, w - m * 4.4, h - m * 4.4);
+    const img = sym(this.T.icon[k], w * 1.15);
+    x.drawImage(img, (w - w * 1.15) / 2, h * 0.16, w * 1.15, w * 1.15);
+    // Base de montaña nevada
+    x.fillStyle = '#eaf6ff'; x.beginPath(); x.moveTo(m, h - m); x.lineTo(w * 0.3, h * 0.84); x.lineTo(w * 0.5, h * 0.9); x.lineTo(w * 0.72, h * 0.8); x.lineTo(w - m, h - m); x.closePath(); x.fill();
+    x.restore();
+    shape(); x.lineWidth = w * 0.03; x.strokeStyle = '#e8f8ff'; x.stroke();
+    return (cache[key] = c);
+  }
+  // Filas abiertas en un rodillo (iguales en todos salvo en temas con apertura por rodillo)
+  colOpen(c) { return this.expandCols ? this.expandCols[c] : this.expand; }
   isBar(k) { return k === 'bar' && !this.T.icon.bar; }
   // Sprite de un símbolo según el tema (BAR dibujado, variante de color opcional)
   symImg(k, size, v = 'n') {
@@ -262,6 +287,16 @@ export default class XLink {
   }
   drawSym(x, s, px, py, w, h, o) {
     if (!s) return;
+    // Pila de 2: una sola figura alta que ocupa ambas casillas (la dibuja la de arriba)
+    if (s.stack && !(o && o.blur)) {
+      if (s.stack === 'bot') return;
+      let sc = 1, alpha = 1;
+      if (o && o.fx) { sc = o.fx.scale || 1; alpha = o.fx.alpha == null ? 1 : o.fx.alpha; }
+      x.globalAlpha = alpha;
+      x.drawImage(this.stackImg(s.k, Math.round(w * this.app.dpr), Math.round(h * 2 * this.app.dpr)), px + w * (1 - sc) / 2, py + h * (1 - sc), w * sc, h * 2 * sc);
+      x.globalAlpha = 1;
+      return;
+    }
     const dpr = this.app.dpr, size = Math.min(w, h) * (s.ball ? 1.02 : 0.86);
     let sc = 1, alpha = 1;
     if (o && o.fx) { sc = o.fx.scale || 1; alpha = o.fx.alpha == null ? 1 : o.fx.alpha; }
@@ -287,6 +322,10 @@ export default class XLink {
       const open = this.bonus ? i >= MAXR - this.bonus.rows : i >= 5 - this.expand;
       const tgt = open ? 0 : 1;
       this.glass[i] += (tgt - this.glass[i]) * Math.min(1, dt * 5);
+      for (let c = 0; c < COLS; c++) {
+        const oc = this.bonus ? open : i >= 5 - this.colOpen(c);
+        this.glassC[c][i] += ((oc ? 0 : 1) - this.glassC[c][i]) * Math.min(1, dt * 5);
+      }
     }
   }
 
@@ -307,8 +346,15 @@ export default class XLink {
     const ay = by + (MAXR - act) * ch;
     x.save(); x.globalCompositeOperation = 'lighter';
     x.strokeStyle = this.bonus ? 'rgba(120,220,255,0.9)' : 'rgba(90,200,255,0.75)'; x.lineWidth = 3;
-    x.strokeRect(bx + 1.5, ay + 1.5, bw - 3, act * ch - 3);
-    x.globalAlpha = 0.3 + 0.2 * Math.sin(time * 4); x.lineWidth = 8; x.strokeRect(bx, ay, bw, act * ch);
+    if (this.expandCols && !this.bonus) {
+      // Contorno escalonado: cada rodillo con su propia altura
+      x.beginPath();
+      for (let c = 0; c < COLS; c++) { const y = by + (MAXR - BASE_R - this.expandCols[c]) * ch + 1.5; c ? x.lineTo(bx + c * cw, y) : x.moveTo(bx + 1.5, y); x.lineTo(bx + (c + 1) * cw - (c === COLS - 1 ? 1.5 : 0), y); }
+      x.lineTo(bx + bw - 1.5, by + bh - 1.5); x.lineTo(bx + 1.5, by + bh - 1.5); x.closePath(); x.stroke();
+    } else {
+      x.strokeRect(bx + 1.5, ay + 1.5, bw - 3, act * ch - 3);
+      x.globalAlpha = 0.3 + 0.2 * Math.sin(time * 4); x.lineWidth = 8; x.strokeRect(bx, ay, bw, act * ch);
+    }
     x.restore();
     if (this.wins) this.drawWins(x);
     this.drawRails(x);
@@ -402,8 +448,8 @@ export default class XLink {
   drawPanels(x) {
     const { bx, by, cw, ch } = this, P = this.T.panels, L = this.app.light;
     for (let i = 0; i < 5; i++) {
-      const a = this.glass[i]; if (a < 0.02) continue;
       for (let c = 0; c < COLS; c++) {
+        const a = this.glassC[c][i]; if (a < 0.02) continue;
         const px = bx + c * cw + 3, py = by + i * ch;
         const g = x.createLinearGradient(px, 0, px + cw - 6, 0);
         g.addColorStop(0, P.col[1]); g.addColorStop(0.5, P.col[0]); g.addColorStop(1, P.col[1]);
@@ -411,12 +457,11 @@ export default class XLink {
       }
     }
     x.globalAlpha = 1;
-    const locked = this.glass.filter(v => v > 0.5).length;
-    if (!locked) return;
-    const h = locked * ch;
     x.strokeStyle = P.border; x.lineWidth = 2;
     for (let c = 0; c < COLS; c++) {
-      const px = bx + c * cw + 3;
+      const locked = this.glassC[c].filter(v => v > 0.5).length;
+      if (!locked) continue;
+      const h = locked * ch, px = bx + c * cw + 3;
       x.strokeRect(px + 0.5, by + 2, cw - 7, h - 4);
       x.strokeRect(px + 5, by + 7, cw - 16, h - 14);
       if (P.tassel) {
@@ -476,7 +521,7 @@ export default class XLink {
 
   async play(bet) {
     const app = this.app, sfx = app.sfx;
-    this.wins = null; this.expand = 0;
+    this.wins = null; this.expand = 0; this.expandCols = null;
     const final = [];
     for (let c = 0; c < COLS; c++) { final.push([]); for (let r = 0; r < BASE_R; r++) final[c].push(pickSym(this.wFor(c), bet)); }
     // Filas extra según el tema: estrellas (original), pilas de princesa o velos que se abren al azar.
@@ -491,7 +536,7 @@ export default class XLink {
         const opts = [0, 1].filter(r => !final[c][r].ball && !final[c][r + 1].ball);
         if (!opts.length) continue;
         const r = opts[Math.random() * opts.length | 0];
-        final[c][r] = { k: 's7r', stack: 1 }; final[c][r + 1] = { k: 's7r', stack: 1 };
+        final[c][r] = { k: 's7r', stack: 'top' }; final[c][r + 1] = { k: 's7r', stack: 'bot' };
         stacks.push([c, r], [c, r + 1]);
       }
     }
@@ -528,13 +573,17 @@ export default class XLink {
         const [x1, y1] = this.cellCenter(c, r + 5), [x2, y2] = this.cellCenter(c, 5 - k);
         this.bolts.push({ x1, y1, x2, y2, t: 0, life: 0.9, w: 2.4, color: s.stack ? '#e8f8ff' : undefined });
       }));
-      if (mode === 'random') for (let c = 0; c < COLS; c++) { const [px, py] = this.cellCenter(c, 5 - k); app.burst(px, py, 10, { type: 'spark', color: '#ffd06a', speed: 220, size: 9 }); }
+      // Apertura por rodillo: cada rodillo abre de 0 a k posiciones (al menos uno abre k)
+      const kc = [k, k, k, k, k];
+      if (this.T.perReel) { for (let c = 0; c < COLS; c++) kc[c] = Math.max(0, k - (Math.random() * 3 | 0)); kc[Math.random() * COLS | 0] = k; this.expandCols = kc; }
+      if (mode === 'random') for (let c = 0; c < COLS; c++) { if (!kc[c]) continue; const [px, py] = this.cellCenter(c, 5 - kc[c]); app.burst(px, py, 10, { type: 'spark', color: '#ffd06a', speed: 220, size: 9 }); }
       sfx.rowUnlock(k);
       app.flash(mode === 'random' ? '#ffd0a0' : '#9fe8ff', 0.35); app.shake(false);
       this.expand = k;
-      const cnt = this.T.ways ? Math.pow(BASE_R + k, 5).toLocaleString('es-CL') + ' formas' : linesFor(BASE_R + k).length + ' líneas';
+      const opened = kc.reduce((a, v) => a + v, 0);
+      const cnt = this.T.ways ? kc.reduce((a, v) => a * (BASE_R + v), 1).toLocaleString('es-CL') + ' formas' : linesFor(BASE_R + k).length + ' líneas';
       const why = mode === 'random' ? '¡Se abren los velos!' : mode === 'princess' ? '¡La princesa derrite el hielo!' : '¡Estrellas!';
-      app.message(why + ' <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ' + cnt);
+      app.message(why + (this.T.perReel ? ' <b>+' + opened + ' posiciones</b> · ' : ' <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ') + cnt);
       for (let i = 0; i < k; i++) { const [px, py] = this.cellCenter(2, 4 - i); app.burst(px, py, 18, { type: 'shard', color: '#bfe6ff', speed: 300, size: 7, g: 500 }); }
       await app.wait(400);
       const up = [];
@@ -544,22 +593,23 @@ export default class XLink {
       await this.upper.stopTo(up, {
         onStop: (c, last) => {
           sfx.reelStop(c, last);
-          up[c].forEach((s, r) => { if (s.ball && r >= 5 - k) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } });
+          up[c].forEach((s, r) => { if (s.ball && r >= 5 - kc[c]) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } });
         }
       });
-      grid = up.map((col, c) => col.slice(5 - k).concat(final[c]));
+      grid = up.map((col, c) => col.slice(5 - kc[c]).concat(final[c]));
     }
     const rows = BASE_R + this.expand;
     // Premios de líneas
     const lineBet = bet / 20;
     const ways = !!this.T.ways;
     const pay = this.T.pay || PAY;
-    const wins = ways ? evalWays(grid, rows, bet, pay) : evalLines(grid, rows, lineBet, pay);
+    const heights = grid.map(col => col.length);
+    const wins = ways ? evalWays(grid, heights, bet, pay) : evalLines(grid, rows, lineBet, pay);
     let total = 0;
-    const off = MAXR - rows;
+    const off = MAXR - rows, offC = heights.map(h => MAXR - h);
     if (wins.length) {
       total = wins.reduce((a, w) => a + w.win, 0);
-      this.wins = ways ? wins.map(w => ({ win: w.win, cells: w.cells.map(([c, r]) => [c, r + off]), label: w.ways + (w.ways > 1 ? ' formas' : ' forma') }))
+      this.wins = ways ? wins.map(w => ({ win: w.win, cells: w.cells.map(([c, r]) => [c, r + offC[c]]), label: w.ways + (w.ways > 1 ? ' formas' : ' forma') }))
         : wins.map(w => ({ line: w.line.map(r => r + off), win: w.win, cells: w.line.slice(0, w.n).map((r, c) => [c, r + off]) }));
       this.winT = 0;
       sfx.win(total >= bet * 5 ? 2 : 0);
@@ -570,7 +620,7 @@ export default class XLink {
     } else if (stars === 0) app.message(this.hint);
     // Bolas en área activa
     const balls = [];
-    grid.forEach((col, c) => col.forEach((s, r) => { if (s.ball) balls.push({ c, row: r + off, s }); }));
+    grid.forEach((col, c) => col.forEach((s, r) => { if (s.ball) balls.push({ c, row: r + offC[c], s }); }));
     // BONO SORPRESA: rayos convierten casillas en bolas hasta completar 6
     if (balls.length < 6 && (Math.random() < MYSTERY_P || app._forceMystery)) {
       app._forceMystery = false;
@@ -606,7 +656,7 @@ export default class XLink {
 
   async buyBonus(bet) {
     const app = this.app;
-    this.wins = null; this.expand = 0;
+    this.wins = null; this.expand = 0; this.expandCols = null;
     app.sfx.whoosh();
     const pos = [];
     while (pos.length < 6) { const c = Math.random() * 5 | 0, r = 5 + (Math.random() * 3 | 0); if (!pos.some(p => p.c === c && p.row === r)) pos.push({ c, row: r }); }
@@ -631,7 +681,7 @@ export default class XLink {
     while (b.rows < MAXR && b.count >= THRESH[b.rows - 3]) b.rows++;
     // Símbolos de relleno atenuados para celdas vacías
     for (let r = 0; r < MAXR; r++) { b.filler.push([]); for (let c = 0; c < COLS; c++) b.filler[r].push(pickSym(W_UP, bet)); }
-    this.expand = 0;
+    this.expand = 0; this.expandCols = null;
     sfx.stopMusic();
     app.flash('#fff2b0', 0.7); app.shake(true);
     sfx.featureStart();
@@ -734,7 +784,7 @@ export default class XLink {
     await app.wait(400);
     await app.celebrate(sum, bet, 'GOLDEN SPINS');
     this.bonus = null;
-    this.expand = 0;
+    this.expand = 0; this.expandCols = null;
     sfx.stopMusic(); sfx.music(this.constructor.music);
     app.message('Golden Spins pagó <b>' + app.fmt(sum) + '</b>');
     return sum;
@@ -858,7 +908,7 @@ export default class XLink {
     return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
       (this.T.ways
         ? '<li><b>5 rodillos × 3 filas, 243 formas</b>: pagan iguales en rodillos contiguos desde la izquierda, en cualquier fila; el premio se multiplica por las formas. <b>WILD</b> en los rodillos 2 a 4.</li>' +
-          '<li><b>Velos al azar</b>: en cualquier giro los paneles rojos pueden abrirse por sorpresa (1 a 5 filas) solo para ese giro. Con 8 filas hay <b>32.768 formas</b>.</li>'
+          '<li><b>Velos al azar</b>: en cualquier giro se abren por sorpresa <b>hasta 25 posiciones</b>; cada rodillo abre su propia cantidad (0 a 5) solo para ese giro. Las formas son la multiplicación de las alturas: hasta <b>32.768</b>.</li>'
         : '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
           (this.T.expand === 'princess'
             ? '<li><b>Reina en pila de 2</b>: cada pila derrite el hielo y abre <b>1 fila</b> (máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>'

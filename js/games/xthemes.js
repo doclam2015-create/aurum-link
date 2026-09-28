@@ -10,7 +10,7 @@ import XLink, { THEME, PAY, linesFor } from './xlink.js?v=32';
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
 function activeRows(g) { return g.bonus ? g.bonus.rows : BASE_R + g.expand; }
-function waysText(g) { return Math.pow(activeRows(g), 5).toLocaleString('es-CL'); }
+function waysText(g) { if (g.bonus) return Math.pow(g.bonus.rows, 5).toLocaleString('es-CL'); let w = 1; for (let c = 0; c < 5; c++) w *= BASE_R + g.colOpen(c); return w.toLocaleString('es-CL'); }
 function linesText(g) { return String(linesFor(activeRows(g)).length); }
 // Letrero lateral "243 FORMAS DE GANAR" (como en la máquina)
 function waysBadge(x, cx, cy, w, text, col, txt, l1 = 'FORMAS', l2 = 'DE GANAR') {
@@ -24,7 +24,7 @@ function waysBadge(x, cx, cy, w, text, col, txt, l1 = 'FORMAS', l2 = 'DE GANAR')
 
 // ---------- SUEÑO ROJO ----------
 const RED = Object.assign({}, THEME, {
-  ways: true, wild: 2.5, top: 34, bottom: 14, expand: 'random', ball: 0.97,
+  ways: true, wild: 2.5, top: 34, bottom: 14, expand: 'random', perReel: true, ball: 1.12,
   icon: Object.assign({}, THEME.icon, { s7r: S.GEISHA, s7b: S.DRAGON, bar: S.PHOENIX, bell: S.BELL, melon: S.CLOVER, grapes: S.K, plum: S.Q, orange: S.J, cherry: S.TEN, wild: S.WILD }),
   variant: {},
   names: { s7r: 'Princesa', s7b: 'Dragón', bar: 'Fénix', bell: 'Campana de oro', melon: 'Jade', grapes: 'K', plum: 'Q', orange: 'J', cherry: '10' },
@@ -46,7 +46,7 @@ export class RedDream extends XLink {
   };
   constructor(app) {
     super(app);
-    this.hint = '<b>243 formas</b> de ganar. Los paneles se abren <b>al azar</b>. 6 bolas doradas = <b>GOLDEN SPINS</b>.';
+    this.hint = '<b>243 formas</b>. Hasta <b>25 posiciones</b> se abren al azar. 6 bolas doradas = <b>GOLDEN SPINS</b>.';
     this.petals = []; for (let i = 0; i < 18; i++) this.petals.push({ x: Math.random(), y: Math.random(), v: rand(0.02, 0.05), s: rand(3, 5.5), p: Math.random() * 6, r: Math.random() * 6 });
   }
   get animating() { return true; }
