@@ -35,6 +35,6 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 ## Técnica
 - Render en `<canvas>` con sprites pre-escalados (sin reescalado por cuadro), fondos cacheados, DPR limitado a 2 y 30 fps en reposo → fluido en iOS.
 - Sonido y música 100 % sintetizados con Web Audio (sin archivos).
-- `assets/symbols.webp` (475 KB) reemplaza los ~4 MB de imágenes embebidas del diseño anterior. Se regenera con `python3 tools/build_atlas.py` desde `assets/src/`. Las imágenes de Sueño Rojo y Reino de Nieve van en `assets/themes.webp` (`python3 tools/build_themes.py` desde `assets/src/themes/`) y las de Carrera del Lobo en `assets/wolf.webp` (`python3 tools/build_wolf.py` desde `assets/src/wolf/`, generadas con IA en Canva).
+- `assets/symbols.webp` (475 KB) reemplaza los ~4 MB de imágenes embebidas del diseño anterior. Se regenera con `python3 tools/build_atlas.py` desde `assets/src/`. Las imágenes de Sueño Rojo y Reino de Nieve van en `assets/themes.webp` (`python3 tools/build_themes.py` desde `assets/src/themes/`) y las de Carrera del Lobo en `assets/wolf.webp` (`python3 tools/build_wolf.py` desde `assets/src/wolf/`, generadas con IA en Canva). El aullido `assets/sfx/howl.wav` se genera con `python3 tools/make_howl.py`.
 - Tras cada cambio: `python3 tools/bump_version.py N` para que Safari/iOS descargue todos los archivos nuevos (la versión aparece en el lobby y en Ajustes).
 - Service worker para uso offline. Se publica con GitHub Pages desde `main` (`.github/workflows/pages.yml`).

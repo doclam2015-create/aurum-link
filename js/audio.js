@@ -34,6 +34,7 @@ class Sfx {
       this.verbSend = ctx.createGain(); this.verbSend.gain.value = 0.28;
       this.verbSend.connect(this.verb); this.verb.connect(this.master);
       this.noiseBuf = this._noise(2);
+      this.samples = this.samples || {}; this._decode();
       this.crackleBuf = this._crackle(1.2);
       this.brownBuf = this._brown(4);
       // Buffer silencioso: requisito de iOS para habilitar el audio
@@ -163,7 +164,29 @@ class Sfx {
   // Viento helado: ruido filtrado que sube y baja
   wind(dur = 1.6, vol = 0.18, at = 0) { this.noise(dur, { at, vol, type: 'bandpass', freq: 500, freqEnd: 1800, q: 3, verb: 0.4 }); this.noise(dur * 0.8, { at: at + 0.2, vol: vol * 0.6, type: 'bandpass', freq: 1400, freqEnd: 600, q: 5 }); }
   // Aullido de lobo: voz que sube, sostiene con vibrato y cae, con un poco de aire
+  // Muestras de audio (WAV generados en tools/): se descargan al inicio y se decodifican al activar el audio
+  preload(name, url) {
+    this._raw = this._raw || {}; this.samples = this.samples || {};
+    fetch(url).then(r => r.ok ? r.arrayBuffer() : null).then(b => { if (b) { this._raw[name] = b; this._decode(); } }).catch(() => { });
+  }
+  _decode() {
+    if (!this.ctx || !this._raw) return;
+    Object.keys(this._raw).forEach(k => { const b = this._raw[k]; delete this._raw[k]; this.ctx.decodeAudioData(b).then(buf => { this.samples[k] = buf; }).catch(() => { }); });
+  }
+  play(name, { at = 0, vol = 1, rate = 1, verb = 0 } = {}) {
+    const buf = this.samples && this.samples[name]; if (!this.ok || !buf) return false;
+    const ctx = this.ctx, t0 = ctx.currentTime + at, s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf; s.playbackRate.value = rate; g.gain.value = vol;
+    s.connect(g); g.connect(this.sfxBus);
+    if (verb) { const v = ctx.createGain(); v.gain.value = verb; g.connect(v); v.connect(this.verbSend); }
+    s.start(t0); return true;
+  }
+  // Aullido: grabación sintetizada con detalle (assets/sfx/howl.wav); variación de tono en cada uso
   howl(at = 0, vol = 0.22, f0 = 330) {
+    if (this.play('howl', { at, vol: Math.min(1, vol * 3.2), rate: (f0 / 330) * (0.94 + Math.random() * 0.1), verb: 0.25 })) return;
+    this._howlSynth(at, vol, f0);
+  }
+  _howlSynth(at = 0, vol = 0.22, f0 = 330) {
     if (!this.ok) return;
     const ctx = this.ctx, t0 = ctx.currentTime + at, d = 2.2, o = ctx.createOscillator(), o2 = ctx.createOscillator(), vib = ctx.createOscillator(), vg = ctx.createGain(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     o.type = 'sawtooth'; o2.type = 'sine';
@@ -313,7 +336,7 @@ class Sfx {
     [1, 1.25, 1.5, 2].forEach((m, i) => this.tone(base * m, 0.9, { type: 'triangle', vol: 0.12, at: 0.25 + i * 0.07, verb: 0.5 }));
   }
   featureStart() {
-    if (this.theme === 'wolf') { this.howl(0, 0.3, 300); this.howl(0.5, 0.2, 380); for (let i = 0; i < 10; i++) this.drum(0.2 + i * 0.16, 0.5, i % 2 ? 80 : 110); this.brass([220, 261.6, 329.6, 440], 1.6, 1.4); return; }
+    if (this.theme === 'wolf') { this.howl(0, 0.3, 320); for (let i = 0; i < 10; i++) this.drum(0.2 + i * 0.16, 0.5, i % 2 ? 80 : 110); this.brass([220, 261.6, 329.6, 440], 1.6, 1.4); return; }
     if (this.theme === 'china') { this.gong(82, 3.5, 0.5); this.firecrackers(18, 0.3); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => this.pluck(this._scale(i + 3), 0.9 + i * 0.06, 0.09)); this.brass([293.7, 370, 440, 587.3], 1.5, 1.4); return; }
     if (this.theme === 'snow') { this.wind(2.4, 0.22); this.shatter(3); for (let i = 0; i < 12; i++) this.celesta(this._scale(14 - i), 0.3 + i * 0.07, 0.07); for (let i = 0; i < 8; i++) this.jingle(0.4 + i * 0.12, 0.08); this.brass([293.7, 349.2, 440, 587.3], 1.3, 1.6); return; }
     this.thunder(0.8);
