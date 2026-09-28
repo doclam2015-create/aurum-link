@@ -281,6 +281,10 @@ class Sfx {
       jungle: { bpm: 104, root: 41, prog: [[0, M], [10, J], [8, J], [7, M]], kick: 'x..x....x..x....', snare: '......x.......x.', hat: 'x.xx.xx.x.xx.xx.', bass: [0, -1, 0, 3, -1, 5, -1, 7], arp: 'updown', lead: 'triangle', pad: 'sine', bells: 0.3, toms: true },
       // Arrecife: suave, acuático
       ocean: { bpm: 84, root: 52, prog: [[0, J], [9, M], [5, J], [7, J]], kick: 'x.......x.......', snare: '................', hat: '....x.......x...', bass: [0, -1, -1, 7, -1, -1, 5, -1], arp: 'up', lead: 'sine', pad: 'sine', bells: 0.65 },
+      // Duelo del Oeste: galope con guitarra
+      western: { bpm: 118, root: 40, prog: [[0, M], [5, M], [7, J], [0, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, -1, 7, -1, 0, -1, 7, -1], arp: 'down', lead: 'triangle', pad: 'sawtooth', bells: 0.15 },
+      // Galaxia: sintetizador espacial
+      space: { bpm: 92, root: 38, prog: [[0, M], [3, J], [10, J], [5, M]], kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', bass: [0, -1, 12, -1, 7, -1, 10, -1], arp: 'updown', lead: 'sawtooth', pad: 'sine', bells: 0.5 },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];
