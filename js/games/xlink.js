@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=31';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=31';
+import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=32';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=32';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -14,12 +14,23 @@ export const PAY = {
   bell: [0, 0, 0, 15, 50, 200], melon: [0, 0, 0, 12, 40, 160], grapes: [0, 0, 0, 12, 40, 160],
   plum: [0, 0, 0, 8, 25, 100], orange: [0, 0, 0, 8, 25, 100], cherry: [0, 0, 2, 5, 20, 80]
 };
-const W_BASE = { s7r: 3, s7b: 4, bar: 5, bell: 7, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, ball: 6.15, g1: 1.1, g2: 0.6, g3: 0.3 };
-const W_UP = Object.assign({}, W_BASE, { g1: 0, g2: 0, g3: 0, ball: 7.5 });
+const PAYT = PAY;
+export const W_BASE = { s7r: 3, s7b: 4, bar: 5, bell: 7, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, ball: 6.15, g1: 1.1, g2: 0.6, g3: 0.3 };
+export const W_UP = Object.assign({}, W_BASE, { g1: 0, g2: 0, g3: 0, ball: 7.5 });
 const VALS = [0.5, 1, 1.5, 2, 2.5, 4, 5, 8, 10, 25];
 const VAL_W = [26, 22, 16, 10, 9, 6, 4, 2.5, 1.5, 0.3];
 const JP_W = { mini: 2.2, minor: 0.8, major: 0.12, grand: 0.01 };
 const ICON = { s7r: S.SEVEN, s7b: S.SEVEN, bell: S.BELL, melon: S.MELON, grapes: S.GRAPES, plum: S.PLUM, orange: S.ORANGE, cherry: S.CHERRY, g1: S.GSTAR, g2: S.BSTAR, g3: S.RSTAR };
+// Tema visual: la lógica, los pagos y las probabilidades son iguales en todas las variantes;
+// cada tema solo cambia símbolos, nombres, colores y decoración.
+export const THEME = {
+  icon: ICON, variant: { s7b: 'blue' },
+  names: { s7r: '7 rojo', s7b: '7 azul', bar: 'BAR', bell: 'Campana', melon: 'Sandía', grapes: 'Uvas', plum: 'Ciruela', orange: 'Naranja', cherry: 'Cereza' },
+  frame: ['#ffcf6a', '#d47a12', '#ffc14d'],
+  board: ['#1b1566', '#2b0f5c', '#3a0d6a'], boardL: ['#f6f1ff', '#e6dcfb', '#d9ccf6'],
+  grid: 'rgba(80,190,255,0.35)', gridL: 'rgba(120,80,200,0.35)',
+  glass: ['rgba(40,40,110,0.82)', 'rgba(25,20,80,0.88)'], glassL: ['rgba(205,195,245,0.86)', 'rgba(180,165,235,0.9)']
+};
 
 // Líneas para N filas: los 20 patrones base desplazados por bandas (máx. 100)
 const lineCache = {};
@@ -63,14 +74,38 @@ export function makeBall(bet, inBonus, jpBoost = 1, noSpecial = false) {
   const m = VALS[Math.min(i, VALS.length - 1)];
   return { ball: true, mult: m, value: m * bet };
 }
-function pickSym(w, bet) {
+export function pickSym(w, bet) {
   const k = weighted(w);
   if (k === 'ball') return makeBall(bet, false);
   if (k[0] === 'g') return { k, star: +k[1] };
   return { k };
 }
+// Sorteo oculto con la misma probabilidad de las estrellas visibles (para temas sin estrellas)
+export function hiddenStars(bet) {
+  let n = 0;
+  for (let i = 0; i < COLS * BASE_R; i++) { const s = pickSym(W_BASE, bet); if (s.star) n += s.star; }
+  return Math.min(5, n);
+}
+// Modo FORMAS (temas tipo Red Dream): paga iguales en rodillos contiguos desde la izquierda en
+// cualquier fila activa; el premio se multiplica por la cantidad de formas. El wild sustituye.
+export const WAYS_UNIT = 1 / 328;
+export function evalWays(grid, rows, bet, PAY = PAYT) {
+  const wins = [];
+  for (const k in PAY) {
+    let ways = 1, n = 0; const cells = [];
+    for (let c = 0; c < COLS; c++) {
+      let cnt = 0;
+      for (let r = 0; r < rows; r++) { const s = grid[c][r]; if (s && (s.k === k || (s.k === 'wild' && c > 0))) { cnt++; cells.push([c, r]); } }
+      if (!cnt) break;
+      ways *= cnt; n++;
+    }
+    const p = PAY[k][n];
+    if (p) wins.push({ k, n, ways, cells: cells.filter(([c]) => c < n), win: p * WAYS_UNIT * bet * ways });
+  }
+  return wins;
+}
 // Evalúa líneas sobre una cuadrícula [col][fila] (fila 0 = arriba)
-export function evalLines(grid, rows, lineBet) {
+export function evalLines(grid, rows, lineBet, PAY = PAYT) {
   const wins = [];
   linesFor(rows).forEach((L, li) => {
     const first = grid[0][L[0]];
@@ -94,11 +129,12 @@ export default class XLink {
 
   constructor(app) {
     this.app = app;
-    this.id = XLink.id;
+    this.T = this.constructor.theme || THEME;
+    this.id = this.constructor.id;
     this.hint = '6 bolas doradas activan <b>GOLDEN SPINS</b>. Las ★ abren filas extra.';
     const drawSym = (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o);
-    this.base = new ReelSet({ cols: COLS, rows: BASE_R, pick: () => pickSym(W_BASE, app.bet), drawSym });
-    this.upper = new ReelSet({ cols: COLS, rows: 5, pick: () => pickSym(W_UP, app.bet), drawSym });
+    this.base = new ReelSet({ cols: COLS, rows: BASE_R, pick: c => pickSym(this.wFor(c), app.bet), drawSym });
+    this.upper = new ReelSet({ cols: COLS, rows: 5, pick: c => pickSym(this.wFor(c, true), app.bet), drawSym });
     this.expand = 0;         // filas superiores activas en el juego base
     this.glass = [1, 1, 1, 1, 1]; // opacidad del vidrio por fila superior (0 = arriba)
     this.bonus = null;
@@ -115,7 +151,7 @@ export default class XLink {
 
   resize(W, H) {
     this.W = W; this.H = H;
-    const top = 6, bottom = 6;
+    const top = this.T.top || 6, bottom = this.T.bottom || 6;
     const rail = Math.max(30, Math.min(56, W * 0.1));
     let cw = (W - rail * 2 - 8) / COLS;
     let ch = (H - top - bottom) / MAXR;
@@ -136,14 +172,23 @@ export default class XLink {
     x.scale(dpr, dpr);
     const bw = cw * COLS, bh = ch * MAXR, fr = 7;
     let g = x.createLinearGradient(0, by - fr, 0, by + bh + fr);
-    g.addColorStop(0, '#ffcf6a'); g.addColorStop(0.5, '#d47a12'); g.addColorStop(1, '#ffc14d');
+    const T = this.T, L = this.app.light;
+    if (this.renderScene) this.renderScene(x, W, H, L);
+    g.addColorStop(0, T.frame[0]); g.addColorStop(0.5, T.frame[1]); g.addColorStop(1, T.frame[2]);
     roundRect(x, bx - fr, by - fr, bw + fr * 2, bh + fr * 2, 12); x.fillStyle = g; x.fill();
-    const L = this.app.light;
     g = x.createLinearGradient(0, by, 0, by + bh);
-    if (L) { g.addColorStop(0, '#f6f1ff'); g.addColorStop(0.62, '#e6dcfb'); g.addColorStop(1, '#d9ccf6'); }
-    else { g.addColorStop(0, '#1b1566'); g.addColorStop(0.62, '#2b0f5c'); g.addColorStop(1, '#3a0d6a'); }
+    const bc = L ? T.boardL : T.board;
+    g.addColorStop(0, bc[0]); g.addColorStop(0.62, bc[1]); g.addColorStop(1, bc[2]);
     x.fillStyle = g; x.fillRect(bx, by, bw, bh);
-    x.strokeStyle = L ? 'rgba(120,80,200,0.35)' : 'rgba(80,190,255,0.35)'; x.lineWidth = 1;
+    // Zona base (3 filas de abajo) con color propio del tema, p. ej. verde jade
+    const zb = L ? T.baseBoardL : T.baseBoard;
+    if (zb) { g = x.createLinearGradient(0, by + (MAXR - BASE_R) * ch, 0, by + bh); g.addColorStop(0, zb[0]); g.addColorStop(0.5, zb[1]); g.addColorStop(1, zb[2]); x.fillStyle = g; x.fillRect(bx, by + (MAXR - BASE_R) * ch, bw, BASE_R * ch); }
+    // Casillas de color alternado (tema tipo Snow Kingdom)
+    if (T.tiles) for (let c = 0; c < COLS; c++) for (let r = 0; r < MAXR; r++) {
+      roundRect(x, bx + c * cw + 3, by + r * ch + 3, cw - 6, ch - 6, 6);
+      x.fillStyle = T.tiles[(c + r) % 2]; x.fill();
+    }
+    x.strokeStyle = L ? T.gridL : T.grid; x.lineWidth = 1;
     for (let i = 0; i <= COLS; i++) { x.beginPath(); x.moveTo(bx + i * cw, by); x.lineTo(bx + i * cw, by + bh); x.stroke(); }
     for (let r = 0; r <= MAXR; r++) { x.beginPath(); x.moveTo(bx, by + r * ch); x.lineTo(bx + bw, by + r * ch); x.stroke(); }
     return c;
@@ -153,8 +198,8 @@ export default class XLink {
     const c = makeCanvas(cw * COLS * dpr, ch * dpr), x = c.getContext('2d');
     x.scale(dpr, dpr);
     const g = x.createLinearGradient(0, 0, 0, ch);
-    if (this.app.light) { g.addColorStop(0, 'rgba(205,195,245,0.86)'); g.addColorStop(1, 'rgba(180,165,235,0.9)'); }
-    else { g.addColorStop(0, 'rgba(40,40,110,0.82)'); g.addColorStop(1, 'rgba(25,20,80,0.88)'); }
+    const gc = this.app.light ? this.T.glassL : this.T.glass;
+    g.addColorStop(0, gc[0]); g.addColorStop(1, gc[1]);
     x.fillStyle = g; x.fillRect(0, 0, cw * COLS, ch);
     for (let i = 0; i < COLS; i++) {
       const cx = i * cw + cw * 0.72, lg = x.createLinearGradient(cx - cw * 0.12, 0, cx + cw * 0.12, 0);
@@ -189,6 +234,32 @@ export default class XLink {
     if (s.extra) return ball('blue', '+' + s.extra, size, s.extra > 1 ? 'GIROS' : 'GIRO');
     return ball('gold', short(s.value), size);
   }
+  // Pesos por rodillo: el tema puede agregar WILD en los rodillos 2 a 4
+  // Pesos por rodillo según el tema: WILD en rodillos 2 a 4, sin estrellas si la expansión es
+  // por princesa o al azar, y sin princesa suelta si solo aparece en pilas
+  wFor(c, up) {
+    const T = this.T, mode = T.expand || 'stars', wild = T.wild && c >= 1 && c <= 3;
+    if (!wild && mode === 'stars' && !T.ball) return up ? W_UP : W_BASE;
+    const key = (up ? 'u' : 'b') + (wild ? 'w' : '');
+    const cache = this._wcache || (this._wcache = {});
+    if (!cache[key]) {
+      const w = Object.assign({}, up ? W_UP : W_BASE);
+      if (wild) w.wild = T.wild;
+      if (mode !== 'stars') { w.g1 = 0; w.g2 = 0; w.g3 = 0; }
+      if (mode === 'princess') w.s7r = 0;
+      if (T.ball) w.ball *= T.ball; // escala la frecuencia de bolas
+      cache[key] = w;
+    }
+    return cache[key];
+  }
+  isBar(k) { return k === 'bar' && !this.T.icon.bar; }
+  // Sprite de un símbolo según el tema (BAR dibujado, variante de color opcional)
+  symImg(k, size, v = 'n') {
+    if (this.isBar(k)) return this.barSprite(Math.round(size));
+    // Símbolos dibujados por el tema (tetera, papiro, huevo de jade…)
+    if (this.T.draw && this.T.draw[k]) return this.T.draw[k](Math.round(size), v);
+    return sym(this.T.icon[k] ?? S.CHERRY, size, v === 'n' && this.T.variant[k] ? this.T.variant[k] : v);
+  }
   drawSym(x, s, px, py, w, h, o) {
     if (!s) return;
     const dpr = this.app.dpr, size = Math.min(w, h) * (s.ball ? 1.02 : 0.86);
@@ -198,10 +269,8 @@ export default class XLink {
     x.globalAlpha = alpha;
     let img;
     if (s.ball) img = this.ballImg(s, size * dpr);
-    else if (s.k === 'bar') img = this.barSprite(Math.round(size * dpr));
-    else img = sym(ICON[s.k], size * dpr, o && o.blur ? 'b' : s.k === 's7b' ? 'blue' : 'n');
-    if (o && o.blur && !s.ball && s.k !== 'bar') {
-      if (s.k === 's7b') img = sym(ICON[s.k], size * dpr, 'b');
+    else img = this.symImg(s.k, size * dpr, o && o.blur ? 'b' : 'n');
+    if (o && o.blur && !s.ball && !this.isBar(s.k)) {
       x.drawImage(img, cx - d / 2, cy - d * 0.675, d, d * 1.35);
     } else x.drawImage(img, cx - d / 2, cy - d / 2, d, d);
     x.globalAlpha = 1;
@@ -259,6 +328,7 @@ export default class XLink {
       });
       x.restore();
     }
+    if (this.decorate) this.decorate(x);
   }
 
   cellFx(c, r, upper) {
@@ -274,17 +344,21 @@ export default class XLink {
     if (!w || !w.cells) return;
     const { bx, by, cw, ch } = this;
     x.save(); x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round'; x.lineCap = 'round';
-    x.beginPath();
-    w.line.forEach((rr, c) => { const px = bx + c * cw + cw / 2, py = by + rr * ch + ch / 2; c ? x.lineTo(px, py) : x.moveTo(px - cw / 2, py); });
-    x.lineTo(bx + COLS * cw, by + w.line[COLS - 1] * ch + ch / 2);
-    x.strokeStyle = 'rgba(255,210,80,0.35)'; x.lineWidth = 12; x.stroke();
-    x.strokeStyle = '#fff3b0'; x.lineWidth = 3; x.stroke();
+    if (w.line) {
+      x.beginPath();
+      w.line.forEach((rr, c) => { const px = bx + c * cw + cw / 2, py = by + rr * ch + ch / 2; c ? x.lineTo(px, py) : x.moveTo(px - cw / 2, py); });
+      x.lineTo(bx + COLS * cw, by + w.line[COLS - 1] * ch + ch / 2);
+      x.strokeStyle = 'rgba(255,210,80,0.35)'; x.lineWidth = 12; x.stroke();
+      x.strokeStyle = '#fff3b0'; x.lineWidth = 3; x.stroke();
+    }
     w.cells.forEach(([c, r]) => { x.strokeStyle = '#ffe27a'; x.lineWidth = 3; x.strokeRect(bx + c * cw + 3, by + r * ch + 3, cw - 6, ch - 6); });
     x.restore();
-    if (w.win) goldText(x, this.app.fmt(w.win), bx + cw * 2.5, by + (w.line[2] + 0.5) * ch, Math.min(34, cw * 0.5));
+    const ty = w.line ? by + (w.line[2] + 0.5) * ch : by + (MAXR - 1.5) * ch;
+    if (w.win) goldText(x, this.app.fmt(w.win) + (w.label ? ' · ' + w.label : ''), bx + cw * 2.5, ty, Math.min(30, cw * 0.45), { maxW: cw * 5 });
   }
 
   drawGlass(x) {
+    if (this.T.panels) return this.drawPanels(x);
     const { bx, by, cw, ch, time } = this;
     for (let i = 0; i < 5; i++) {
       const a = this.glass[i];
@@ -296,6 +370,7 @@ export default class XLink {
     }
     // Reflejo que recorre el vidrio
     const locked = this.glass.filter(v => v > 0.5).length;
+    if (this.T.frost && locked) this.drawFrost(x, locked);
     if (locked) {
       x.save(); x.beginPath(); x.rect(bx, by, cw * COLS, ch * locked); x.clip();
       const sx = bx + ((time * 90) % (cw * COLS * 2.2)) - cw * 1.2;
@@ -303,6 +378,51 @@ export default class XLink {
       x.fillStyle = '#b8c8ff';
       x.beginPath(); x.moveTo(sx, by); x.lineTo(sx + cw * 0.6, by); x.lineTo(sx - cw * 0.8, by + ch * locked); x.lineTo(sx - cw * 1.4, by + ch * locked); x.fill();
       x.restore();
+    }
+  }
+
+  // Escarcha: destellos sobre el hielo y borde escarchado abajo (tema tipo Snow Kingdom)
+  drawFrost(x, locked) {
+    const { bx, by, cw, ch, time } = this, bw = cw * COLS, h = locked * ch;
+    if (!this._spark) { this._spark = []; for (let i = 0; i < 46; i++) this._spark.push({ u: Math.random(), v: Math.random(), p: Math.random() * 6, s: rand(1.5, 3.5) }); }
+    x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = '#ffffff'; x.lineWidth = 1;
+    this._spark.forEach(k => {
+      const a = 0.5 + 0.5 * Math.sin(time * 3 + k.p); if (a < 0.2) return;
+      const px = bx + k.u * bw, py = by + k.v * h, s = k.s * a;
+      x.globalAlpha = a; x.beginPath(); x.moveTo(px - s, py); x.lineTo(px + s, py); x.moveTo(px, py - s); x.lineTo(px, py + s); x.stroke();
+    });
+    x.restore();
+    // Borde de escarcha
+    x.fillStyle = this.app.light ? 'rgba(235,248,255,0.95)' : 'rgba(225,244,255,0.85)';
+    for (let i = 0; i <= 40; i++) { const px = bx + i * bw / 40; x.beginPath(); x.arc(px, by + h, 3 + (i % 3), Math.PI, 0); x.fill(); }
+    x.fillRect(bx, by + h - 2, bw, 3);
+  }
+
+  // Paneles lacados por rodillo (temas tipo Red Dream) en lugar del vidrio
+  drawPanels(x) {
+    const { bx, by, cw, ch } = this, P = this.T.panels, L = this.app.light;
+    for (let i = 0; i < 5; i++) {
+      const a = this.glass[i]; if (a < 0.02) continue;
+      for (let c = 0; c < COLS; c++) {
+        const px = bx + c * cw + 3, py = by + i * ch;
+        const g = x.createLinearGradient(px, 0, px + cw - 6, 0);
+        g.addColorStop(0, P.col[1]); g.addColorStop(0.5, P.col[0]); g.addColorStop(1, P.col[1]);
+        x.globalAlpha = a * (L ? 0.8 : 0.86); x.fillStyle = g; x.fillRect(px, py, cw - 6, ch);
+      }
+    }
+    x.globalAlpha = 1;
+    const locked = this.glass.filter(v => v > 0.5).length;
+    if (!locked) return;
+    const h = locked * ch;
+    x.strokeStyle = P.border; x.lineWidth = 2;
+    for (let c = 0; c < COLS; c++) {
+      const px = bx + c * cw + 3;
+      x.strokeRect(px + 0.5, by + 2, cw - 7, h - 4);
+      x.strokeRect(px + 5, by + 7, cw - 16, h - 14);
+      if (P.tassel) {
+        x.fillStyle = P.tassel;
+        [px + 4, px + cw - 10].forEach(tx => { x.fillRect(tx, by + h - 2, 3, 8); x.beginPath(); x.arc(tx + 1.5, by + h - 2, 3, 0, 7); x.fill(); });
+      }
     }
   }
 
@@ -358,7 +478,23 @@ export default class XLink {
     const app = this.app, sfx = app.sfx;
     this.wins = null; this.expand = 0;
     const final = [];
-    for (let c = 0; c < COLS; c++) { final.push([]); for (let r = 0; r < BASE_R; r++) final[c].push(pickSym(W_BASE, bet)); }
+    for (let c = 0; c < COLS; c++) { final.push([]); for (let r = 0; r < BASE_R; r++) final[c].push(pickSym(this.wFor(c), bet)); }
+    // Filas extra según el tema: estrellas (original), pilas de princesa o velos que se abren al azar.
+    // Las dos últimas usan la misma probabilidad que las estrellas para no cambiar el equilibrio.
+    const mode = this.T.expand || 'stars';
+    let target = mode === 'stars' ? 0 : hiddenStars(bet);
+    const stacks = [];
+    if (mode === 'princess' && target) {
+      const cols = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
+      for (const c of cols) {
+        if (stacks.length >= target) break;
+        const opts = [0, 1].filter(r => !final[c][r].ball && !final[c][r + 1].ball);
+        if (!opts.length) continue;
+        const r = opts[Math.random() * opts.length | 0];
+        final[c][r] = { k: 's7r', stack: 1 }; final[c][r + 1] = { k: 's7r', stack: 1 };
+        stacks.push([c, r], [c, r + 1]);
+      }
+    }
     // Suspenso: si los primeros rodillos ya traen 4+ bolas
     let anticFrom = -1, acc = 0;
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
@@ -374,31 +510,35 @@ export default class XLink {
         final[c].forEach((s, r) => {
           const [px, py] = this.cellCenter(c, r + 5);
           if (s.ball) { sfx.ballLand(landed++); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); }
+          if (s.stack) { app.burst(px, py, 12, { type: 'spark', color: '#dff6ff', speed: 260, size: 10 }); sfx.tone(1320, 0.3, { type: 'triangle', vol: 0.1 }); }
           if (s.star) { app.burst(px, py, 12, { color: ['', '#6cff8a', '#6cc8ff', '#ff6a6a'][s.star], speed: 260, size: 9 }); sfx.tone(880 + s.star * 220, 0.3, { type: 'triangle', vol: 0.1 }); }
         });
         if (last) sfx.anticipation(false);
       }
     });
     sfx.anticipation(false);
-    // Expansión por estrellas
-    const stars = final.flat().reduce((a, s) => a + (s.star || 0), 0);
+    // Expansión
+    const stars = mode === 'stars' ? final.flat().reduce((a, s) => a + (s.star || 0), 0) : mode === 'princess' ? stacks.length / 2 : target;
     let grid = final.map(col => col.slice());
     if (stars > 0) {
       const k = Math.min(5, stars);
       await app.wait(250);
       final.forEach((col, c) => col.forEach((s, r) => {
-        if (!s.star) return;
+        if (!s.star && !(s.stack && (r === 0 || !col[r - 1].stack))) return;
         const [x1, y1] = this.cellCenter(c, r + 5), [x2, y2] = this.cellCenter(c, 5 - k);
-        this.bolts.push({ x1, y1, x2, y2, t: 0, life: 0.9, w: 2.4 });
+        this.bolts.push({ x1, y1, x2, y2, t: 0, life: 0.9, w: 2.4, color: s.stack ? '#e8f8ff' : undefined });
       }));
+      if (mode === 'random') for (let c = 0; c < COLS; c++) { const [px, py] = this.cellCenter(c, 5 - k); app.burst(px, py, 10, { type: 'spark', color: '#ffd06a', speed: 220, size: 9 }); }
       sfx.rowUnlock(k);
-      app.flash('#9fe8ff', 0.35); app.shake(false);
+      app.flash(mode === 'random' ? '#ffd0a0' : '#9fe8ff', 0.35); app.shake(false);
       this.expand = k;
-      app.message('¡Estrellas! <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ' + linesFor(BASE_R + k).length + ' líneas');
+      const cnt = this.T.ways ? Math.pow(BASE_R + k, 5).toLocaleString('es-CL') + ' formas' : linesFor(BASE_R + k).length + ' líneas';
+      const why = mode === 'random' ? '¡Se abren los velos!' : mode === 'princess' ? '¡La princesa derrite el hielo!' : '¡Estrellas!';
+      app.message(why + ' <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ' + cnt);
       for (let i = 0; i < k; i++) { const [px, py] = this.cellCenter(2, 4 - i); app.burst(px, py, 18, { type: 'shard', color: '#bfe6ff', speed: 300, size: 7, g: 500 }); }
       await app.wait(400);
       const up = [];
-      for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(W_UP, bet)); }
+      for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(this.wFor(c, true), bet)); }
       sfx.spinStart(app.speed >= 2);
       this.upper.start(app.speed);
       await this.upper.stopTo(up, {
@@ -412,16 +552,19 @@ export default class XLink {
     const rows = BASE_R + this.expand;
     // Premios de líneas
     const lineBet = bet / 20;
-    const wins = evalLines(grid, rows, lineBet);
+    const ways = !!this.T.ways;
+    const pay = this.T.pay || PAY;
+    const wins = ways ? evalWays(grid, rows, bet, pay) : evalLines(grid, rows, lineBet, pay);
     let total = 0;
     const off = MAXR - rows;
     if (wins.length) {
       total = wins.reduce((a, w) => a + w.win, 0);
-      this.wins = wins.map(w => ({ line: w.line.map(r => r + off), win: w.win, cells: w.line.slice(0, w.n).map((r, c) => [c, r + off]) }));
+      this.wins = ways ? wins.map(w => ({ win: w.win, cells: w.cells.map(([c, r]) => [c, r + off]), label: w.ways + (w.ways > 1 ? ' formas' : ' forma') }))
+        : wins.map(w => ({ line: w.line.map(r => r + off), win: w.win, cells: w.line.slice(0, w.n).map((r, c) => [c, r + off]) }));
       this.winT = 0;
       sfx.win(total >= bet * 5 ? 2 : 0);
       app.addWin(total);
-      app.message('Premio en ' + wins.length + ' línea' + (wins.length > 1 ? 's' : '') + ': <b>' + app.fmt(total) + '</b>');
+      app.message(ways ? wins.map(w => w.ways + '× ' + this.T.names[w.k]).join(' · ') + ' = <b>' + app.fmt(total) + '</b>' : 'Premio en ' + wins.length + ' línea' + (wins.length > 1 ? 's' : '') + ': <b>' + app.fmt(total) + '</b>');
       const [px, py] = this.cellCenter(2, MAXR - 2);
       app.flyCoins(px, py, Math.min(14, 4 + wins.length * 2));
     } else if (stars === 0) app.message(this.hint);
@@ -592,7 +735,7 @@ export default class XLink {
     await app.celebrate(sum, bet, 'GOLDEN SPINS');
     this.bonus = null;
     this.expand = 0;
-    sfx.stopMusic(); sfx.music(XLink.music);
+    sfx.stopMusic(); sfx.music(this.constructor.music);
     app.message('Golden Spins pagó <b>' + app.fmt(sum) + '</b>');
     return sum;
   }
@@ -686,13 +829,13 @@ export default class XLink {
           const k = Math.floor(time * 22 + c * 3 + r * 7);
           const f = b.filler[(k) % MAXR][(k + c) % COLS];
           const off = ((time * 22) % 1) * ch;
-          [0, 1].forEach(j => { if (f.ball) return; const img = f.k === 'bar' ? this.barSprite(Math.round(cw * 0.8 * dpr)) : sym(ICON[f.k] || S.CHERRY, cw * 0.8 * dpr, 'b'); x.globalAlpha = 0.55; x.drawImage(img, px + cw * 0.1, py - ch + off + j * ch, cw * 0.8, ch * 1.1); });
+          [0, 1].forEach(j => { if (f.ball) return; const img = this.symImg(f.k, cw * 0.8 * dpr, 'b'); x.globalAlpha = 0.55; x.drawImage(img, px + cw * 0.1, py - ch + off + j * ch, cw * 0.8, ch * 1.1); });
           x.restore(); x.globalAlpha = 1;
         } else {
           const f = b.filler[r][c];
           if (!f.ball && f.k) {
             const size = Math.min(cw, ch) * 0.8;
-            const img = f.k === 'bar' ? this.barSprite(Math.round(size * dpr)) : sym(ICON[f.k], size * dpr, 'd');
+            const img = this.symImg(f.k, size * dpr, 'd');
             x.globalAlpha = 0.55; x.drawImage(img, px + cw / 2 - size / 2, py + ch / 2 - size / 2, size, size); x.globalAlpha = 1;
           }
         }
@@ -704,15 +847,22 @@ export default class XLink {
 
   info(bet, fmt) {
     const lb = bet / 20;
-    const row = (k, name, icon) => '<tr><td>' + icon + '</td><td>' + name + '</td><td>' + [3, 4, 5].map(n => PAY[k][n] ? fmt(PAY[k][n] * lb) : '—').join(' · ') + '</td></tr>';
+    const unit = this.T.ways ? bet * WAYS_UNIT : lb, money = v => '$' + v.toLocaleString('es-CL', { maximumFractionDigits: v < 10 ? 2 : 0 });
+    const P = this.T.pay || PAY;
+    const row = (k, name, icon) => '<tr><td>' + icon + '</td><td>' + name + '</td><td>' + [3, 4, 5].map(n => P[k][n] ? (this.T.ways ? money(P[k][n] * unit) : fmt(P[k][n] * unit)) : '—').join(' · ') + '</td></tr>';
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
     const img = (c, t) => '<figure><img src="' + spriteURL(c) + '" alt=""><figcaption>' + t + '</figcaption></figure>';
     const gallery = '<div class="gallery">' +
       ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotBall(j, short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
       img(specialIcon('launch', 144), 'Multiplicador') + img(specialIcon('upgrade', 144), 'Upgrade') + img(ball('blue', '+1…5', 144, 'GIROS'), '+1 a +5 giros') + '</div>';
     return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
-      '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
-      '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>' +
+      (this.T.ways
+        ? '<li><b>5 rodillos × 3 filas, 243 formas</b>: pagan iguales en rodillos contiguos desde la izquierda, en cualquier fila; el premio se multiplica por las formas. <b>WILD</b> en los rodillos 2 a 4.</li>' +
+          '<li><b>Velos al azar</b>: en cualquier giro los paneles rojos pueden abrirse por sorpresa (1 a 5 filas) solo para ese giro. Con 8 filas hay <b>32.768 formas</b>.</li>'
+        : '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
+          (this.T.expand === 'princess'
+            ? '<li><b>Reina en pila de 2</b>: cada pila derrite el hielo y abre <b>1 fila</b> (máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>'
+            : '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>')) +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
       '<li>En Golden Spins las bolas quedan fijas, tienes <b>3 giros</b> y cada bola nueva los reinicia a 3. Las bolas azules <b>+1 · +2 · +3 · +4 · +5 GIROS</b> suman esos giros encima del reinicio.</li>' +
       '<li>Las bolas especiales (<b>+GIROS</b>, <b>Multiplicador</b> y <b>Upgrade</b>) entregan su efecto y <b>desaparecen</b>: la casilla queda libre para que caiga otra bola.</li>' +
@@ -721,10 +871,8 @@ export default class XLink {
       '<li><b>Multiplicador</b> (esfera eléctrica): lanza bolas a todas las casillas vacías vecinas, con mucha más chance de jackpot.</li>' +
       '<li><b>Upgrade</b> (monedas con flecha): duplica el valor de todas las bolas del tablero.</li>' +
       '<li><b>BONO</b>: compra Golden Spins directo por 60× la apuesta.</li></ul>' +
-      '<h3>Tabla de pagos (apuesta ' + fmt(bet) + ')</h3><table>' +
-      row('s7r', '7 rojo', ic(S.SEVEN)) + row('s7b', '7 azul', ic(S.SEVEN)) + row('bar', 'BAR', '<i class="ico bar">BAR</i>') +
-      row('bell', 'Campana', ic(S.BELL)) + row('melon', 'Sandía', ic(S.MELON)) + row('grapes', 'Uvas', ic(S.GRAPES)) +
-      row('plum', 'Ciruela', ic(S.PLUM)) + row('orange', 'Naranja', ic(S.ORANGE)) + row('cherry', 'Cereza (2+: ' + fmt(PAY.cherry[2] * lb) + ')', ic(S.CHERRY)) + '</table>';
+      '<h3>Tabla de pagos (apuesta ' + fmt(bet) + (this.T.ways ? ', por forma' : ', por línea') + ')</h3><table>' +
+      Object.keys(PAY).map(k => row(k, this.T.names[k] + (k === 'cherry' ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * lb)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
   }
 }
 
