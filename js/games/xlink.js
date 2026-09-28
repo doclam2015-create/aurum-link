@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotBall, specialIcon, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js';
+import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=24';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=24';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -35,7 +35,7 @@ export function linesFor(rows) {
 // Probabilidades de especiales dentro de Golden Spins (por bola que cae)
 // Probabilidad de BONO SORPRESA por giro pagado
 export const MYSTERY_P = 1 / 110;
-export const SPECIAL_W = { extra: 0.05, launch: 0.03, upgrade: 0.025 };
+export const SPECIAL_W = { extra: 0.05, launch: 0.07, upgrade: 0.055 };
 // jpBoost > 1 aumenta la chance de jackpot (bolas lanzadas por el Multiplicador)
 export function makeBall(bet, inBonus, jpBoost = 1, noSpecial = false) {
   const r = Math.random() * 100;
@@ -500,7 +500,7 @@ export default class XLink {
       await app.wait(600);
       empties.sort((a, z) => a[0] - z[0] || z[1] - a[1]);
       // Probabilidad por celda: más difícil con tablero grande
-      const p = 0.072 - Math.min(0.025, b.count * 0.0009);
+      const p = 0.062 - Math.min(0.022, b.count * 0.0009);
       let got = 0;
       const step = Math.max(35, Math.min(90, 900 / empties.length)) / app.speed;
       for (let i = 0; i < empties.length; i++) {
@@ -591,7 +591,7 @@ export default class XLink {
     for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
       const r = r0 + dr, c = c0 + dc;
       if ((!dr && !dc) || c < 0 || c >= COLS || r < MAXR - b.rows || r >= MAXR || cells[r][c]) continue;
-      const s = makeBall(bet, true, 4, true);
+      const s = makeBall(bet, true, 3, true);
       cells[r][c] = Object.assign({ t: 0 }, s);
       b.spinning.delete(r * COLS + c);
       b.count++; n++;
@@ -674,7 +674,11 @@ export default class XLink {
     const lb = bet / 20;
     const row = (k, name, icon) => '<tr><td>' + icon + '</td><td>' + name + '</td><td>' + [3, 4, 5].map(n => PAY[k][n] ? fmt(PAY[k][n] * lb) : '—').join(' · ') + '</td></tr>';
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
-    return '<h3>Cómo se juega</h3><ul>' +
+    const img = (c, t) => '<figure><img src="' + spriteURL(c) + '" alt=""><figcaption>' + t + '</figcaption></figure>';
+    const gallery = '<div class="gallery">' +
+      ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotBall(j, short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
+      img(specialIcon('launch', 144), 'Multiplicador') + img(specialIcon('upgrade', 144), 'Upgrade') + img(ball('blue', '+2', 144, 'GIROS'), '+2 giros') + '</div>';
+    return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
       '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
       '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>' +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +

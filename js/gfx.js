@@ -439,3 +439,13 @@ export function specialIcon(kind, size) {
   cache.set(key, c);
   return c;
 }
+
+// Monto corto para mostrar dentro de bolas ($1,5K / $2M)
+export function shortMoney(v) {
+  v = Math.round(v);
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace('.', ',') + 'M';
+  if (v >= 1e4) return '$' + (v / 1e3).toFixed(v >= 1e5 ? 0 : 1).replace('.', ',') + 'K';
+  return '$' + v.toLocaleString('es-CL');
+}
+// Imagen PNG (data URL) de un sprite, para mostrar en la ayuda
+export function spriteURL(canvas) { try { return canvas.toDataURL('image/png'); } catch (e) { return ''; } }

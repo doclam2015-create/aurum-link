@@ -1,16 +1,17 @@
-import { sfx } from './audio.js';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js';
-import { sleep } from './reels.js';
-import XLink from './games/xlink.js';
-import Avalanche from './games/avalanche.js';
-import FireWheel from './games/firewheel.js';
-import Legion from './games/legion.js';
+import { sfx } from './audio.js?v=24';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=24';
+import { sleep } from './reels.js?v=24';
+import XLink from './games/xlink.js?v=24';
+import Avalanche from './games/avalanche.js?v=24';
+import FireWheel from './games/firewheel.js?v=24';
+import Legion from './games/legion.js?v=24';
 
 const GAMES = [XLink, Avalanche, FireWheel, Legion];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 const SAVE_KEY = 'aurumlink.v2';
+const VERSION = (new URL(import.meta.url).searchParams.get('v')) || 'dev';
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
 // Jackpots progresivos comunes a todos los juegos (múltiplos de la apuesta; crecen con cada giro)
 export const JACKPOTS = [
@@ -314,7 +315,7 @@ function openSettings() {
     '<div class="set"><label>Volumen de música</label><input id="setMusic" type="range" min="0" max="100" value="' + Math.round(state.musicVol * 100) + '"></div>' +
     '<label class="set switch"><span>Música de fondo</span><input id="setMusicOn" type="checkbox"' + (state.music ? ' checked' : '') + '><i></i></label>' +
     '<label class="set switch"><span>Rodillos en modo claro</span><input id="setLight" type="checkbox"' + (state.light ? ' checked' : '') + '><i></i></label>' +
-    '<p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>');
+    '<p class="fine ver">Versión ' + VERSION + '</p><p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>');
 }
 
 // ---------- Lobby ----------
@@ -420,13 +421,14 @@ async function boot() {
   sfx.setVolumes(state.sfxVol, state.musicVol);
   document.body.classList.toggle('light', state.light);
   buildLobby();
+  $('verLabel').textContent = 'v' + VERSION;
   bind();
   try { await loadAtlas('assets/symbols.webp'); } catch (e) { console.warn('atlas', e); }
   $('loader').classList.add('gone');
   selectGame(state.game || GAMES[0].id);
   if (!state.game || !localStorage.getItem(SAVE_KEY + '.seen')) { openLobby(); try { localStorage.setItem(SAVE_KEY + '.seen', '1'); } catch (e) { } }
   requestAnimationFrame(frame);
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => { });
 }
 window.AURUM = { app, get game() { return game; }, state };
 boot();

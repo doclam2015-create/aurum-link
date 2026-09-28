@@ -2,8 +2,8 @@
 // 6x5, pagos en cualquier posición (8+ iguales). Los símbolos ganadores estallan en hielo y
 // caen nuevos (cascadas). Multiplicador base x1→x2→x3→x5 por cascada. 4+ copos = 10 giros
 // gratis con multiplicador progresivo que NO se reinicia (+1 por cada cascada ganadora).
-import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js';
-import { weighted } from '../reels.js';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js?v=24';
+import { weighted } from '../reels.js?v=24';
 
 const COLS = 6, ROWS = 5;
 export const PAY = {
@@ -51,7 +51,7 @@ export default class Avalanche {
   get animating() { return this.moving || this.grid.some(col => col.some(s => s && (s.die || s.hl))); }
 
   cell(r, y, k) {
-    if (!k && (Math.random() < ORB_P || this.app._forceJp)) { this.app._forceJp = false; return { k: 'orb', jp: weighted(ORB_JP), y, ty: r, vy: 0, die: 0, hl: 0 }; }
+    if (!k && (Math.random() < ORB_P || this.app._forceJp)) { this.app._forceJp = false; const m = [1, 2, 3][Math.random() * 3 | 0]; return { k: 'orb', jp: weighted(ORB_JP), value: m * this.app.bet, y, ty: r, vy: 0, die: 0, hl: 0 }; }
     return { k: k || weighted(WEIGHTS), y, ty: r, vy: 0, die: 0, hl: 0, landed: true };
   }
 
@@ -151,7 +151,7 @@ export default class Avalanche {
       x.globalAlpha = a;
       if (s.k === 'orb') {
         const bd = cs * 1.02 * (1 + 0.04 * Math.sin(time * 5));
-        x.drawImage(ball(ORB_COLOR[s.jp], s.jp.toUpperCase(), cs * 1.02 * dpr), px - bd / 2, py - bd / 2, bd, bd);
+        x.drawImage(jackpotBall(s.jp, shortMoney(s.value || 0), cs * 1.02 * dpr), px - bd / 2, py - bd / 2, bd, bd);
         if (Math.random() < 0.6) electricRing(x, px, py, cs * 0.48, 1.3, '#bff2ff', 0.9);
       } else x.drawImage(sym(ICON[s.k], size * dpr, s.hl ? 'g' : 'n'), px - d / 2, py - d / 2, d, d);
       x.globalAlpha = 1;
@@ -252,7 +252,8 @@ export default class Avalanche {
     for (let c = 0; c < COLS; c++) for (const s of this.grid[c]) {
       if (s.k !== 'orb' || s.paid) continue;
       s.paid = true; s.hl = 1;
-      const v = await app.awardJackpot(s.jp);
+      const v = (await app.awardJackpot(s.jp)) + (s.value || 0);
+      if (s.value) app.addWin(s.value);
       total += v; if (this.inFree) this.fsTotal += v;
       s.hl = 0;
     }
@@ -309,7 +310,7 @@ export default class Avalanche {
       '<li>Cuadrícula <b>6 × 5</b> sin líneas: <b>8 o más símbolos iguales en cualquier posición</b> pagan.</li>' +
       '<li><b>Cascadas</b>: los ganadores estallan en hielo y caen símbolos nuevos, que pueden volver a ganar.</li>' +
       '<li>Multiplicador del juego base por cascada: <b>x1 → x2 → x3 → x5</b>.</li>' +
-      '<li><b>Bolas de hielo MINI · MINOR · MAJOR · GRAND</b>: muy raras; pagan su jackpot progresivo al final del giro.</li>' +
+      '<li><b>Bolas MINI · MINOR · MAJOR · GRAND</b>: muy raras; pagan su jackpot progresivo <b>+ el valor</b> que muestran, al final del giro.</li>' +
       '<li><b>4+ copos ❄</b> = <b>10 giros gratis</b>. Ahí el multiplicador sube +1 en cada cascada y <b>no se reinicia</b> entre giros. 3+ copos = +5 giros.</li></ul>' +
       '<h3>Pagos (apuesta ' + fmt(bet) + ') · 8-9 / 10-11 / 12+</h3><table>' +
       Object.keys(PAY).map(k => '<tr><td>' + ic(ICON[k]) + '</td><td>' + label(k) + '</td><td>' + PAY[k].map(p => fmt(p * bet)).join(' · ') + '</td></tr>').join('') + '</table>';

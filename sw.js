@@ -1,7 +1,8 @@
 // Caché offline: la app funciona sin conexión una vez abierta.
-const CACHE = 'aurum-v23';
-const FILES = ['./', './index.html', './css/app.css?v=23', './js/app.js?v=23', './js/audio.js', './js/gfx.js', './js/reels.js',
-  './js/games/xlink.js', './js/games/avalanche.js', './js/games/firewheel.js', './js/games/legion.js',
+const CACHE = 'aurum-v24';
+const V = '?v=24';
+const FILES = ['./', './index.html', './css/app.css' + V, './js/app.js' + V, './js/audio.js' + V, './js/gfx.js' + V, './js/reels.js' + V,
+  './js/games/xlink.js' + V, './js/games/avalanche.js' + V, './js/games/firewheel.js' + V, './js/games/legion.js' + V,
   './assets/symbols.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -13,7 +14,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  e.respondWith(fetch(req).then(res => {
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then(r => r || caches.match('./index.html'))));

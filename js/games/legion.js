@@ -1,8 +1,8 @@
 // LEGIÓN DORADA · 5x4, 1024 formas de ganar.
 // Wild (corona) en rodillos 2-4. 3+ fénix = giros gratis (8/12/20). En giros gratis cada wild
 // queda PEGADO con un multiplicador x2/x3 que se multiplica en cada forma ganadora.
-import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js';
-import { ReelSet, weighted } from '../reels.js';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=24';
+import { ReelSet, weighted } from '../reels.js?v=24';
 
 const COLS = 5, ROWS = 4;
 export const PAY = {
@@ -304,7 +304,7 @@ export default class Legion {
       if (c.flip > 0 && c.flip < 1) c.flip = Math.min(1, c.flip + 1 / 60 / 0.35);
       const f = c.flip, sx = f > 0 ? Math.abs(Math.cos(f * Math.PI)) : 1, show = f >= 0.5;
       const size = s * 0.9 * (c.jp && this.pick.winner === c.jp && !c.dim ? 1 + 0.06 * Math.sin(time * 10) : 1);
-      const img = show ? ball(JPC[c.jp], c.jp.toUpperCase(), s * 0.9 * dpr) : ball('gold', '?', s * 0.9 * dpr);
+      const img = show ? jackpotBall(c.jp, shortMoney(this.app.jackpot(c.jp)), s * 0.9 * dpr) : ball('gold', '?', s * 0.9 * dpr);
       x.globalAlpha = c.dim ? 0.35 : 1;
       x.drawImage(img, px - size * sx / 2, py - size / 2, size * sx, size);
       x.globalAlpha = 1;
