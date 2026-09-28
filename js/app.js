@@ -1,17 +1,17 @@
-import { sfx } from './audio.js?v=35';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=35';
-import { sleep } from './reels.js?v=35';
-import XLink from './games/xlink.js?v=35';
-import Avalanche from './games/avalanche.js?v=35';
-import FireWheel from './games/firewheel.js?v=35';
-import Legion from './games/legion.js?v=35';
-import Bull from './games/bull.js?v=35';
-import Dragon from './games/dragon.js?v=35';
-import Codex from './games/codex.js?v=35';
-import Reef from './games/reef.js?v=35';
-import Western from './games/western.js?v=35';
-import Galaxy from './games/galaxy.js?v=35';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=35';
+import { sfx } from './audio.js?v=36';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=36';
+import { sleep } from './reels.js?v=36';
+import XLink from './games/xlink.js?v=36';
+import Avalanche from './games/avalanche.js?v=36';
+import FireWheel from './games/firewheel.js?v=36';
+import Legion from './games/legion.js?v=36';
+import Bull from './games/bull.js?v=36';
+import Dragon from './games/dragon.js?v=36';
+import Codex from './games/codex.js?v=36';
+import Reef from './games/reef.js?v=36';
+import Western from './games/western.js?v=36';
+import Galaxy from './games/galaxy.js?v=36';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=36';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -21,11 +21,13 @@ const SAVE_KEY = 'aurumlink.v2';
 const VERSION = (new URL(import.meta.url).searchParams.get('v')) || 'dev';
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
 // Jackpots progresivos comunes a todos los juegos (múltiplos de la apuesta; crecen con cada giro)
+// grow: cuánto sube cada pozo por jugada pagada (en apuestas). Con 100 jugadas el GRAND crece ~12 %
+// y los demás ~30 %; al cobrarse vuelven a su base.
 export const JACKPOTS = [
-  { key: 'grand', label: 'GRAND', base: 1000, grow: 0.05, cls: 'grand', color: '#ff4a3a', level: 3 },
-  { key: 'major', label: 'MAJOR', base: 100, grow: 0.02, cls: 'major', color: '#d77aff', level: 2 },
-  { key: 'minor', label: 'MINOR', base: 30, grow: 0.006, cls: 'minor', color: '#5ad8ff', level: 1 },
-  { key: 'mini', label: 'MINI', base: 15, grow: 0.003, cls: 'mini', color: '#5dff7a', level: 0 }
+  { key: 'grand', label: 'GRAND', base: 1000, grow: 1.2, cls: 'grand', color: '#ff4a3a', level: 3 },
+  { key: 'major', label: 'MAJOR', base: 100, grow: 0.35, cls: 'major', color: '#d77aff', level: 2 },
+  { key: 'minor', label: 'MINOR', base: 30, grow: 0.1, cls: 'minor', color: '#5ad8ff', level: 1 },
+  { key: 'mini', label: 'MINI', base: 15, grow: 0.05, cls: 'mini', color: '#5dff7a', level: 0 }
 ];
 
 const state = {
@@ -245,7 +247,26 @@ function renderPots(valuesOnly) {
   if (!valuesOnly || !pots.children.length) {
     pots.innerHTML = js.map(j => '<div class="pot ' + j.cls + '" data-k="' + j.key + '"><b>' + j.label + '</b><strong></strong></div>').join('');
   }
-  js.forEach(j => { const el = pots.querySelector('[data-k="' + j.key + '"] strong'); if (el) el.textContent = fmt(app.jackpot(j.key)); });
+  // Los pozos suben contando hacia el valor nuevo; si bajan (se cobró o cambió la apuesta) saltan directo
+  js.forEach(j => {
+    const box = pots.querySelector('[data-k="' + j.key + '"]'), el = box && box.querySelector('strong'); if (!el) return;
+    const v = app.jackpot(j.key), cur = potShown[j.key];
+    if (cur == null || v < cur || !valuesOnly) { potShown[j.key] = v; potFrom[j.key] = v; el.textContent = fmt(v); return; }
+    if (v > cur + 0.5) { potFrom[j.key] = cur; potTo[j.key] = v; potT0[j.key] = performance.now(); box.classList.remove('grow'); void box.offsetWidth; box.classList.add('grow'); if (!potAnim) potAnim = requestAnimationFrame(tickPots); }
+  });
+}
+const potShown = {}, potFrom = {}, potTo = {}, potT0 = {};
+let potAnim = 0;
+function tickPots(now) {
+  potAnim = 0; let more = false;
+  JACKPOTS.forEach(j => {
+    if (potTo[j.key] == null) return;
+    const t = Math.min(1, (now - potT0[j.key]) / 900), v = potFrom[j.key] + (potTo[j.key] - potFrom[j.key]) * ease.outCubic(t);
+    potShown[j.key] = v;
+    const el = $('pots').querySelector('[data-k="' + j.key + '"] strong'); if (el) el.textContent = fmt(v);
+    if (t < 1) more = true; else potTo[j.key] = null;
+  });
+  if (more) potAnim = requestAnimationFrame(tickPots);
 }
 function renderHud() {
   $('bet').textContent = fmt(app.bet);
