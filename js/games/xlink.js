@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=36';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=36';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=37';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=37';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -239,9 +239,8 @@ export default class XLink {
   }
   ballImg(s, size) {
     if (s.special) return specialIcon(s.special, size);
-    // Estilo gabinete: monto del jackpot arriba (redondeado a 2 cifras para no regenerar el sprite a cada giro),
-    // cinta con el nombre y "+ valor" de la bola abajo
-    if (s.jp) return s.value ? jackpotRibbonBall(s.jp, short(round2(this.app.jackpot(s.jp))), short(s.value), size) : ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
+    // Estilo gabinete: cinta con el nombre del progresivo y "+ valor" de la bola debajo
+    if (s.jp) return s.value ? jackpotRibbonBall(s.jp, short(s.value), size) : ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
     if (s.extra) return spinsBall('+' + s.extra, size, s.extra > 1 ? 'GIROS' : 'GIRO');
     return cashBall(short(s.value), size);
   }
@@ -997,7 +996,7 @@ export default class XLink {
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
     const img = (c, t) => '<figure><img src="' + spriteURL(c) + '" alt=""><figcaption>' + t + '</figcaption></figure>';
     const gallery = '<div class="gallery">' +
-      ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotRibbonBall(j, short(round2(this.app.jackpot(j))), short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
+      ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotRibbonBall(j, short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
       img(specialIcon('launch', 144), 'Multiplicador') + img(specialIcon('upgrade', 144), 'Upgrade') + img(spinsBall('+1…5', 144), '+1 a +5 giros') + '</div>';
     return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
       (this.T.ways
@@ -1021,8 +1020,6 @@ export default class XLink {
   }
 }
 
-// Redondeo a 2 cifras significativas
-function round2(v) { if (!(v > 0)) return 0; const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1)); return Math.floor(v / p) * p; }
 export function short(v) {
   v = Math.round(v);
   if (v >= 1e6) return '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace('.', ',') + 'M';

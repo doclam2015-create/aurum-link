@@ -2,8 +2,8 @@
 // El CÓDICE es wild y dispersor a la vez: 3+ en cualquier lugar = 10 giros gratis. Antes de
 // empezar se elige al azar un SÍMBOLO ESPECIAL; en los giros gratis, si aparece en suficientes
 // rodillos se EXPANDE a todo el rodillo y paga en las 10 líneas aunque no esté contiguo.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=36';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=36';
+import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=37';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=37';
 
 const COLS = 5, ROWS = 3, NL = 10;
 const LINES = LINES_5x3.slice(0, NL);

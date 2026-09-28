@@ -414,24 +414,23 @@ export function spinsBall(n, size, sub = 'GIROS') {
   ballText(x, sub, size / 2, size * 0.72, size * 0.17, '#ffffff', '#0a2a80', size * 0.8);
   cache.set(key, c); return c;
 }
-// Bola de jackpot estilo gabinete: valor arriba, cinta de color con el nombre y "+ monto" abajo
-export function jackpotRibbonBall(jp, topText, bottomText, size) {
+// Bola de jackpot estilo gabinete: cinta de color con el nombre y "+ monto" de la bola debajo
+export function jackpotRibbonBall(jp, bottomText, size) {
   size = Math.round(size);
-  const key = 'jpr|' + jp + '|' + topText + '|' + bottomText + '|' + size;
+  const key = 'jpr|' + jp + '|' + bottomText + '|' + size;
   let c = cache.get(key); if (c) return c;
   c = makeCanvas(size, size);
   const x = c.getContext('2d'), cx = size / 2, cy = size / 2, r = size * 0.46, col = JP_BAND[jp] || JP_BAND.mini;
   x.drawImage(ball('gold', '', size), 0, 0);
-  ballText(x, topText, cx, cy - r * 0.55, size * (topText.length > 5 ? 0.16 : 0.2), ['#ffffff', '#fff2c0'], 'rgba(60,40,10,0.92)', size * 0.62);
-  // Cinta horizontal que sobresale un poco del círculo
-  const bh = size * 0.2, by = cy - bh * 0.35, bw = size * 0.98;
+  // Cinta horizontal que sobresale un poco del círculo (algo sobre el centro)
+  const bh = size * 0.22, by = cy - bh * 0.95, bw = size * 0.98;
   x.save(); x.shadowColor = 'rgba(0,0,0,0.5)'; x.shadowBlur = size * 0.04; x.shadowOffsetY = size * 0.015;
   let g = x.createLinearGradient(0, by, 0, by + bh); g.addColorStop(0, col[0]); g.addColorStop(0.4, col[1]); g.addColorStop(1, col[2]);
   x.fillStyle = g; roundRect(x, cx - bw / 2, by, bw, bh, bh * 0.25); x.fill(); x.restore();
   x.lineWidth = size * 0.018; x.strokeStyle = '#ffe28a'; roundRect(x, cx - bw / 2, by, bw, bh, bh * 0.25); x.stroke();
   ballText(x, jp.toUpperCase(), cx, by + bh * 0.53, bh * 0.7, '#ffffff', col[2], bw * 0.86);
   const bt = '+' + bottomText;
-  ballText(x, bt, cx, cy + r * 0.62, size * (bt.length > 6 ? 0.15 : 0.18), ['#ffffff', '#ffd35a'], 'rgba(40,18,0,0.95)', size * 0.66);
+  ballText(x, bt, cx, cy + r * 0.42, size * (bt.length > 6 ? 0.17 : 0.21), ['#ffffff', '#ffd35a'], 'rgba(40,18,0,0.95)', size * 0.74);
   cache.set(key, c); return c;
 }
 
