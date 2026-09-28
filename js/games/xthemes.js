@@ -40,7 +40,9 @@ const RED = Object.assign({}, THEME, {
 export class RedDream extends XLink {
   static id = 'reddream';
   static name = 'Sueño Rojo';
-  static music = 'orient';
+  static music = 'china';
+  static bonusMusic = 'chinaBonus';
+  static sfxTheme = 'china';
   static theme = RED;
   static lobby = {
     icons: [S.GEISHA, S.DRAGON, S.PHOENIX], c1: '#ff3a2a', c2: '#4a0406', mechanic: '243 formas + velos al azar · estilo Red Dream',
@@ -112,7 +114,9 @@ const SNOW = Object.assign({}, THEME, {
 export class SnowKingdom extends XLink {
   static id = 'snowking';
   static name = 'Reino de Nieve';
-  static music = 'ice';
+  static music = 'snow';
+  static bonusMusic = 'snowBonus';
+  static sfxTheme = 'snow';
   static theme = SNOW;
   static lobby = {
     icons: [S.QUEEN, S.SNOW, S.DIAMOND], c1: '#bfe8ff', c2: '#0a2a6e', mechanic: 'La Reina abre filas · estilo Snow Kingdom',
@@ -520,12 +524,17 @@ const lacquer = k => drawn('lacq-' + k, (x, s) => {
   // esquinas doradas
   x.fillStyle = '#ffd06a'; [[0.07, 0.07], [0.93, 0.07], [0.07, 0.93], [0.93, 0.93]].forEach(([u, v]) => { x.beginPath(); x.arc(s * u, s * v, s * 0.035, 0, 7); x.fill(); });
 }, true);
-// Sueño Rojo: noble de azul, noble chino, taza de porcelana, papiro y flor de loto BONUS
-RED.draw = Object.assign({}, RED.draw, { s7r: lacquer('lady'), s7b: figure('noble'), bar: figure('tea'), bell: figure('scroll'), scat: figure('lotus') });
-RED.names = Object.assign({}, RED.names, { s7r: 'Noble de azul', bar: 'Taza de porcelana' });
+// Sueño Rojo: noble china > noble de azul (símbolo propio del tema) > noble chino > taza > papiro…
+RED.draw = Object.assign({}, RED.draw, { lady: lacquer('lady'), s7b: figure('noble'), bar: figure('tea'), bell: figure('scroll'), scat: figure('lotus') });
+RED.names = Object.assign({}, RED.names, { lady: 'Noble de azul', bar: 'Taza de porcelana' });
+// Sin campanas (grapes): así la noble de azul no diluye los premios
+{ const { s7r, grapes, ...rest } = RED.pay; RED.pay = Object.assign({ s7r, lady: [0, 0, 0, 40, 150, 700] }, rest); }
+RED.extraW = { lady: 3.5, grapes: 0 };
+// Sin compensar: con la noble de azul y sin campanas paga ~20 % más que la versión anterior (simulado)
+RED.waysScale = 1;
 // Reino de Nieve (la Reina sigue siendo la del atlas): lobo, leopardo, halcón, antílope y copo de nieve BONUS
 SNOW.draw = Object.assign({}, SNOW.draw, { s7b: card('wolf'), bar: card('leopard', true), bell: card('falcon', true), melon: card('antelope', true), scat: drawSnowflake });
 SNOW.names = Object.assign({}, SNOW.names, { scat: 'Copo de nieve' });
 SNOW.scatter = Object.assign({}, SNOW.scatter, { name: 'copos de nieve' });
-RedDream.lobby.icons = ['noble', 'lady', 'lotus'];
+RedDream.lobby.icons = [S.GEISHA, 'lady', 'noble'];
 SnowKingdom.lobby.icons = ['wolf', S.QUEEN, 'leopard'];

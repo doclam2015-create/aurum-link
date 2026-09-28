@@ -260,6 +260,7 @@ export default class XLink {
       if (mode === 'princess') w.s7r = 0;
       if (T.ball) w.ball *= T.ball; // escala la frecuencia de bolas
       if (T.scatter) w.scat = T.scatter.w; // dispersor de giros gratis
+      if (T.extraW) Object.assign(w, T.extraW); // símbolos propios del tema (p. ej. la noble de azul)
       cache[key] = w;
     }
     return cache[key];
@@ -652,7 +653,7 @@ export default class XLink {
     const ways = !!this.T.ways;
     const pay = this.T.pay || PAY;
     const heights = grid.map(col => col.length);
-    const wins = ways ? evalWays(grid, heights, bet, pay) : evalLines(grid, rows, lineBet * (this.T.lineScale || 1), pay);
+    const wins = ways ? evalWays(grid, heights, bet * (this.T.waysScale || 1), pay) : evalLines(grid, rows, lineBet * (this.T.lineScale || 1), pay);
     let total = 0;
     const off = MAXR - rows, offC = heights.map(h => MAXR - h);
     if (wins.length) {
@@ -693,7 +694,7 @@ export default class XLink {
       this.wins = null;
       const bw = await this.golden(bet, balls, rows);
       total += bw;
-      if (this.inFree) sfx.music('bonus');
+      if (this.inFree) sfx.music(this.constructor.bonusMusic || 'bonus');
       return this.afterSpin(bet, total, grid, free, bw > 0);
     }
     if (balls.length >= 4) app.message(balls.length + ' bolas… ¡faltan ' + (6 - balls.length) + ' para Golden Spins!');
@@ -728,7 +729,7 @@ export default class XLink {
         this.inFree = true; this.freeLeft = 10; this.freeTotal = 10; this.fsTotal = 0;
         sfx.stopMusic();
         await app.banner('10 GIROS GRATIS', scat + ' ' + T.scatter.name + ' · 3 más = +10 giros', { color: T.scatter.color, ms: 2600 });
-        sfx.music('bonus');
+        sfx.music(this.constructor.bonusMusic || 'bonus');
       }
     }
     if (this.inFree && this.freeLeft === 0 && free) {
@@ -777,7 +778,7 @@ export default class XLink {
     sfx.featureStart();
     this.bonus = b;
     await app.banner('GOLDEN SPINS', 'Las bolas quedan fijas · 3 giros', { color: '#ffb52e', ms: 2300 });
-    sfx.music('bonus');
+    sfx.music(this.constructor.bonusMusic || 'bonus');
     app.setSpinLabel('BONO', 'GOLDEN SPINS');
     app.message('Cada bola nueva reinicia los giros a <b>3</b>. Llena el tablero para el <b>GRAND</b>.');
 
@@ -863,11 +864,14 @@ export default class XLink {
       const [px, py] = this.cellCenter(c, r);
       if (s.jp) { v += await app.awardJackpot(s.jp); if (s.value) app.addWin(s.value); }
       else app.addWin(v);
-      sfx.collect(n++);
-      app.flyCoins(px, py, 3, 'spark');
+      sfx.collect(n); sfx.lightning(n, !!s.jp); n++;
+      // Rayo y trueno desde la bola hasta la suma del premio
+      app.boltToWin(px, py, s.jp ? '#ffe36a' : '#9fe8ff', s.jp ? 3.4 : 2.6);
+      app.burst(px, py, 10, { color: s.jp ? '#fff4b0' : '#bff0ff', speed: 240, size: 8 });
+      app.flash(s.jp ? '#fff2b0' : '#cfefff', s.jp ? 0.35 : 0.14);
       app.popText(px, py, short(v), 20);
       sum += v;
-      await app.wait(130);
+      await app.wait(240);
       s.collect = 0; s.done = true;
     }
     if (full) sum += await app.awardJackpot('grand');
@@ -987,7 +991,7 @@ export default class XLink {
 
   info(bet, fmt) {
     const lb = bet / 20;
-    const unit = this.T.ways ? bet * WAYS_UNIT : lb * (this.T.lineScale || 1), money = v => '$' + v.toLocaleString('es-CL', { maximumFractionDigits: v < 10 ? 2 : 0 });
+    const unit = this.T.ways ? bet * WAYS_UNIT * (this.T.waysScale || 1) : lb * (this.T.lineScale || 1), money = v => '$' + v.toLocaleString('es-CL', { maximumFractionDigits: v < 10 ? 2 : 0 });
     const P = this.T.pay || PAY;
     const row = (k, name, icon) => '<tr><td>' + icon + '</td><td>' + name + '</td><td>' + [3, 4, 5].map(n => P[k][n] ? (this.T.ways ? money(P[k][n] * unit) : fmt(P[k][n] * unit)) : '—').join(' · ') + '</td></tr>';
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
@@ -1013,7 +1017,7 @@ export default class XLink {
       '<li><b>Upgrade</b> (monedas con flecha): duplica el valor de todas las bolas del tablero.</li>' +
       '<li><b>BONO</b>: compra Golden Spins directo por 60× la apuesta.</li></ul>' +
       '<h3>Tabla de pagos (apuesta ' + fmt(bet) + (this.T.ways ? ', por forma' : ', por línea') + ')</h3><table>' +
-      Object.keys(PAY).map(k => row(k, this.T.names[k] + (k === 'cherry' && P.cherry[2] ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * unit)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
+      Object.keys(P).map(k => row(k, this.T.names[k] + (k === 'cherry' && P.cherry[2] ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * unit)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
   }
 }
 

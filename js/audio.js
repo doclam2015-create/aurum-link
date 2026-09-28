@@ -12,6 +12,7 @@ class Sfx {
     this.musicVol = 0.55;
     this._loops = {};
     this._music = null;
+    this.theme = null; // 'china' (Sueño Rojo) · 'snow' (Reino de Nieve): cambia los efectos
   }
 
   unlock() {
@@ -114,12 +115,49 @@ class Sfx {
     [1, 2.76, 5.4, 8.93].forEach((m, i) => this.tone(freq * m, dur / (1 + i * 0.8), { vol: vol / (1 + i * 1.4), at, verb: 0.6 }));
   }
 
+  // --- Instrumentos temáticos ---
+  // Gong chino: parciales graves inarmónicos con batido y cola larga
+  gong(freq = 110, dur = 3, vol = 0.3, at = 0) {
+    [1, 1.48, 2.02, 2.73, 3.6, 4.9].forEach((m, i) => this.tone(freq * m * (1 + (Math.random() - 0.5) * 0.004), dur / (1 + i * 0.35), { vol: vol / (1 + i * 0.9), at, attack: 0.012 + i * 0.01, verb: 0.9 }));
+    this.noise(0.25, { at, vol: vol * 0.5, type: 'lowpass', freq: 900, q: 0.5 });
+  }
+  // Bloque de madera (muyu)
+  wood(at = 0, vol = 0.18, f = 900) { this.tone(f, 0.06, { type: 'square', vol: vol * 0.5, at, attack: 0.001 }); this.tone(f * 1.5, 0.05, { vol, at, attack: 0.001 }); this.noise(0.03, { at, vol: vol * 0.8, freq: f * 2.2, q: 6 }); }
+  // Cuerda pulsada tipo guzheng: ataque brillante, leve bajada de afinación y cola corta
+  pluck(freq, at = 0, vol = 0.12, dur = 0.9) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + at, f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 8, t0); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t0 + dur * 0.6);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    f.connect(g); g.connect(this.sfxBus); const v = ctx.createGain(); v.gain.value = 0.5; g.connect(v); v.connect(this.verbSend);
+    ['sawtooth', 'triangle'].forEach((ty, i) => { const o = ctx.createOscillator(); o.type = ty; o.frequency.setValueAtTime(freq * (1.012 + i * 0.002), t0); o.frequency.exponentialRampToValueAtTime(freq, t0 + 0.08); o.connect(f); o.start(t0); o.stop(t0 + dur + 0.05); });
+  }
+  // Celesta / caja de música: seno con parciales altos y mucha reverb
+  celesta(freq, at = 0, vol = 0.1, dur = 1.3) {
+    this.tone(freq, dur, { vol, at, attack: 0.002, verb: 0.8 });
+    this.tone(freq * 4, dur * 0.35, { vol: vol * 0.3, at, attack: 0.002, verb: 0.8 });
+    this.tone(freq * 6.8, dur * 0.18, { vol: vol * 0.12, at, attack: 0.002 });
+  }
+  // Cascabeles de trineo: ráfaga de ruido agudo con varios golpecitos
+  jingle(at = 0, vol = 0.1) { for (let i = 0; i < 4; i++) { this.noise(0.07, { at: at + i * 0.018, vol: vol * (1 - i * 0.2), type: 'bandpass', freq: 6500 + Math.random() * 2500, q: 7 }); } this.tone(5200 + Math.random() * 800, 0.12, { vol: vol * 0.25, at }); }
+  // Petardos: estallidos secos al azar
+  firecrackers(n = 14, at = 0, vol = 0.3) { for (let i = 0; i < n; i++) { const t = at + i * 0.06 + Math.random() * 0.05; this.noise(0.05, { at: t, vol: vol * (0.5 + Math.random() * 0.5), type: 'highpass', freq: 1500, q: 0.7 }); this.tone(180 + Math.random() * 120, 0.05, { type: 'square', vol: vol * 0.25, at: t, slide: 0.4 }); } }
+  // Viento helado: ruido filtrado que sube y baja
+  wind(dur = 1.6, vol = 0.18, at = 0) { this.noise(dur, { at, vol, type: 'bandpass', freq: 500, freqEnd: 1800, q: 3, verb: 0.4 }); this.noise(dur * 0.8, { at: at + 0.2, vol: vol * 0.6, type: 'bandpass', freq: 1400, freqEnd: 600, q: 5 }); }
+  // Escalas pentatónicas de los temas
+  _scale(i) {
+    const china = [0, 2, 4, 7, 9], snow = [0, 3, 5, 7, 10], sc = this.theme === 'snow' ? snow : china, base = this.theme === 'snow' ? 293.66 : 220;
+    return base * Math.pow(2, (sc[((i % 5) + 5) % 5] + 12 * Math.floor(i / 5)) / 12);
+  }
+
   // --- Efectos de juego ---
   click() { this.tone(1800, 0.04, { type: 'square', vol: 0.05 }); }
   button() { this.tone(660, 0.06, { type: 'triangle', vol: 0.12 }); this.tone(990, 0.08, { type: 'sine', vol: 0.08, at: 0.03 }); }
 
   spinStart(turbo) {
     if (!this.ok) return;
+    if (this.theme === 'china') { [0, 1, 2, 3, 4, 5].forEach(i => this.pluck(this._scale(i), i * 0.035, 0.07, 0.5)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
+    if (this.theme === 'snow') { this.wind(0.6, 0.14); [7, 6, 5, 4].forEach((n, i) => this.celesta(this._scale(n), i * 0.04, 0.035, 0.6)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     this.noise(0.25, { vol: 0.25, freq: 300, freqEnd: 2400, q: 2 });
     this.tone(180, 0.2, { type: 'triangle', vol: 0.15, slide: 2.2 });
     this.startLoop('reels', turbo ? 1.35 : 1);
@@ -145,6 +183,8 @@ class Sfx {
     l.s.stop(t + 0.3); l.lfo.stop(t + 0.3);
   }
   reelStop(i = 0, last = false) {
+    if (this.theme === 'china') { this.wood(0, 0.2, 820 + i * 60); this.tone(95, 0.2, { vol: 0.35, slide: 0.5 }); if (last) this.stopLoop('reels'); return; }
+    if (this.theme === 'snow') { this.celesta(this._scale(5 + i), 0, 0.05, 0.5); this.tone(130 - i * 5, 0.14, { vol: 0.3, slide: 0.5 }); this.noise(0.04, { vol: 0.12, type: 'highpass', freq: 6000 }); if (last) this.stopLoop('reels'); return; }
     this.tone(150 - i * 6, 0.16, { type: 'sine', vol: 0.4, slide: 0.45 });
     this.noise(0.05, { vol: 0.25, freq: 3200, q: 2 });
     this.tone(420 + i * 30, 0.05, { type: 'triangle', vol: 0.08, at: 0.01 });
@@ -168,6 +208,8 @@ class Sfx {
     }
   }
   ballLand(n = 0) {
+    if (this.theme === 'china') { this.gong(220 * Math.pow(2, [0, 2, 4, 7, 9][n % 5] / 12), 1.4, 0.1); this.pluck(this._scale(5 + n % 10), 0.02, 0.07); this.zap(0.15, 0.08); return; }
+    if (this.theme === 'snow') { this.celesta(this._scale(5 + n % 10), 0, 0.12); this.celesta(this._scale(10 + n % 10), 0.05, 0.05); this.noise(0.2, { vol: 0.08, type: 'highpass', freq: 7000, verb: 0.5 }); this.zap(0.12, 0.06); return; }
     const f = 523.25 * Math.pow(2, (n % 12) / 12);
     this.bell(f, 1.0, 0.14);
     this.tone(f * 2, 0.25, { type: 'triangle', vol: 0.05, at: 0.02 });
@@ -182,12 +224,23 @@ class Sfx {
     this.tone(70, 1.1, { type: 'sine', vol: 0.5, slide: 0.4 });
     this.zap(0.6, 0.3);
   }
+  // Rayo corto con trueno para cada bola cobrada (sube de tono con el conteo)
+  lightning(n = 0, big = false) {
+    this.noise(0.18, { vol: 0.32, buf: this.crackleBuf, type: 'highpass', freq: 2200, q: 0.7 });
+    this.noise(0.12, { vol: 0.28, type: 'bandpass', freq: 6000, freqEnd: 900, q: 3 });
+    this.noise(big ? 1.6 : 0.9, { at: 0.04, vol: big ? 0.55 : 0.32, type: 'lowpass', freq: 700, freqEnd: 50, q: 0.6, verb: 0.4 });
+    this.tone(62 + (n % 8) * 3, big ? 0.9 : 0.5, { vol: big ? 0.45 : 0.28, slide: 0.45, at: 0.03 });
+  }
   rowUnlock(level = 0) {
+    if (this.theme === 'china') { this.gong(98 * Math.pow(2, level / 12), 2.2, 0.35); [0, 1, 2, 3].forEach(i => this.pluck(this._scale(5 + level + i), 0.2 + i * 0.07, 0.1)); return; }
+    if (this.theme === 'snow') { this.shatter(level); this.wind(1, 0.12); [0, 1, 2, 3].forEach(i => this.celesta(this._scale(5 + level + i), 0.15 + i * 0.07, 0.08)); return; }
     this.thunder(0.6);
     const base = 392 * Math.pow(2, level / 6);
     [1, 1.25, 1.5, 2].forEach((m, i) => this.tone(base * m, 0.9, { type: 'triangle', vol: 0.12, at: 0.25 + i * 0.07, verb: 0.5 }));
   }
   featureStart() {
+    if (this.theme === 'china') { this.gong(82, 3.5, 0.5); this.firecrackers(18, 0.3); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => this.pluck(this._scale(i + 3), 0.9 + i * 0.06, 0.09)); this.brass([293.7, 370, 440, 587.3], 1.5, 1.4); return; }
+    if (this.theme === 'snow') { this.wind(2.4, 0.22); this.shatter(3); for (let i = 0; i < 12; i++) this.celesta(this._scale(14 - i), 0.3 + i * 0.07, 0.07); for (let i = 0; i < 8; i++) this.jingle(0.4 + i * 0.12, 0.08); this.brass([293.7, 349.2, 440, 587.3], 1.3, 1.6); return; }
     this.thunder(0.8);
     const seq = [392, 523, 659, 784, 1047, 1319];
     seq.forEach((f, i) => { this.tone(f, 0.5, { type: 'sawtooth', vol: 0.06, at: 0.3 + i * 0.09, verb: 0.4 }); this.bell(f, 0.8, 0.07, 0.3 + i * 0.09); });
@@ -207,6 +260,8 @@ class Sfx {
     }));
   }
   win(level = 0) {
+    if (this.theme === 'china') { for (let i = 0; i < 4 + level * 2; i++) this.pluck(this._scale(5 + i), i * 0.07, 0.1); if (level >= 2) this.gong(147, 2, 0.2); return; }
+    if (this.theme === 'snow') { for (let i = 0; i < 4 + level * 2; i++) this.celesta(this._scale(5 + i), i * 0.07, 0.09); if (level >= 1) this.jingle(0.1, 0.09); return; }
     const notes = [523, 659, 784, 1047, 1319];
     notes.slice(0, 3 + Math.min(2, level)).forEach((f, i) => this.bell(f, 0.8, 0.1, i * 0.08));
   }
@@ -222,6 +277,8 @@ class Sfx {
     this.tone(f * 2, 0.3, { vol: 0.07, at: 0.04, verb: 0.4 });
   }
   bigWin(level = 1) {
+    if (this.theme === 'china') { this.gong(98, 3, 0.4); this.firecrackers(10 + level * 6, 0.2, 0.22); }
+    if (this.theme === 'snow') { for (let i = 0; i < 10 + level * 4; i++) this.jingle(i * 0.11, 0.07); this.wind(1.5, 0.12); }
     const chords = [[261.6, 329.6, 392], [349.2, 440, 523.3], [392, 493.9, 587.3], [523.3, 659.3, 784, 1046.5]];
     chords.forEach((c, i) => this.brass(c, i * 0.32, i === 3 ? 1.8 : 0.4));
     this.tone(65, 0.5, { vol: 0.5, slide: 0.5 }); this.tone(65, 0.5, { vol: 0.5, slide: 0.5, at: 0.96 });
@@ -229,6 +286,8 @@ class Sfx {
   }
   // Jackpot: sirena + carillón + metales; más largo cuanto mayor el nivel (0 mini … 3 grand)
   jackpot(level = 1) {
+    if (this.theme === 'china') { this.gong(73, 4, 0.45); this.firecrackers(20 + level * 8, 0.4, 0.25); }
+    if (this.theme === 'snow') { for (let i = 0; i < 16; i++) this.celesta(this._scale(16 - i), 0.2 + i * 0.05, 0.06); for (let i = 0; i < 10; i++) this.jingle(0.3 + i * 0.1, 0.07); }
     this.thunder(0.5 + level * 0.1);
     this.siren(1.2 + level * 0.6);
     const n = 10 + level * 6;
@@ -285,6 +344,20 @@ class Sfx {
       western: { bpm: 118, root: 40, prog: [[0, M], [5, M], [7, J], [0, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, -1, 7, -1, 0, -1, 7, -1], arp: 'down', lead: 'triangle', pad: 'sawtooth', bells: 0.15 },
       // Galaxia: sintetizador espacial
       space: { bpm: 92, root: 38, prog: [[0, M], [3, J], [10, J], [5, M]], kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', bass: [0, -1, 12, -1, 7, -1, 10, -1], arp: 'updown', lead: 'sawtooth', pad: 'sine', bells: 0.5 },
+      // Sueño Rojo: pentatónica china, guzheng en arpegio, erhu en la melodía, bloque de madera y gong
+      china: { bpm: 90, root: 50, prog: [[0, J], [9, M], [7, J], [0, J]], kick: 'x.......x..x....', snare: '................', hat: '................', bass: [0, -1, 7, -1, 9, -1, 7, -1], arp: 'updown', lead: 'pluck', pad: 'sine', bells: 0.1, toms: true,
+        scale: [0, 2, 4, 7, 9], mel: 'erhu', wood: 'x..x..x...x.x...', gong: 4,
+        melody: [5, -1, 6, 7, 6, 5, 3, -2, 2, 3, 5, -2, 3, 2, 0, -2, 3, 5, 6, 8, 7, 6, 5, -2, 6, 5, 3, 2, 3, -2, -2, -1] },
+      chinaBonus: { bpm: 132, root: 50, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: '................', bass: [0, 12, 7, 12, 9, 12, 7, 12], arp: 'up', lead: 'pluck', pad: 'sine', bells: 0.2, toms: true,
+        scale: [0, 2, 4, 7, 9], mel: 'dizi', wood: 'x.xxx.xxx.xxx.xx', gong: 1,
+        melody: [5, 6, 7, 8, 7, 6, 5, 3, 5, 6, 7, -2, 6, 5, 6, -2, 7, 8, 10, 8, 7, 6, 5, 6, 7, 6, 5, 3, 5, -2, -2, -1] },
+      // Reino de Nieve: caja de música/celesta, cascabeles de trineo y viento helado
+      snow: { bpm: 78, root: 50, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x.......x.......', snare: '................', hat: '................', bass: [0, -1, -1, -1, 7, -1, -1, -1], arp: 'updown', lead: 'celesta', pad: 'sine', bells: 0.5,
+        scale: [0, 3, 5, 7, 10], mel: 'celesta', jingle: '....x.......x.x.', wind: true,
+        melody: [5, -2, 7, -2, 8, -2, 7, 6, 5, -2, -2, 3, 4, -2, -2, -1, 3, -2, 5, -2, 6, -2, 5, 4, 4, -2, -2, 2, 1, -2, -2, -1] },
+      snowBonus: { bpm: 124, root: 50, prog: [[0, J], [5, J], [7, J], [0, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: '................', bass: [0, 12, 7, 12, 0, 12, 7, 12], arp: 'up', lead: 'celesta', pad: 'sine', bells: 0.5,
+        scale: [0, 2, 4, 7, 9], mel: 'celesta', jingle: 'x.x.x.x.x.x.x.x.', wind: true,
+        melody: [5, 7, 8, 7, 5, 7, 8, 10, 9, -2, 8, 7, 6, -2, 5, -2, 6, 8, 9, 8, 6, 8, 9, 11, 10, -2, 9, 8, 7, -2, -2, -1] },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];
@@ -310,6 +383,27 @@ class Sfx {
     const snare = t => { noiseHit(t, 'bandpass', 1900, 0.18, 0.35, 0.8); osc('triangle', 190, t, 0.1, 0.25, bus); };
     const hat = (t, open) => noiseHit(t, 'highpass', 8000, open ? 0.22 : 0.05, open ? 0.12 : 0.08);
     const tom = (t, f) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.5, t + 0.3); env(g, t, 0.003, 0.5, 0.45); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.5); };
+    // Instrumentos de los temas (van al bus de música)
+    const pluckM = (f, t, v, d = step * 5) => { const fl = ctx.createBiquadFilter(), g = ctx.createGain(); fl.type = 'lowpass'; fl.frequency.setValueAtTime(f * 8, t); fl.frequency.exponentialRampToValueAtTime(f * 1.5, t + d * 0.6); env(g, t, 0.004, v, d); fl.connect(g); g.connect(bus);
+      ['sawtooth', 'triangle'].forEach((ty, k) => { const o = ctx.createOscillator(); o.type = ty; o.frequency.setValueAtTime(f * (1.012 + k * 0.002), t); o.frequency.exponentialRampToValueAtTime(f, t + 0.08); o.connect(fl); o.start(t); o.stop(t + d + 0.05); }); };
+    const celestaM = (f, t, v, d = 1.2) => { osc('sine', f, t, d, v, bus, 0.002); osc('sine', f * 4, t, d * 0.35, v * 0.3, bus, 0.002); osc('sine', f * 6.8, t, d * 0.18, v * 0.1, bus, 0.002); };
+    // Erhu / dizi: voz sostenida con vibrato y leve deslizamiento hacia la nota
+    const voiceM = (f, t, d, v, breathy) => { const o = ctx.createOscillator(), fl = ctx.createBiquadFilter(), g = ctx.createGain(), vib = ctx.createOscillator(), vg = ctx.createGain();
+      o.type = breathy ? 'triangle' : 'sawtooth'; o.frequency.setValueAtTime(f * 0.97, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.07);
+      vib.frequency.value = 5.5; vg.gain.value = f * 0.012; vib.connect(vg); vg.connect(o.frequency);
+      fl.type = 'lowpass'; fl.frequency.value = breathy ? 3200 : 1900; fl.Q.value = 2;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.07); g.gain.setValueAtTime(v, t + Math.max(0.08, d - 0.08)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(fl); fl.connect(g); g.connect(bus); o.start(t); vib.start(t); o.stop(t + d + 0.05); vib.stop(t + d + 0.05);
+      if (breathy) noiseHit(t, 'bandpass', f * 2, d * 0.5, v * 0.25, 3); };
+    const woodM = t => { osc('square', 880, t, 0.05, 0.05, bus, 0.001); osc('sine', 1320, t, 0.05, 0.12, bus, 0.001); };
+    const jingleM = t => { for (let k = 0; k < 3; k++) noiseHit(t + k * 0.018, 'bandpass', 6500 + Math.random() * 2500, 0.07, 0.07 * (1 - k * 0.25), 7); };
+    const gongM = (t, f = 82) => [1, 1.48, 2.02, 2.73].forEach((mm, k) => osc('sine', f * mm, t, 3 / (1 + k * 0.4), 0.09 / (1 + k), bus, 0.015));
+    const scaleHz = d => hz(st.root + 24 + st.scale[((d % 5) + 5) % 5] + 12 * Math.floor(d / 5));
+    // Viento de fondo continuo (Reino de Nieve)
+    if (st.wind) { const ws = ctx.createBufferSource(), wf = ctx.createBiquadFilter(), wg = ctx.createGain(), wl = ctx.createOscillator(), wlg = ctx.createGain();
+      ws.buffer = this.noiseBuf; ws.loop = true; wf.type = 'bandpass'; wf.frequency.value = 700; wf.Q.value = 2.5; wg.gain.value = 0.05;
+      wl.frequency.value = 0.11; wlg.gain.value = 450; wl.connect(wlg); wlg.connect(wf.frequency);
+      ws.connect(wf); wf.connect(wg); wg.connect(bus); ws.start(); wl.start(); m.wind = [ws, wl]; }
     const chordNotes = (c) => { const r = st.root + 12 + c[0]; return [r, r + (c[1] === M ? 3 : 4), r + 7]; };
     const tick = () => {
       while (m.next < ctx.currentTime + 0.3) {
@@ -325,7 +419,21 @@ class Sfx {
         // Arpegio
         const idx = st.arp === 'down' ? 3 - (s16 % 4) : st.arp === 'updown' ? [0, 1, 2, 3, 2, 1][s16 % 6] : s16 % 4;
         const an = (notes.concat([notes[0] + 12]))[idx] + 12;
-        if (style !== 'ice' || s16 % 2 === 0) osc(st.lead, hz(an), t, step * 0.9, st.lead === 'sawtooth' ? 0.035 : 0.045, bus);
+        if (st.lead === 'pluck') { if (s16 % 2 === 0) pluckM(hz(an), t, 0.05); }
+        else if (st.lead === 'celesta') { if (s16 % 2 === 0) celestaM(hz(an + 12), t, 0.03); }
+        else if (style !== 'ice' || s16 % 2 === 0) osc(st.lead, hz(an), t, step * 0.9, st.lead === 'sawtooth' ? 0.035 : 0.045, bus);
+        // Percusión de los temas
+        if (st.wood && st.wood[s16] === 'x') woodM(t);
+        if (st.jingle && st.jingle[s16] === 'x') jingleM(t);
+        if (st.gong && s16 === 0 && (i / 16 | 0) % st.gong === 0) gongM(t);
+        // Melodía en corcheas (-1 silencio, -2 sostiene la nota anterior)
+        if (st.melody && s16 % 2 === 0) {
+          const L = st.melody.length, e = (i / 2 | 0) % L, d = st.melody[e];
+          if (d >= 0) { let n = 1; while (st.melody[(e + n) % L] === -2 && n < 8) n++;
+            const dur = step * 2 * n, f = scaleHz(d);
+            if (st.mel === 'celesta') celestaM(f, t, 0.06, Math.max(0.8, dur));
+            else voiceM(f, t, dur * 0.95, st.mel === 'dizi' ? 0.05 : 0.055, st.mel === 'dizi'); }
+        }
         // Campanitas brillantes
         if (Math.random() < st.bells * 0.25) { const f = hz(notes[Math.random() * 3 | 0] + 36); osc('sine', f, t, 0.9, 0.035, bus); osc('sine', f * 2.76, t, 0.4, 0.012, bus); }
         m.next += step; m.i = (i + 1) % (16 * st.prog.length * 4);
@@ -337,6 +445,7 @@ class Sfx {
   stopMusic() {
     const m = this._music; if (!m) return;
     this._music = null; clearInterval(m.timer);
+    if (m.wind) setTimeout(() => { try { m.wind.forEach(n => n.stop()); } catch (e) { } }, 1500);
     const t = this.ctx.currentTime; m.bus.gain.setTargetAtTime(0.0001, t, 0.25);
     setTimeout(() => { try { m.bus.disconnect(); m.lfo.stop(); } catch (e) { } }, 1500);
   }
