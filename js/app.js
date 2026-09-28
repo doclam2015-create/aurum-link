@@ -1,19 +1,20 @@
-import { sfx } from './audio.js?v=38';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=38';
-import { sleep } from './reels.js?v=38';
-import XLink from './games/xlink.js?v=38';
-import Avalanche from './games/avalanche.js?v=38';
-import FireWheel from './games/firewheel.js?v=38';
-import Legion from './games/legion.js?v=38';
-import Bull from './games/bull.js?v=38';
-import Dragon from './games/dragon.js?v=38';
-import Codex from './games/codex.js?v=38';
-import Reef from './games/reef.js?v=38';
-import Western from './games/western.js?v=38';
-import Galaxy from './games/galaxy.js?v=38';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=38';
+import { sfx } from './audio.js?v=39';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=39';
+import { sleep } from './reels.js?v=39';
+import XLink from './games/xlink.js?v=39';
+import Avalanche from './games/avalanche.js?v=39';
+import FireWheel from './games/firewheel.js?v=39';
+import Legion from './games/legion.js?v=39';
+import Bull from './games/bull.js?v=39';
+import Dragon from './games/dragon.js?v=39';
+import Codex from './games/codex.js?v=39';
+import Reef from './games/reef.js?v=39';
+import Western from './games/western.js?v=39';
+import Galaxy from './games/galaxy.js?v=39';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=39';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=39';
 
-const GAMES = [XLink, RedDream, SnowKingdom, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
+const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
@@ -382,7 +383,7 @@ function openSettings() {
 function buildLobby() {
   $('lobbyGrid').innerHTML = GAMES.map(G => {
     // Íconos: número = casilla del atlas; texto = imagen de la hoja de temas
-    const icons = G.lobby.icons.map(i => typeof i === 'string' ? '<i class="art" style="' + sheetIconStyle(i) + '"></i>' : '<i style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>').join('');
+    const icons = G.lobby.icons.map(i => typeof i === 'string' ? '<i class="art" style="' + (G.iconStyle ? G.iconStyle(i) : sheetIconStyle(i)) + '"></i>' : '<i style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>').join('');
     return '<button class="card" data-game="' + G.id + '" style="--c1:' + G.lobby.c1 + ';--c2:' + G.lobby.c2 + '"><div class="icons">' + icons + '</div><b>' + G.name + '</b><em>' + G.lobby.mechanic + '</em><small>' + G.lobby.desc + '</small></button>';
   }).join('');
 }
@@ -497,7 +498,7 @@ async function boot() {
   buildLobby();
   $('verLabel').textContent = 'v' + VERSION;
   bind();
-  await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e))]);
+  await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e)), loadWolfArt().catch(e => console.warn('lobo', e))]);
   $('loader').classList.add('gone');
   selectGame(state.game || GAMES[0].id);
   if (!state.game || !localStorage.getItem(SAVE_KEY + '.seen')) { openLobby(); try { localStorage.setItem(SAVE_KEY + '.seen', '1'); } catch (e) { } }

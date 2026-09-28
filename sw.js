@@ -1,9 +1,9 @@
 // Caché offline: la app funciona sin conexión una vez abierta.
-const CACHE = 'aurum-v38';
-const V = '?v=38';
+const CACHE = 'aurum-v39';
+const V = '?v=39';
 const FILES = ['./', './index.html', './css/app.css' + V, './js/app.js' + V, './js/audio.js' + V, './js/gfx.js' + V, './js/reels.js' + V,
-  './js/games/xlink.js' + V, './js/games/avalanche.js' + V, './js/games/firewheel.js' + V, './js/games/legion.js' + V, './js/games/bull.js' + V, './js/games/dragon.js' + V, './js/games/codex.js' + V, './js/games/reef.js' + V, './js/games/western.js' + V, './js/games/galaxy.js' + V, './js/games/xthemes.js' + V,
-  './assets/symbols.webp', './assets/themes.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];
+  './js/games/xlink.js' + V, './js/games/avalanche.js' + V, './js/games/firewheel.js' + V, './js/games/legion.js' + V, './js/games/bull.js' + V, './js/games/dragon.js' + V, './js/games/codex.js' + V, './js/games/reef.js' + V, './js/games/western.js' + V, './js/games/galaxy.js' + V, './js/games/xthemes.js' + V, './js/games/wolf.js' + V,
+  './assets/symbols.webp', './assets/themes.webp', './assets/wolf.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
 });
