@@ -1,8 +1,8 @@
 // LEGIÓN DORADA · 5x4, 1024 formas de ganar.
 // Wild (corona) en rodillos 2-4. 3+ fénix = giros gratis (8/12/20). En giros gratis cada wild
 // queda PEGADO con un multiplicador x2/x3 que se multiplica en cada forma ganadora.
-import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=26';
-import { ReelSet, weighted } from '../reels.js?v=26';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=29';
+import { ReelSet, weighted } from '../reels.js?v=29';
 
 const COLS = 5, ROWS = 4;
 export const PAY = {
@@ -79,6 +79,7 @@ export default class Legion {
   }
   update(dt) { this.time += dt; this.reels.update(dt); if (this.wins) this.winT += dt; }
   draw(x) {
+    if (!this.W) return; // aún sin medidas (primer cuadro)
     const { gx, gy, cw, ch, W, time } = this;
     const bw = cw * COLS, bh = ch * ROWS;
     // Frontón romano
