@@ -11,15 +11,25 @@ const BETS = [10, 20, 30, 50, 100, 200, 500];
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 const SAVE_KEY = 'aurumlink.v2';
+const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
+// Jackpots progresivos comunes a todos los juegos (múltiplos de la apuesta; crecen con cada giro)
+export const JACKPOTS = [
+  { key: 'grand', label: 'GRAND', base: 1000, grow: 0.05, cls: 'grand', color: '#ff4a3a', level: 3 },
+  { key: 'major', label: 'MAJOR', base: 100, grow: 0.02, cls: 'major', color: '#d77aff', level: 2 },
+  { key: 'minor', label: 'MINOR', base: 30, grow: 0.006, cls: 'minor', color: '#5ad8ff', level: 1 },
+  { key: 'mini', label: 'MINI', base: 15, grow: 0.003, cls: 'mini', color: '#5dff7a', level: 0 }
+];
 
 const state = {
-  balance: 10000, betIdx: 2, game: null, sound: true, music: true, turbo: false, jp: {}, stats: { spins: 0, bet: 0, won: 0, best: 0 }
+  balance: 10000, betIdx: 2, game: null, sound: true, music: true, speed: 1, light: false, sfxVol: 0.9, musicVol: 0.55, jp: {}, stats: { spins: 0, bet: 0, won: 0, best: 0 }
 };
 try {
   const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
   if (s && typeof s.balance === 'number' && isFinite(s.balance)) Object.assign(state, s);
 } catch (e) { /* almacenamiento no disponible */ }
 state.betIdx = clamp(state.betIdx | 0, 0, BETS.length - 1);
+if (state.turbo) { state.speed = 2; delete state.turbo; }
+if (!SPEEDS.includes(state.speed)) state.speed = 1;
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { } }
 
 // ---------- Canvas ----------
@@ -50,7 +60,10 @@ const meter = { win: 0, winShown: 0, credit: state.balance, creditShown: state.b
 const app = {
   sfx, fx, fmt,
   get dpr() { return DPR; },
-  get turbo() { return state.turbo; },
+  get speed() { return state.speed; },
+  get turbo() { return state.speed >= 2; },
+  get light() { return state.light; },
+  get auto() { return autoLeft > 0; },
   get bet() { return BETS[state.betIdx]; },
   get skip() { return skipReq; },
   message(t) { $('msg').innerHTML = t || ''; },
@@ -71,15 +84,25 @@ const app = {
     const el = $('board'); el.classList.remove('shake', 'shake2'); void el.offsetWidth; el.classList.add(strong ? 'shake2' : 'shake');
   },
   jackpot(key) {
-    const d = (game.jackpots || []).find(j => j.key === key); if (!d) return 0;
-    return app.bet * (d.base + (d.grow ? (state.jp[game.id] && state.jp[game.id][key]) || 0 : 0));
+    const d = JACKPOTS.find(j => j.key === key); if (!d) return 0;
+    return app.bet * (d.base + ((state.jp[game.id] && state.jp[game.id][key]) || 0));
+  },
+  // Entrega un jackpot con toda la ceremonia y lo reinicia. Devuelve el monto.
+  async awardJackpot(key) {
+    const d = JACKPOTS.find(j => j.key === key); if (!d) return 0;
+    const v = app.jackpot(key);
+    app.highlightPot(key); sfx.jackpot(d.level); app.flash(d.color, 0.6); app.shake(d.level >= 2);
+    await showOverlay({ kind: 'banner', title: d.label, sub: '¡JACKPOT! ' + fmt(v), color: d.color, dur: 1800 + d.level * 700, t: 0, jp: true });
+    app.resetJackpot(key);
+    app.addWin(v);
+    return v;
   },
   resetJackpot(key) { if (state.jp[game.id]) state.jp[game.id][key] = 0; renderPots(true); },
   highlightPot(key) { const el = document.querySelector('.pot[data-k="' + key + '"]'); if (el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } },
   banner(title, sub, opts = {}) { return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 }); },
   celebrate(amount, bet, label) { return showOverlay({ kind: 'big', amount, bet, label, t: 0, dur: 4.5 }); },
   setSpinLabel(t, sub) { $('spinLabel').textContent = t; $('spinSub').textContent = sub || ''; },
-  wait(ms) { return sleep(state.turbo ? ms * 0.55 : ms); },
+  wait(ms) { return sleep(ms / state.speed); },
   pulseMeter(id) { const el = $(id); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
 };
 
@@ -115,6 +138,10 @@ function drawOverlay(x, dt) {
   if (o.kind === 'banner') {
     x.drawImage(glow(o.color, 128), cx - FW * 0.5, cy - size * 2, FW, size * 4);
     goldText(x, o.title, cx, cy - size * 0.35, size * pop * (1 + Math.sin(t * 5) * 0.03), { maxW: FW * 0.9, glowColor: o.color });
+    if (o.jp) {
+      if (Math.random() < 0.9) fx.add({ type: 'coin', x: rand(0, FW), y: -20, vx: rand(-40, 40), vy: rand(150, 350), g: 900, life: 2.2, size: rand(9, 16), vr: rand(6, 14) });
+      if (Math.random() < 0.4) fx.add({ type: 'spark', x: rand(0, FW), y: rand(0, FH), vx: 0, vy: -30, life: 0.8, size: rand(8, 18), color: o.color });
+    }
     if (o.sub) goldText(x, o.sub, cx, cy + size * 0.75, size * 0.42 * pop, { colors: ['#fff', '#fff', '#e8f6ff', '#fff'], stroke: '#10183a', maxW: FW * 0.9 });
     if (t > bigDur) finishOverlay();
   } else {
@@ -179,18 +206,18 @@ let fxDrawn = false;
 // ---------- HUD ----------
 function renderPots(valuesOnly) {
   const pots = $('pots');
-  const js = game.jackpots;
-  if (!valuesOnly) {
-    pots.innerHTML = js ? js.map(j => '<div class="pot ' + j.cls + '" data-k="' + j.key + '"><b>' + j.label + '</b><strong></strong></div>').join('') : '';
-    pots.hidden = !js;
-    document.body.classList.toggle('no-pots', !js);
+  const js = JACKPOTS;
+  if (!valuesOnly || !pots.children.length) {
+    pots.innerHTML = js.map(j => '<div class="pot ' + j.cls + '" data-k="' + j.key + '"><b>' + j.label + '</b><strong></strong></div>').join('');
   }
-  if (js) js.forEach(j => { const el = pots.querySelector('[data-k="' + j.key + '"] strong'); if (el) el.textContent = fmt(app.jackpot(j.key)); });
+  js.forEach(j => { const el = pots.querySelector('[data-k="' + j.key + '"] strong'); if (el) el.textContent = fmt(app.jackpot(j.key)); });
 }
 function renderHud() {
   $('bet').textContent = fmt(app.bet);
   $('credit').textContent = fmt(meter.creditShown);
-  $('btnTurbo').classList.toggle('on', state.turbo);
+  $('speedVal').textContent = speedLabel(state.speed);
+  $('btnTurbo').classList.toggle('on', state.speed >= 2);
+  $('btnTheme').classList.toggle('on', state.light);
   $('btnSound').classList.toggle('off', !state.sound);
   $('btnAuto').classList.toggle('on', autoLeft > 0);
   $('autoCount').textContent = autoLeft > 0 ? (autoLeft === Infinity ? '∞' : autoLeft) : '';
@@ -202,9 +229,8 @@ function renderHud() {
 }
 
 function growJackpots() {
-  if (!game.jackpots) return;
   const jp = state.jp[game.id] || (state.jp[game.id] = {});
-  game.jackpots.forEach(j => { if (j.grow) jp[j.key] = (jp[j.key] || 0) + j.grow * (0.6 + Math.random() * 0.8); });
+  JACKPOTS.forEach(j => { jp[j.key] = (jp[j.key] || 0) + j.grow * (0.6 + Math.random() * 0.8); });
 }
 
 async function spin(paid = true) {
@@ -258,6 +284,24 @@ function openInstall() {
   openSheet('Instalar en iPhone / iPad', '<ol class="steps"><li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> <span class="kbd">⬆︎</span>.</li><li>Elige <b>Agregar a pantalla de inicio</b>.</li><li>Ábrela desde el ícono: se ejecuta a pantalla completa y funciona sin conexión.</li></ol><p class="fine">Si no oyes sonido, revisa que el interruptor de silencio del iPhone esté desactivado.</p>');
 }
 
+function speedLabel(v) { return (v === 0.75 ? '¾' : v === 0.5 ? '½' : v === 1.5 ? '1½' : String(v)) + '×'; }
+function setLight(on) {
+  state.light = on; save();
+  document.body.classList.toggle('light', on);
+  if (game) game.resize(W, H, DPR);
+  renderHud();
+}
+function openSettings() {
+  const idx = SPEEDS.indexOf(state.speed);
+  openSheet('Ajustes', '<div class="set"><label>Velocidad de giro <output id="setSpeedOut">' + speedLabel(state.speed) + '</output></label>' +
+    '<input id="setSpeed" type="range" min="0" max="' + (SPEEDS.length - 1) + '" step="1" value="' + idx + '"><div class="set-scale"><span>Lenta</span><span>Normal</span><span>Muy rápida</span></div></div>' +
+    '<div class="set"><label>Volumen de efectos</label><input id="setSfx" type="range" min="0" max="100" value="' + Math.round(state.sfxVol * 100) + '"></div>' +
+    '<div class="set"><label>Volumen de música</label><input id="setMusic" type="range" min="0" max="100" value="' + Math.round(state.musicVol * 100) + '"></div>' +
+    '<label class="set switch"><span>Música de fondo</span><input id="setMusicOn" type="checkbox"' + (state.music ? ' checked' : '') + '><i></i></label>' +
+    '<label class="set switch"><span>Rodillos en modo claro</span><input id="setLight" type="checkbox"' + (state.light ? ' checked' : '') + '><i></i></label>' +
+    '<p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>');
+}
+
 // ---------- Lobby ----------
 function buildLobby() {
   $('lobbyGrid').innerHTML = GAMES.map(G => {
@@ -290,7 +334,9 @@ function bind() {
   $('btnSpin').addEventListener('pointerdown', e => { e.preventDefault(); if (autoLeft > 0 && !busy) { autoLeft = 0; renderHud(); } spin(); });
   tap('betDown', () => { if (busy) return; state.betIdx = Math.max(0, state.betIdx - 1); sfx.click(); renderHud(); save(); });
   tap('betUp', () => { if (busy) return; state.betIdx = Math.min(BETS.length - 1, state.betIdx + 1); sfx.click(); renderHud(); save(); });
-  tap('btnTurbo', () => { state.turbo = !state.turbo; sfx.button(); renderHud(); save(); });
+  tap('btnTurbo', () => { state.speed = SPEEDS[(SPEEDS.indexOf(state.speed) + 1) % SPEEDS.length]; sfx.button(); renderHud(); save(); });
+  tap('btnTheme', () => { setLight(!state.light); sfx.button(); });
+  tap('btnSettings', openSettings);
   tap('btnAuto', () => { if (autoLeft > 0) { autoLeft = 0; renderHud(); return; } if (!busy) openAuto(); });
   tap('btnInfo', openInfo);
   tap('btnLobby', openLobby);
@@ -299,7 +345,20 @@ function bind() {
     if (state.sound && state.music) sfx.music(game.constructor.music); else sfx.stopMusic();
     renderHud(); save();
   });
-  tap('btnMusic', () => { state.music = !state.music; sfx.musicOn = state.music; if (state.music) sfx.music(game.constructor.music); else sfx.stopMusic(); $('btnMusic').classList.toggle('off', !state.music); save(); });
+  $('sheet').addEventListener('input', e => {
+    const t = e.target;
+    if (t.id === 'setSpeed') { state.speed = SPEEDS[+t.value]; $('setSpeedOut').textContent = speedLabel(state.speed); renderHud(); }
+    if (t.id === 'setSfx') state.sfxVol = +t.value / 100;
+    if (t.id === 'setMusic') state.musicVol = +t.value / 100;
+    sfx.setVolumes(state.sfxVol, state.musicVol);
+    save();
+  });
+  $('sheet').addEventListener('change', e => {
+    const t = e.target;
+    if (t.id === 'setMusicOn') { state.music = t.checked; sfx.musicOn = state.music; if (state.music) sfx.music(game.constructor.music); else sfx.stopMusic(); save(); }
+    if (t.id === 'setLight') setLight(t.checked);
+    if (t.id === 'setSfx') sfx.coin();
+  });
   tap('btnInstall', openInstall);
   tap('btnExtra', async () => {
     if (busy || !game.extra) return;
@@ -325,6 +384,7 @@ function bind() {
   $('lobbyGrid').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) selectGame(c.dataset.game); });
   $('lobbyClose').addEventListener('click', () => { if (game) { $('lobby').classList.remove('open'); if (state.music) sfx.music(game.constructor.music); } });
   $('fx').addEventListener('pointerdown', () => { skipReq = true; });
+  stage.addEventListener('pointerdown', e => { if (game && game.onTap && !overlay) { const r = stage.getBoundingClientRect(); game.onTap(e.clientX - r.left, e.clientY - r.top); } });
   document.addEventListener('pointerdown', () => { if (overlay) skipReq = true; }, true);
   document.addEventListener('keydown', e => { if (e.code === 'Space' && !$('sheet').classList.contains('open')) { e.preventDefault(); spin(); } });
   window.addEventListener('resize', () => requestAnimationFrame(resize));
@@ -342,7 +402,8 @@ function bind() {
 // ---------- Arranque ----------
 async function boot() {
   sfx.enabled = state.sound; sfx.musicOn = state.music;
-  $('btnMusic').classList.toggle('off', !state.music);
+  sfx.setVolumes(state.sfxVol, state.musicVol);
+  document.body.classList.toggle('light', state.light);
   buildLobby();
   bind();
   try { await loadAtlas('assets/symbols.webp'); } catch (e) { console.warn('atlas', e); }

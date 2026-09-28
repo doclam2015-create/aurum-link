@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="assets/symbols.webp" as="image" type="image/webp">
-<link rel="stylesheet" href="css/app.css?v=20">
+<link rel="stylesheet" href="css/app.css?v=21">
 <title>Aurum Link</title>
 </head>
 <body data-game="xlink">
@@ -21,7 +21,8 @@
   <header class="top">
     <button id="btnLobby" class="icon" aria-label="Elegir juego"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></button>
     <div class="logo"><span id="gameName">Aurum Link</span><small id="gameTag"></small></div>
-    <button id="btnMusic" class="icon" aria-label="Música"><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+    <button id="btnTheme" class="icon" aria-label="Modo claro u oscuro"><svg viewBox="0 0 24 24"><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/><g class="sun"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" stroke="currentColor" stroke-width="2"/></g></svg></button>
+    <button id="btnSettings" class="icon" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.4 5.1 1.9 1.5-2 3.4-2.3-.8a8 8 0 0 1-1.9 1.1L15.7 21h-4l-.4-2.4a8 8 0 0 1-1.9-1.1l-2.3.8-2-3.4 1.9-1.5a8 8 0 0 1 0-2.2L5.1 9.7l2-3.4 2.3.8a8 8 0 0 1 1.9-1.1L11.7 3.6h4l.4 2.4a8 8 0 0 1 1.9 1.1l2.3-.8 2 3.4-1.9 1.5a8 8 0 0 1 0 2.2z" fill-rule="evenodd"/></svg></button>
     <button id="btnSound" class="icon" aria-label="Sonido"><svg viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="wave" d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14" fill="none" stroke="currentColor" stroke-width="2"/><path class="mute" d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2"/></svg></button>
   </header>
   <section id="pots" class="pots" aria-label="Jackpots"></section>
@@ -41,7 +42,7 @@
       <button id="btnInfo" class="ctl"><b>i</b><small>PAGOS</small></button>
       <button id="btnAuto" class="ctl"><b>AUTO</b><small id="autoCount"></small></button>
       <button id="btnSpin" class="spin" aria-label="Girar"><span class="ring"></span><span id="spinLabel">GIRAR</span><small id="spinSub"></small></button>
-      <button id="btnTurbo" class="ctl"><b>⚡</b><small>TURBO</small></button>
+      <button id="btnTurbo" class="ctl"><b>⚡ <span id="speedVal">1×</span></b><small>VELOCIDAD</small></button>
       <button id="btnExtra" class="ctl extra" hidden><b id="extraLabel">BONO</b><small id="extraSub"></small></button>
     </div>
   </section>
@@ -69,6 +70,6 @@
 </div>
 
 <div id="loader"><div class="brand">AURUM <span>LINK</span></div><div class="bar"><i></i></div></div>
-<script type="module" src="js/app.js?v=20"></script>
+<script type="module" src="js/app.js?v=21"></script>
 </body>
 </html>

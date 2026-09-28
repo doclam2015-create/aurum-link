@@ -19,22 +19,25 @@ export class ReelSet {
   }
   layout(x, y, cw, ch) { this.x = x; this.y = y; this.cw = cw; this.ch = ch; }
 
-  start(turbo) {
-    this.turbo = turbo; this.spinning = true; this.time = 0; this.slammed = false;
-    this.maxSpeed = turbo ? 34 : 24;
+  // speed: 0.5 (lento) … 3 (muy rápido)
+  start(speed = 1) {
+    if (speed === true) speed = 2; else if (!speed) speed = 1;
+    this.speed = speed; this.spinning = true; this.time = 0; this.slammed = false;
+    this.maxSpeed = 22 * Math.sqrt(speed);
     this.columns.forEach((col, c) => {
-      col.state = 'windup'; col.t = -c * (turbo ? 0.02 : 0.06); col.speed = 0; col.feed = []; col.antic = false; col.stopAt = Infinity; col.bounce = 1;
+      col.state = 'windup'; col.t = -c * 0.06 / speed; col.speed = 0; col.feed = []; col.antic = false; col.stopAt = Infinity; col.bounce = 1;
     });
   }
 
   // Programa el frenado. `anticFrom`: índice de rodillo desde el cual se alarga la espera (suspenso).
   stopTo(final, { minTime, anticFrom = -1, onStop } = {}) {
     this.final = final; this.onStop = onStop;
-    const base = minTime != null ? minTime : (this.turbo ? 0.25 : 0.55);
-    const gap = this.turbo ? 0.07 : 0.16;
+    const sp = this.speed || 1;
+    const base = minTime != null ? minTime : 0.6 / sp;
+    const gap = 0.18 / sp;
     let t = base;
     this.columns.forEach((col, c) => {
-      if (anticFrom >= 0 && c >= anticFrom) { t += this.turbo ? 0.8 : 1.4; col.antic = true; }
+      if (anticFrom >= 0 && c >= anticFrom) { t += 1.4 / Math.sqrt(sp); col.antic = true; }
       col.stopAt = this.time + t + (this.slammed ? -10 : 0);
       t += gap;
     });

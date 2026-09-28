@@ -187,3 +187,46 @@ body.busy #btnExtra,body.busy #btnInfo{opacity:.4}
   .ctl{height:40px}.spin{width:70px;height:70px}
 }
 @media (prefers-reduced-motion:reduce){.pot::after,body:not(.busy) .spin{animation:none}}
+
+/* Botones de cabecera */
+.top .icon{flex:0 0 auto}
+#btnTheme .moon{display:none}
+body.light #btnTheme .moon{display:inline}body.light #btnTheme .sun{display:none}
+#btnTheme.on{background:rgba(255,236,170,.25)}
+#speedVal{font-size:13px}
+
+/* Ajustes */
+.set{display:block;margin:14px 0}
+.set label,.set>span{display:flex;justify-content:space-between;font-weight:700;color:#fff;margin-bottom:6px}
+.set output{color:var(--accent);font-weight:900}
+.set input[type=range]{width:100%;height:34px;-webkit-appearance:none;appearance:none;background:transparent}
+.set input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.set input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--accent) 60%,#8a5a10);box-shadow:0 2px 6px rgba(0,0,0,.6)}
+.set-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.set.switch{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.set.switch input{display:none}
+.set.switch i{position:relative;width:52px;height:30px;border-radius:15px;background:#3a2a44;transition:background .2s}
+.set.switch i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.set.switch input:checked+i{background:var(--accent2)}
+.set.switch input:checked+i::after{transform:translateX(22px)}
+
+/* Modo claro */
+body.light{background:radial-gradient(120% 70% at 50% 18%,#fff6e6,color-mix(in srgb,var(--bg1) 35%,#f3e6d6) 80%) fixed;--muted:#6a5540}
+body.light .logo span{filter:drop-shadow(0 1px 0 rgba(90,50,0,.6))}
+body.light .logo small,body.light .msg{color:#5a4632}
+body.light .msg b{color:color-mix(in srgb,var(--accent2) 70%,#000)}
+body.light .icon{background:rgba(255,255,255,.7);border-color:rgba(120,80,30,.25);color:color-mix(in srgb,var(--accent2) 75%,#000)}
+body.light .hud{background:linear-gradient(#fffaf0,#ecdcc3);border-color:rgba(140,100,40,.4);box-shadow:0 -4px 16px rgba(80,50,10,.18)}
+body.light .meter{background:#fffdf7;border-color:rgba(140,100,40,.3);box-shadow:inset 0 2px 6px rgba(80,50,10,.15)}
+body.light .meter b{color:#2a1a08}
+body.light #win{color:color-mix(in srgb,var(--accent2) 80%,#000)}
+body.light .ctl{background:linear-gradient(#fff,#e9dcc8);border-color:rgba(120,80,30,.25);box-shadow:inset 0 1px 0 #fff,0 3px 0 rgba(90,60,20,.3)}
+body.light .ctl b{color:#2a1a08}
+body.light .ctl.extra b,body.light .ctl.on b{color:#fff}
+body.light .ctl.extra{background:linear-gradient(#ff6ad5,#a3129c)}
+body.light .ctl.on{background:linear-gradient(#ffcf4a,#d07a10)}
+.top{gap:4px}
+.top .icon{width:36px;height:36px;border-radius:11px}
+.top .icon svg{width:19px;height:19px}
+.logo small{display:block;overflow:hidden;text-overflow:ellipsis;font-size:9px;letter-spacing:.08em}
+@media (min-width:600px){.top .icon{width:42px;height:42px}.top .icon svg{width:22px;height:22px}.logo small{font-size:11px}}

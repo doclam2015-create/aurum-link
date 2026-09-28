@@ -1,7 +1,7 @@
 // LEGIÓN DORADA · 5x4, 1024 formas de ganar.
 // Wild (corona) en rodillos 2-4. 3+ fénix = giros gratis (8/12/20). En giros gratis cada wild
 // queda PEGADO con un multiplicador x2/x3 que se multiplica en cada forma ganadora.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js';
+import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js';
 import { ReelSet, weighted } from '../reels.js';
 
 const COLS = 5, ROWS = 4;
@@ -9,7 +9,9 @@ export const PAY = {
   emperor: [0, 0, 0, 25, 60, 200], bull: [0, 0, 0, 15, 40, 120], dragon: [0, 0, 0, 12, 30, 90], rstar: [0, 0, 0, 10, 25, 70],
   K: [0, 0, 0, 5, 12, 35], Q: [0, 0, 0, 5, 10, 30], J: [0, 0, 0, 4, 8, 22], ten: [0, 0, 0, 4, 8, 20]
 };
-const BASEW = { emperor: 4, bull: 6, dragon: 7, rstar: 8, K: 12, Q: 12, J: 14, ten: 14, phoenix: 1.25 };
+const BASEW = { emperor: 4, bull: 6, dragon: 7, rstar: 8, K: 12, Q: 12, J: 14, ten: 14, phoenix: 1.25, coin: 0.9 };
+export const PICK_W = { mini: 60, minor: 28, major: 10, grand: 2 };
+const JPC = { mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' };
 export const W_REEL = [0, 1, 2, 3, 4].map(c => Object.assign({}, BASEW, (c >= 1 && c <= 3) ? { wild: 2.2 } : {}));
 const ICON = { emperor: S.EMPEROR, bull: S.BULL, dragon: S.DRAGON, rstar: S.RSTAR, K: S.K, Q: S.Q, J: S.J, ten: S.TEN, wild: S.WILD, phoenix: S.PHOENIX };
 const UNIT = 1 / 72;
@@ -43,7 +45,6 @@ export default class Legion {
   };
   constructor(app) {
     this.app = app; this.id = Legion.id;
-    this.jackpots = null;
     this.hint = '<b>1024 formas</b> de ganar. 3 fénix = <b>giros gratis con wilds pegajosos</b>.';
     this.reels = new ReelSet({ cols: COLS, rows: ROWS, pick: c => ({ k: weighted(W_REEL[c]) }), drawSym: (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o) });
     this.sticky = {}; this.freeLeft = 0; this.inFree = false; this.fsTotal = 0;
@@ -53,7 +54,7 @@ export default class Legion {
   get freeRound() { return this.freeLeft > 0; }
   get keepWin() { return this.inFree; }
   get locked() { return this.inFree; }
-  get animating() { return this.reels.spinning || !!this.wins || this.inFree; }
+  get animating() { return this.reels.spinning || !!this.wins || this.inFree || !!this.pick; }
 
   resize(W, H) {
     this.W = W; this.H = H;
@@ -70,7 +71,8 @@ export default class Legion {
     if (o && o.fx) { sc = o.fx.scale || 1; a = o.fx.alpha == null ? 1 : o.fx.alpha; }
     const d = size * sc, cx = px + w / 2, cy = py + h / 2;
     x.globalAlpha = a;
-    if (o && o.blur) x.drawImage(sym(ICON[s.k], size * dpr, 'b'), cx - d / 2, cy - d * 0.675, d, d * 1.35);
+    if (s.k === 'coin') { const bd = Math.min(w, h) * 0.98 * sc; x.drawImage(ball('gold', 'JP', Math.min(w, h) * 0.98 * dpr), cx - bd / 2, cy - bd / 2, bd, bd); }
+    else if (o && o.blur) x.drawImage(sym(ICON[s.k], size * dpr, 'b'), cx - d / 2, cy - d * 0.675, d, d * 1.35);
     else x.drawImage(sym(ICON[s.k], size * dpr), cx - d / 2, cy - d / 2, d, d);
     x.globalAlpha = 1;
   }
@@ -94,9 +96,10 @@ export default class Legion {
     g.addColorStop(0, '#9c5a14'); g.addColorStop(0.5, '#ffe29a'); g.addColorStop(1, '#9c5a14');
     x.fillStyle = g; x.fill();
     g = x.createLinearGradient(0, gy, 0, gy + bh);
-    g.addColorStop(0, '#3a0a0e'); g.addColorStop(0.5, '#61141a'); g.addColorStop(1, '#2a0508');
+    if (this.app.light) { g.addColorStop(0, '#fffaf2'); g.addColorStop(0.5, '#f1e4d0'); g.addColorStop(1, '#fbf3e6'); }
+    else { g.addColorStop(0, '#3a0a0e'); g.addColorStop(0.5, '#61141a'); g.addColorStop(1, '#2a0508'); }
     x.fillStyle = g; x.fillRect(gx - 2, gy, bw + 4, bh);
-    x.strokeStyle = 'rgba(255,210,120,0.25)'; x.lineWidth = 1;
+    x.strokeStyle = this.app.light ? 'rgba(140,90,30,0.3)' : 'rgba(255,210,120,0.25)'; x.lineWidth = 1;
     for (let c = 1; c < COLS; c++) { x.beginPath(); x.moveTo(gx + c * cw, gy); x.lineTo(gx + c * cw, gy + bh); x.stroke(); }
     this.reels.draw(x, (c, r) => this.cellFx(c, r));
     // Wilds pegajosos
@@ -114,6 +117,7 @@ export default class Legion {
       x.font = '900 12px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#3a1000'; x.fillText('x' + s.m, px + cw - 16.5, py + 12.5);
     }
     if (this.wins) this.drawWins(x);
+    if (this.pick) this.drawPick(x);
   }
   cellFx(c, r) {
     if (!this.wins || !this.wins.length) return null;
@@ -138,11 +142,12 @@ export default class Legion {
     app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeLeft + ' restantes' : '');
     const final = [];
     for (let c = 0; c < COLS; c++) { final.push([]); for (let r = 0; r < ROWS; r++) final[c].push({ k: weighted(W_REEL[c]) }); }
+    if (app._forceJp) { app._forceJp = false; [0, 2, 4].forEach(c => { final[c][0] = { k: 'coin' }; }); }
     if (app._force) { app._force = false; [0, 2, 4].forEach(c => { final[c][1] = { k: 'phoenix' }; }); if (this.inFree) [1, 2, 3].forEach(c => { final[c][2] = { k: 'wild' }; }); }
     let ph = 0, anticFrom = -1;
     for (let c = 0; c < COLS - 1; c++) { ph += final[c].some(s => s.k === 'phoenix') ? 1 : 0; if (ph >= 2 && anticFrom < 0) anticFrom = c + 1; }
-    sfx.spinStart(app.turbo);
-    this.reels.start(app.turbo);
+    sfx.spinStart(app.speed >= 2);
+    this.reels.start(app.speed);
     let wildsNew = 0;
     await this.reels.stopTo(final, {
       anticFrom,
@@ -173,6 +178,14 @@ export default class Legion {
       app.message(wins.map(w => w.ways + '× ' + labelOf(w.k)).join(' · ') + ' = <b>' + app.fmt(total) + '</b>');
       if (this.inFree) this.fsTotal += total;
     } else if (!this.inFree) app.message(this.hint);
+    // Monedas de oro: 3+ = Tesoro del César (jackpot)
+    const coins = grid.flat().filter(s => s.k === 'coin').length;
+    if (coins >= 3) {
+      await app.wait(wins.length ? 1200 : 400);
+      this.wins = null;
+      const v = await this.treasure(bet);
+      total += v; if (this.inFree) this.fsTotal += v;
+    }
     // Fénix
     const phoenix = grid.flat().filter(s => s.k === 'phoenix').length;
     if (!this.inFree && phoenix >= 3) {
@@ -201,11 +214,91 @@ export default class Legion {
     return { win: total, celebrated };
   }
   slam() { this.reels.slam(); }
+
+  // ---------- TESORO DEL CÉSAR: elige monedas hasta juntar 3 iguales ----------
+  async treasure(bet) {
+    const app = this.app, sfx = app.sfx;
+    sfx.featureStart(); app.flash('#ffd35a', 0.6); app.shake(true);
+    await app.banner('TESORO DEL CÉSAR', 'Elige monedas · 3 iguales ganan el jackpot', { color: '#ffc23a', ms: 2400 });
+    const keys = Object.keys(PICK_W);
+    const winner = weighted(PICK_W);
+    // Secuencia: 2 del ganador + distractores (máx. 2 de cada otro) mezclados, y el ganador al final
+    const seq = [winner, winner];
+    keys.filter(k => k !== winner).forEach(k => { const n = Math.random() * 3 | 0; for (let i = 0; i < n; i++) seq.push(k); });
+    for (let i = seq.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [seq[i], seq[j]] = [seq[j], seq[i]]; }
+    seq.push(winner);
+    const coins = [];
+    for (let i = 0; i < 12; i++) coins.push({ jp: null, t: 0, flip: 0 });
+    this.pick = { coins, winner: null, msg: 'Toca una moneda' };
+    app.message('Toca las monedas. <b>3 iguales</b> ganan ese jackpot.');
+    let idx = 0;
+    while (idx < seq.length) {
+      const i = await this.waitPick();
+      const c = coins[i]; if (c.jp) continue;
+      c.jp = seq[idx++]; c.flip = 0.001;
+      sfx.coin(); sfx.bell(660 + idx * 60, 0.6, 0.1);
+      const n = coins.filter(o => o.jp === c.jp).length;
+      if (n === 2) sfx.anticipation(true), setTimeout(() => sfx.anticipation(false), 500);
+      await app.wait(350);
+    }
+    // Revela el resto
+    const left = keys.filter(k => k !== winner);
+    coins.forEach(c => { if (!c.jp) { c.jp = left[Math.random() * left.length | 0]; c.dim = true; c.flip = 0.001; } });
+    this.pick.winner = winner;
+    await app.wait(700);
+    const v = await app.awardJackpot(winner);
+    await app.celebrate(v, bet, winner.toUpperCase());
+    this.pick = null;
+    return v;
+  }
+  waitPick() {
+    return new Promise(res => {
+      this.pick.res = res;
+      // En automático (o sin toque) elige solo
+      this.pick.timer = setTimeout(() => {
+        const free = this.pick.coins.map((c, i) => c.jp ? -1 : i).filter(i => i >= 0);
+        this.pick.res = null; res(free[Math.random() * free.length | 0]);
+      }, this.app.auto ? 600 : 5000);
+    });
+  }
+  pickLayout() {
+    const { gx, gy, cw, ch } = this, bw = cw * COLS, bh = ch * ROWS;
+    const s = Math.min(bw / 4, (bh - 10) / 3);
+    return { s, x0: gx + (bw - s * 4) / 2, y0: gy + (bh - s * 3) / 2 + 5 };
+  }
+  onTap(x, y) {
+    if (!this.pick || !this.pick.res) return;
+    const { s, x0, y0 } = this.pickLayout();
+    const c = Math.floor((x - x0) / s), r = Math.floor((y - y0) / s);
+    if (c < 0 || c > 3 || r < 0 || r > 2) return;
+    const i = r * 4 + c;
+    if (this.pick.coins[i].jp) return;
+    clearTimeout(this.pick.timer);
+    const res = this.pick.res; this.pick.res = null; res(i);
+  }
+  drawPick(x) {
+    const { gx, gy, cw, ch, time } = this, bw = cw * COLS, bh = ch * ROWS, dpr = this.app.dpr;
+    x.fillStyle = 'rgba(20,4,6,0.86)'; x.fillRect(gx - 2, gy, bw + 4, bh);
+    const { s, x0, y0 } = this.pickLayout();
+    goldText(x, 'TESORO DEL CÉSAR', gx + bw / 2, gy + 14, Math.min(18, bw * 0.05), { maxW: bw * 0.9 });
+    this.pick.coins.forEach((c, i) => {
+      const px = x0 + (i % 4) * s + s / 2, py = y0 + Math.floor(i / 4) * s + s / 2;
+      if (c.flip > 0 && c.flip < 1) c.flip = Math.min(1, c.flip + 1 / 60 / 0.35);
+      const f = c.flip, sx = f > 0 ? Math.abs(Math.cos(f * Math.PI)) : 1, show = f >= 0.5;
+      const size = s * 0.9 * (c.jp && this.pick.winner === c.jp && !c.dim ? 1 + 0.06 * Math.sin(time * 10) : 1);
+      const img = show ? ball(JPC[c.jp], c.jp.toUpperCase(), s * 0.9 * dpr) : ball('gold', '?', s * 0.9 * dpr);
+      x.globalAlpha = c.dim ? 0.35 : 1;
+      x.drawImage(img, px - size * sx / 2, py - size / 2, size * sx, size);
+      x.globalAlpha = 1;
+      if (!c.jp && Math.sin(time * 3 + i) > 0.95) { x.save(); x.globalCompositeOperation = 'lighter'; x.drawImage(glow('rgba(255,220,120,1)', 32), px - s * 0.3, py - s * 0.45, s * 0.6, s * 0.6); x.restore(); }
+    });
+  }
   info(bet, fmt) {
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
     return '<h3>Cómo se juega</h3><ul><li><b>5 × 4 con 1024 formas</b>: paga cualquier símbolo en rodillos contiguos desde la izquierda, en cualquier fila.</li>' +
       '<li>El premio se multiplica por el número de formas (p. ej. 2 en el rodillo 1 × 3 en el 2 × 1 en el 3 = 6 formas).</li>' +
       '<li><b>Corona WILD</b> en rodillos 2, 3 y 4, sustituye a todos menos al fénix.</li>' +
+      '<li><b>3+ monedas JP</b> = <b>Tesoro del César</b>: elige monedas hasta juntar 3 iguales y gana ese jackpot progresivo (MINI · MINOR · MAJOR · GRAND).</li>' +
       '<li><b>3 / 4 / 5 fénix</b> = <b>8 / 12 / 20 giros gratis</b>. Cada corona que cae queda <b>pegada</b> con <b>x2 o x3</b>; los multiplicadores se multiplican entre sí. 2 fénix = +3 giros.</li></ul>' +
       '<h3>Pagos por forma (apuesta ' + fmt(bet) + ') · 3 / 4 / 5</h3><table>' +
       Object.keys(PAY).map(k => '<tr><td>' + ic(ICON[k]) + '</td><td>' + labelOf(k) + '</td><td>' + [3, 4, 5].map(n => fmt(PAY[k][n] * UNIT * bet)).join(' · ') + '</td></tr>').join('') + '</table>';

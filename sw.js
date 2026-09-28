@@ -1,6 +1,6 @@
 // Caché offline: la app funciona sin conexión una vez abierta.
-const CACHE = 'aurum-v20';
-const FILES = ['./', './index.html', './css/app.css?v=20', './js/app.js?v=20', './js/audio.js', './js/gfx.js', './js/reels.js',
+const CACHE = 'aurum-v21';
+const FILES = ['./', './index.html', './css/app.css?v=21', './js/app.js?v=21', './js/audio.js', './js/gfx.js', './js/reels.js',
   './js/games/xlink.js', './js/games/avalanche.js', './js/games/firewheel.js', './js/games/legion.js',
   './assets/symbols.webp', './icon-180.png', './icon-512.png', './manifest.webmanifest'];
 self.addEventListener('install', e => {

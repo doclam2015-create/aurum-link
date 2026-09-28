@@ -75,12 +75,6 @@ export default class XLink {
   constructor(app) {
     this.app = app;
     this.id = XLink.id;
-    this.jackpots = [
-      { key: 'grand', label: 'GRAND', base: 1000, grow: 0.05, cls: 'grand' },
-      { key: 'major', label: 'MAJOR', base: 100, grow: 0.02, cls: 'major' },
-      { key: 'minor', label: 'MINOR', base: 30, cls: 'minor' },
-      { key: 'mini', label: 'MINI', base: 15, cls: 'mini' }
-    ];
     this.hint = '6 bolas doradas activan <b>GOLDEN SPINS</b>. Las ★ abren filas extra.';
     const drawSym = (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o);
     this.base = new ReelSet({ cols: COLS, rows: BASE_R, pick: () => pickSym(W_BASE, app.bet), drawSym });
@@ -124,10 +118,12 @@ export default class XLink {
     let g = x.createLinearGradient(0, by - fr, 0, by + bh + fr);
     g.addColorStop(0, '#ffcf6a'); g.addColorStop(0.5, '#d47a12'); g.addColorStop(1, '#ffc14d');
     roundRect(x, bx - fr, by - fr, bw + fr * 2, bh + fr * 2, 12); x.fillStyle = g; x.fill();
+    const L = this.app.light;
     g = x.createLinearGradient(0, by, 0, by + bh);
-    g.addColorStop(0, '#1b1566'); g.addColorStop(0.62, '#2b0f5c'); g.addColorStop(1, '#3a0d6a');
+    if (L) { g.addColorStop(0, '#f6f1ff'); g.addColorStop(0.62, '#e6dcfb'); g.addColorStop(1, '#d9ccf6'); }
+    else { g.addColorStop(0, '#1b1566'); g.addColorStop(0.62, '#2b0f5c'); g.addColorStop(1, '#3a0d6a'); }
     x.fillStyle = g; x.fillRect(bx, by, bw, bh);
-    x.strokeStyle = 'rgba(80,190,255,0.35)'; x.lineWidth = 1;
+    x.strokeStyle = L ? 'rgba(120,80,200,0.35)' : 'rgba(80,190,255,0.35)'; x.lineWidth = 1;
     for (let i = 0; i <= COLS; i++) { x.beginPath(); x.moveTo(bx + i * cw, by); x.lineTo(bx + i * cw, by + bh); x.stroke(); }
     for (let r = 0; r <= MAXR; r++) { x.beginPath(); x.moveTo(bx, by + r * ch); x.lineTo(bx + bw, by + r * ch); x.stroke(); }
     return c;
@@ -137,7 +133,8 @@ export default class XLink {
     const c = makeCanvas(cw * COLS * dpr, ch * dpr), x = c.getContext('2d');
     x.scale(dpr, dpr);
     const g = x.createLinearGradient(0, 0, 0, ch);
-    g.addColorStop(0, 'rgba(40,40,110,0.82)'); g.addColorStop(1, 'rgba(25,20,80,0.88)');
+    if (this.app.light) { g.addColorStop(0, 'rgba(205,195,245,0.86)'); g.addColorStop(1, 'rgba(180,165,235,0.9)'); }
+    else { g.addColorStop(0, 'rgba(40,40,110,0.82)'); g.addColorStop(1, 'rgba(25,20,80,0.88)'); }
     x.fillStyle = g; x.fillRect(0, 0, cw * COLS, ch);
     for (let i = 0; i < COLS; i++) {
       const cx = i * cw + cw * 0.72, lg = x.createLinearGradient(cx - cw * 0.12, 0, cx + cw * 0.12, 0);
@@ -343,9 +340,9 @@ export default class XLink {
     // Suspenso: si los primeros rodillos ya traen 4+ bolas
     let anticFrom = -1, acc = 0;
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
-    sfx.spinStart(app.turbo);
+    sfx.spinStart(app.speed >= 2);
     app.setSpinLabel('PARAR');
-    this.base.start(app.turbo);
+    this.base.start(app.speed);
     let landed = 0;
     await this.base.stopTo(final, {
       anticFrom,
@@ -380,8 +377,8 @@ export default class XLink {
       await app.wait(400);
       const up = [];
       for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(W_UP, bet)); }
-      sfx.spinStart(app.turbo);
-      this.upper.start(app.turbo);
+      sfx.spinStart(app.speed >= 2);
+      this.upper.start(app.speed);
       await this.upper.stopTo(up, {
         onStop: (c, last) => {
           sfx.reelStop(c, last);
@@ -466,13 +463,13 @@ export default class XLink {
       for (let r = MAXR - b.rows; r < MAXR; r++) for (let c = 0; c < COLS; c++) if (!cells[r][c]) empties.push([c, r]);
       if (!empties.length) break;
       empties.forEach(([c, r]) => b.spinning.set(r * COLS + c, { t: 0 }));
-      sfx.spinStart(app.turbo);
-      await app.wait(app.turbo ? 350 : 650);
+      sfx.spinStart(app.speed >= 2);
+      await app.wait(600);
       empties.sort((a, z) => a[0] - z[0] || z[1] - a[1]);
       // Probabilidad por celda: más difícil con tablero grande
       const p = 0.085 - Math.min(0.03, b.count * 0.0009);
       let got = 0;
-      const step = app.turbo ? 45 : Math.max(55, 900 / empties.length);
+      const step = Math.max(35, Math.min(90, 900 / empties.length)) / app.speed;
       for (let i = 0; i < empties.length; i++) {
         const [c, r] = empties[i];
         b.spinning.delete(r * COLS + c);
@@ -520,27 +517,18 @@ export default class XLink {
     for (let c = 0; c < COLS; c++) for (let r = MAXR - 1; r >= 0; r--) {
       const s = cells[r][c]; if (!s) continue;
       let v = s.value || 0;
-      if (s.jp) {
-        v = app.jackpot(s.jp);
-        app.highlightPot(s.jp);
-        if (s.jp === 'major') app.resetJackpot('major');
-      }
       s.collect = 1;
       const [px, py] = this.cellCenter(c, r);
-      if (s.jp) { sfx.jackpot(); await app.banner(s.jp.toUpperCase(), app.fmt(v), { color: { mini: '#5dff7a', minor: '#5ad8ff', major: '#d77aff' }[s.jp], ms: 1800 }); }
+      if (s.jp) v = await app.awardJackpot(s.jp);
+      else app.addWin(v);
       sfx.collect(n++);
       app.flyCoins(px, py, 3, 'spark');
       app.popText(px, py, short(v), 20);
-      sum += v; app.addWin(v);
-      await app.wait(app.turbo ? 60 : 130);
+      sum += v;
+      await app.wait(130);
       s.collect = 0; s.done = true;
     }
-    if (full) {
-      const g = app.jackpot('grand');
-      sfx.jackpot(); app.highlightPot('grand');
-      await app.banner('GRAND', app.fmt(g), { color: '#ff4a3a', ms: 3000 });
-      sum += g; app.addWin(g); app.resetJackpot('grand');
-    }
+    if (full) sum += await app.awardJackpot('grand');
     await app.wait(400);
     await app.celebrate(sum, bet, 'GOLDEN SPINS');
     this.bonus = null;

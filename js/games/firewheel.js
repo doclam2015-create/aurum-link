@@ -43,12 +43,6 @@ export default class FireWheel {
   };
   constructor(app) {
     this.app = app; this.id = FireWheel.id;
-    this.jackpots = [
-      { key: 'grand', label: 'GRAND', base: 500, grow: 0.03, cls: 'grand' },
-      { key: 'major', label: 'MAJOR', base: 100, grow: 0.015, cls: 'major' },
-      { key: 'minor', label: 'MINOR', base: 25, cls: 'minor' },
-      { key: 'mini', label: 'MINI', base: 10, cls: 'mini' }
-    ];
     this.hint = '<b>WILD</b> de fuego se expande y duplica. 3 ☀ = <b>RUEDA DE FUEGO</b>.';
     this.reels = new ReelSet({ cols: 3, rows: 3, pick: c => ({ k: weighted(W_REEL[c]) }), drawSym: (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o) });
     this.embers = []; this.time = 0; this.fire = 0; this.wins = null; this.winT = 0; this.wheel = null;
@@ -112,9 +106,10 @@ export default class FireWheel {
     }
     roundRect(x, gx - 4, gy - 4, bw + 8, bh + 8, 12);
     g = x.createLinearGradient(0, gy, 0, gy + bh);
-    g.addColorStop(0, '#fffaf0'); g.addColorStop(0.5, '#f3e3c5'); g.addColorStop(1, '#fffaf0');
+    if (this.app.light) { g.addColorStop(0, '#fffaf0'); g.addColorStop(0.5, '#f3e3c5'); g.addColorStop(1, '#fffaf0'); }
+    else { g.addColorStop(0, '#1a0703'); g.addColorStop(0.5, '#3a1408'); g.addColorStop(1, '#1a0703'); }
     x.fillStyle = g; x.fill();
-    x.strokeStyle = 'rgba(120,60,10,0.35)'; x.lineWidth = 2;
+    x.strokeStyle = this.app.light ? 'rgba(120,60,10,0.35)' : 'rgba(255,150,60,0.3)'; x.lineWidth = 2;
     for (let c = 1; c < 3; c++) { x.beginPath(); x.moveTo(gx + c * cs, gy); x.lineTo(gx + c * cs, gy + bh); x.stroke(); }
     // Sombra de cilindro
     this.reels.draw(x, (c, r) => this.cellFx(c, r));
@@ -167,9 +162,9 @@ export default class FireWheel {
     const final = [0, 1, 2].map(c => [0, 1, 2].map(() => ({ k: weighted(W_REEL[c]) })));
     if (app._force) { app._force = false; [0, 1, 2].forEach(c => { final[c][c] = { k: 'sun' }; }); }
     const suns01 = final[0].concat(final[1]).filter(s => s.k === 'sun').length;
-    sfx.spinStart(app.turbo);
+    sfx.spinStart(app.speed >= 2);
     app.setSpinLabel('PARAR');
-    this.reels.start(app.turbo);
+    this.reels.start(app.speed);
     await this.reels.stopTo(final, {
       anticFrom: suns01 >= 2 ? 2 : -1,
       onStop: (c, last) => {
@@ -222,15 +217,13 @@ export default class FireWheel {
     const idx = weightedIdx(WHEEL.map(s => s.w)), n = WHEEL.length, seg = Math.PI * 2 / n;
     // Ángulo final: el segmento idx queda bajo el puntero (arriba)
     const target = Math.PI * 2 * (6 + Math.floor(Math.random() * 2)) + (Math.PI * 2 - (idx * seg + seg / 2)) + rand(-seg * 0.35, seg * 0.35);
-    this.wheel = { a: 0, from: 0, to: target, t: 0, dur: app.turbo ? 3.5 : 5.5, lastSeg: -1, done: false, idx, show: 0 };
+    this.wheel = { a: 0, from: 0, to: target, t: 0, dur: 5.5 / Math.sqrt(app.speed), lastSeg: -1, done: false, idx, show: 0 };
     sfx.whoosh();
     await new Promise(res => { this.wheel.res = res; });
     const s = WHEEL[idx];
-    let v = s.m ? s.m * bet : app.jackpot(s.jp);
-    sfx.jackpot(); app.flash('#fff', 0.5);
-    if (s.jp) { app.highlightPot(s.jp); if (s.jp === 'grand' || s.jp === 'major') app.resetJackpot(s.jp); }
-    await app.wait(700);
-    app.addWin(v);
+    let v;
+    if (s.jp) v = await app.awardJackpot(s.jp);
+    else { v = s.m * bet; sfx.jackpot(1); app.flash('#fff', 0.5); await app.wait(700); app.addWin(v); }
     await app.celebrate(v, bet, s.jp ? s.t : 'RUEDA ' + s.t);
     this.wheel = null;
     return v;

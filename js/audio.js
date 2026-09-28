@@ -7,7 +7,9 @@ class Sfx {
     this.ctx = null;
     this.enabled = true;
     this.musicOn = true;
-    this.volume = 0.8;
+    this.volume = 0.9;
+    this.sfxVol = 0.9;
+    this.musicVol = 0.55;
     this._loops = {};
     this._music = null;
   }
@@ -23,6 +25,8 @@ class Sfx {
       comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 5;
       comp.attack.value = 0.003; comp.release.value = 0.2;
       this.master.connect(comp); comp.connect(ctx.destination);
+      this.sfxBus = ctx.createGain(); this.sfxBus.gain.value = this.sfxVol; this.sfxBus.connect(this.master);
+      this.musicBus = ctx.createGain(); this.musicBus.gain.value = this.musicVol; this.musicBus.connect(this.master);
       // Reverb corta generada (sala de casino)
       this.verb = ctx.createConvolver();
       this.verb.buffer = this._impulse(1.6, 2.8);
@@ -43,6 +47,14 @@ class Sfx {
   setEnabled(on) {
     this.enabled = on;
     if (this.master) this.master.gain.setTargetAtTime(on ? this.volume : 0, this.ctx.currentTime, 0.05);
+  }
+
+  setVolumes(sfxV, musicV) {
+    this.sfxVol = sfxV; this.musicVol = musicV;
+    if (this.ctx) {
+      this.sfxBus.gain.setTargetAtTime(sfxV, this.ctx.currentTime, 0.05);
+      this.musicBus.gain.setTargetAtTime(musicV, this.ctx.currentTime, 0.05);
+    }
   }
 
   get ok() { return !!(this.ctx && this.enabled && this.ctx.state === 'running'); }
@@ -82,7 +94,7 @@ class Sfx {
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(vol, t0 + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(dest || this.master);
+    o.connect(g); g.connect(dest || this.sfxBus);
     if (verb) { const s = ctx.createGain(); s.gain.value = verb; g.connect(s); s.connect(this.verbSend); }
     o.start(t0); o.stop(t0 + dur + 0.05);
   }
@@ -93,7 +105,7 @@ class Sfx {
     f.type = type; f.frequency.setValueAtTime(freq, t0); f.Q.value = q;
     if (freqEnd) f.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
     g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    s.connect(f); f.connect(g); g.connect(this.master);
+    s.connect(f); f.connect(g); g.connect(this.sfxBus);
     if (verb) { const v = ctx.createGain(); v.gain.value = verb; g.connect(v); v.connect(this.verbSend); }
     s.start(t0, Math.random()); s.stop(t0 + dur + 0.05);
   }
@@ -121,7 +133,7 @@ class Sfx {
     lfo.frequency.value = 14 * rate; lg.gain.value = 0.05;
     lfo.connect(lg); lg.connect(g.gain);
     g.gain.value = 0.06;
-    s.connect(f); f.connect(g); g.connect(this.master);
+    s.connect(f); f.connect(g); g.connect(this.sfxBus);
     s.start(); lfo.start();
     this._loops[name] = { s, lfo, g };
   }
@@ -147,7 +159,7 @@ class Sfx {
       o2.frequency.linearRampToValueAtTime(333, ctx.currentTime + 3);
       f.type = 'lowpass'; f.frequency.value = 400; f.frequency.linearRampToValueAtTime(2600, ctx.currentTime + 3); f.Q.value = 8;
       g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.4);
-      o.connect(f); o2.connect(f); f.connect(g); g.connect(this.master);
+      o.connect(f); o2.connect(f); f.connect(g); g.connect(this.sfxBus);
       o.start(); o2.start();
       this._antic = { o, o2, g };
     } else if (!on && this._antic) {
@@ -187,7 +199,7 @@ class Sfx {
     const f = ctx.createBiquadFilter(), g = ctx.createGain();
     f.type = 'lowpass'; f.frequency.setValueAtTime(500, t0); f.frequency.exponentialRampToValueAtTime(3500, t0 + 0.12); f.frequency.exponentialRampToValueAtTime(1200, t0 + dur);
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    f.connect(g); g.connect(this.master);
+    f.connect(g); g.connect(this.sfxBus);
     const v = ctx.createGain(); v.gain.value = 0.5; g.connect(v); v.connect(this.verbSend);
     chord.forEach(fr => [0, 4].forEach(dt => {
       const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = dt - 2;
@@ -215,10 +227,25 @@ class Sfx {
     this.tone(65, 0.5, { vol: 0.5, slide: 0.5 }); this.tone(65, 0.5, { vol: 0.5, slide: 0.5, at: 0.96 });
     for (let i = 0; i < 6 + level * 4; i++) this.coin(0.4 + i * 0.09);
   }
-  jackpot() {
-    this.thunder(0.6);
-    for (let i = 0; i < 16; i++) this.bell([784, 988, 1175, 1568][i % 4], 1.2, 0.09, 0.2 + i * 0.12);
-    this.brass([261.6, 329.6, 392, 523.3], 0.3, 2.2);
+  // Jackpot: sirena + carillón + metales; más largo cuanto mayor el nivel (0 mini … 3 grand)
+  jackpot(level = 1) {
+    this.thunder(0.5 + level * 0.1);
+    this.siren(1.2 + level * 0.6);
+    const n = 10 + level * 6;
+    for (let i = 0; i < n; i++) this.bell([784, 988, 1175, 1568, 1976][i % 5], 1.2, 0.09, 0.2 + i * 0.11);
+    const ch = [[261.6, 329.6, 392, 523.3], [293.7, 370, 440, 587.3], [329.6, 415.3, 493.9, 659.3], [392, 493.9, 587.3, 784]];
+    for (let i = 0; i <= level; i++) this.brass(ch[i], 0.3 + i * 0.45, i === level ? 2.4 : 0.5);
+    for (let i = 0; i < 8 + level * 8; i++) this.coin(0.5 + i * 0.07);
+  }
+  siren(dur = 1.5) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime, o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = 880; lfo.frequency.value = 5; lg.gain.value = 260;
+    lfo.connect(lg); lg.connect(o.frequency);
+    f.type = 'lowpass'; f.frequency.value = 2400;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.05); g.gain.setValueAtTime(0.06, t0 + dur - 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(f); f.connect(g); g.connect(this.sfxBus);
+    o.start(t0); lfo.start(t0); o.stop(t0 + dur + 0.05); lfo.stop(t0 + dur + 0.05);
   }
   shatter(n = 1) {
     this.noise(0.35, { vol: 0.25, type: 'highpass', freq: 4000, q: 0.5, verb: 0.4 });
@@ -232,49 +259,74 @@ class Sfx {
   sticky() { this.tone(330, 0.4, { type: 'sawtooth', vol: 0.07, slide: 2 }); this.bell(988, 0.8, 0.1, 0.1); }
   multiplier(m) { this.bell(660 * Math.pow(2, Math.min(m, 12) / 12), 1.0, 0.14); this.zap(0.2, 0.1); }
 
-  // --- Música de fondo generativa (secuenciador con lookahead) ---
+  // --- Música de fondo: batería + bajo + acordes con "pump" + arpegio + campanas ---
   music(style) {
     this.stopMusic();
     if (!this.ok || !this.musicOn || !style) return;
+    const M = 'm', J = 'M';
     const styles = {
-      disco: { bpm: 118, root: 55, scale: [0, 3, 5, 7, 10], wave: 'square', bass: [0, 0, 7, 0, 5, 0, 7, 10] },
-      ice: { bpm: 92, root: 49, scale: [0, 2, 3, 7, 9], wave: 'sine', bass: [0, 7, 3, 7, 0, 7, 9, 7] },
-      fire: { bpm: 132, root: 52, scale: [0, 1, 4, 5, 7, 8], wave: 'square', bass: [0, 0, 12, 0, 7, 0, 12, 8] },
-      rome: { bpm: 100, root: 46, scale: [0, 2, 3, 5, 7, 8, 10], wave: 'triangle', bass: [0, 0, 7, 7, 5, 5, 3, 7] },
-      bonus: { bpm: 140, root: 58, scale: [0, 4, 7, 9, 12], wave: 'square', bass: [0, 12, 7, 12, 5, 12, 7, 12] }
+      // Xtension Link: disco-funk dorado
+      disco: { bpm: 122, root: 45, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.', bass: [0, 0, 12, 0, 0, 12, 7, 10], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.25 },
+      // Avalancha: cristalino, lento, mucha reverb
+      ice: { bpm: 88, root: 50, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x.......x.......', snare: '................', hat: '....x.......x...', bass: [0, -1, -1, -1, 7, -1, -1, -1], arp: 'updown', lead: 'triangle', pad: 'sine', bells: 0.6 },
+      // Rueda de Fuego: rápido, frigio, agresivo
+      fire: { bpm: 142, root: 40, prog: [[0, J], [1, J], [0, J], [-2, J]], kick: 'x..x..x.x..x..x.', snare: '....x.......x..x', hat: 'xxxxxxxxxxxxxxxx', bass: [0, 0, 12, 0, 1, 0, 12, 0], arp: 'down', lead: 'sawtooth', pad: 'sawtooth', bells: 0.1 },
+      // Legión: épico, timbales, metales
+      rome: { bpm: 96, root: 36, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x.....x.x.......', snare: '....x.......x.xx', hat: '..x...x...x...x.', bass: [0, -1, 0, 7, 0, -1, 3, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.2, toms: true },
+      // Bonos: eufórico en mayor
+      bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];
     if (!st) return;
-    const step = 60 / st.bpm / 2, ctx = this.ctx, bus = ctx.createGain();
-    bus.gain.value = 0.0001; bus.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 1.5);
-    bus.connect(this.master);
-    const m = { bus, next: ctx.currentTime + 0.1, i: 0, timer: 0 };
-    const hz = n => st.root * Math.pow(2, n / 12);
-    const note = (f, t, d, type, v) => {
-      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g); g.connect(bus); o.start(t); o.stop(t + d + 0.02);
+    const ctx = this.ctx, step = 60 / st.bpm / 4; // semicorcheas
+    const bus = ctx.createGain(); bus.gain.value = 0.0001; bus.gain.exponentialRampToValueAtTime(0.9, ctx.currentTime + 2);
+    bus.connect(this.musicBus);
+    const vs = ctx.createGain(); vs.gain.value = 0.35; bus.connect(vs); vs.connect(this.verbSend);
+    // Bus de acordes con compresión lateral (bombeo al ritmo del bombo)
+    const padBus = ctx.createGain(); padBus.gain.value = 0.5; padBus.connect(bus);
+    const padF = ctx.createBiquadFilter(); padF.type = 'lowpass'; padF.frequency.value = 1400; padF.Q.value = 2; padF.connect(padBus);
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.07; lg.gain.value = 700; lfo.connect(lg); lg.connect(padF.frequency); lfo.start();
+    const m = { bus, lfo, next: ctx.currentTime + 0.12, i: 0, timer: 0 };
+    const hz = n => 440 * Math.pow(2, (n - 69) / 12);
+    const env = (g, t, a, v, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + d); };
+    const osc = (type, f, t, d, v, dest, a = 0.005, det = 0) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = f; o.detune.value = det;
+      env(g, t, a, v, d); o.connect(g); g.connect(dest); o.start(t); o.stop(t + d + 0.05); return o;
     };
-    const tickFn = () => {
-      while (m.next < ctx.currentTime + 0.25) {
-        const i = m.i, t = m.next;
-        if (i % 2 === 0) note(hz(st.bass[(i / 2) % 8]), t, step * 1.6, 'triangle', 0.16);
-        if (i % 4 === 0) { note(55, t, 0.12, 'sine', 0.2); }
-        if (Math.random() < 0.55) {
-          const deg = st.scale[Math.floor(Math.random() * st.scale.length)];
-          note(hz(deg + 36), t, step * 0.9, st.wave, 0.018);
-        }
-        if (i % 16 === 0) [0, st.scale[2], 12].forEach(d => note(hz(d + 24), t, step * 14, 'sine', 0.02));
-        m.next += step; m.i = (i + 1) % 64;
+    const kick = t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12); env(g, t, 0.002, 0.9, 0.35); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.4);
+      padBus.gain.setTargetAtTime(0.12, t, 0.005); padBus.gain.setTargetAtTime(0.5, t + 0.06, 0.08); };
+    const noiseHit = (t, type, freq, d, v, q = 1) => { const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = this.noiseBuf; f.type = type; f.frequency.value = freq; f.Q.value = q; env(g, t, 0.001, v, d); s.connect(f); f.connect(g); g.connect(bus); s.start(t, Math.random()); s.stop(t + d + 0.05); };
+    const snare = t => { noiseHit(t, 'bandpass', 1900, 0.18, 0.35, 0.8); osc('triangle', 190, t, 0.1, 0.25, bus); };
+    const hat = (t, open) => noiseHit(t, 'highpass', 8000, open ? 0.22 : 0.05, open ? 0.12 : 0.08);
+    const tom = (t, f) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.5, t + 0.3); env(g, t, 0.003, 0.5, 0.45); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.5); };
+    const chordNotes = (c) => { const r = st.root + 12 + c[0]; return [r, r + (c[1] === M ? 3 : 4), r + 7]; };
+    const tick = () => {
+      while (m.next < ctx.currentTime + 0.3) {
+        const i = m.i, t = m.next, s16 = i % 16, bar = Math.floor(i / 16) % st.prog.length, ch = st.prog[bar], notes = chordNotes(ch);
+        if (st.kick[s16] === 'x') kick(t);
+        if (st.snare[s16] === 'x') snare(t);
+        if (st.hat[s16] === 'x') hat(t, style === 'disco' && s16 % 4 === 2);
+        if (st.toms && s16 >= 12 && (i / 16 | 0) % 4 === 3) tom(t, [220, 180, 150, 120][s16 - 12]);
+        // Bajo en corcheas
+        if (s16 % 2 === 0) { const b = st.bass[(s16 / 2) % 8]; if (b >= 0) { osc('sawtooth', hz(st.root + ch[0] + b), t, step * 1.7, 0.16, bus, 0.004); osc('sine', hz(st.root + ch[0] + b - 12), t, step * 1.8, 0.25, bus); } }
+        // Acordes al inicio de cada compás
+        if (s16 === 0) notes.concat([notes[0] + 12]).forEach(n => { [-9, 9].forEach(d => osc(st.pad, hz(n), t, step * 15.5, 0.05, padF, 0.25, d)); });
+        // Arpegio
+        const idx = st.arp === 'down' ? 3 - (s16 % 4) : st.arp === 'updown' ? [0, 1, 2, 3, 2, 1][s16 % 6] : s16 % 4;
+        const an = (notes.concat([notes[0] + 12]))[idx] + 12;
+        if (style !== 'ice' || s16 % 2 === 0) osc(st.lead, hz(an), t, step * 0.9, st.lead === 'sawtooth' ? 0.035 : 0.045, bus);
+        // Campanitas brillantes
+        if (Math.random() < st.bells * 0.25) { const f = hz(notes[Math.random() * 3 | 0] + 36); osc('sine', f, t, 0.9, 0.035, bus); osc('sine', f * 2.76, t, 0.4, 0.012, bus); }
+        m.next += step; m.i = (i + 1) % (16 * st.prog.length * 4);
       }
     };
-    tickFn(); m.timer = setInterval(tickFn, 90);
+    tick(); m.timer = setInterval(tick, 80);
     this._music = m;
   }
   stopMusic() {
     const m = this._music; if (!m) return;
     this._music = null; clearInterval(m.timer);
-    const t = this.ctx.currentTime; m.bus.gain.setTargetAtTime(0.0001, t, 0.3);
-    setTimeout(() => m.bus.disconnect(), 1500);
+    const t = this.ctx.currentTime; m.bus.gain.setTargetAtTime(0.0001, t, 0.25);
+    setTimeout(() => { try { m.bus.disconnect(); m.lfo.stop(); } catch (e) { } }, 1500);
   }
 }
 

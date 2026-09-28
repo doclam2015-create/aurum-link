@@ -9,6 +9,11 @@ Colección de 4 tragamonedas para iPhone / iPad (Safari), con **créditos fictic
 | **Rueda de Fuego** | Clásica 3×3, 5 líneas. Wild de fuego expansivo x2; 3 soles = rueda de multiplicadores y jackpots. |
 | **Legión Dorada** | 5×4, 1024 formas. Fénix = giros gratis con coronas pegajosas x2/x3 que se multiplican. |
 
+**Todos los juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
+Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) y Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales).
+
+**Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
+
 ## Instalar en iPhone / iPad
 1. Abre la URL de GitHub Pages en **Safari**.
 2. Botón **Compartir** → **Agregar a pantalla de inicio**.
