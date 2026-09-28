@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=34';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=34';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=35';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=35';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -275,8 +275,6 @@ export default class XLink {
     shape(); x.fillStyle = g; x.fill();
     // Interior con la figura
     x.save(); shape(); x.clip();
-    // El tema puede traer su propio retrato de 2 casillas (la Reina de Reino de Nieve)
-    if (this.T.stackArt && this.T.stackArt(x, w, h, m)) { x.restore(); shape(); x.lineWidth = w * 0.03; x.strokeStyle = '#e8f8ff'; x.stroke(); return (cache[key] = c); }
     g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2a4a8a'); g.addColorStop(1, '#0a1a4a');
     x.fillStyle = g; x.fillRect(m * 2.2, m * 2.2, w - m * 4.4, h - m * 4.4);
     const img = sym(this.T.icon[k], w * 1.15);
