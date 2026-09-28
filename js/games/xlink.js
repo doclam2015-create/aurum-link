@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=37';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=37';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=38';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=38';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -29,8 +29,27 @@ export const THEME = {
   frame: ['#ffcf6a', '#d47a12', '#ffc14d'],
   board: ['#1b1566', '#2b0f5c', '#3a0d6a'], boardL: ['#f6f1ff', '#e6dcfb', '#d9ccf6'],
   grid: 'rgba(80,190,255,0.35)', gridL: 'rgba(120,80,200,0.35)',
-  glass: ['rgba(40,40,110,0.82)', 'rgba(25,20,80,0.88)'], glassL: ['rgba(205,195,245,0.86)', 'rgba(180,165,235,0.9)']
+  glass: ['rgba(40,40,110,0.82)', 'rgba(25,20,80,0.88)'], glassL: ['rgba(205,195,245,0.86)', 'rgba(180,165,235,0.9)'],
+  // Giros gratis: 3+ soles BONUS = 10 giros (repetibles, +10)
+  scatter: { w: 1.5, name: 'soles BONUS', color: '#ffc23a', pay: [5, 20] }
 };
+// Dispersor de Xtension Link: sol dorado con la palabra BONUS
+const scatArt = {};
+THEME.draw = {
+  scat: (size, v = 'n') => {
+    const key = size + '|' + v; if (scatArt[key]) return scatArt[key];
+    const c = makeCanvas(size, size), x = c.getContext('2d'), s = size;
+    x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.45; x.drawImage(glow('rgba(255,190,60,1)', 64), 0, -s * 0.05, s, s); x.restore();
+    x.drawImage(sym(S.SUN, Math.round(s * 0.82)), s * 0.09, s * 0.0, s * 0.82, s * 0.82);
+    const fs = s * 0.22; x.font = '900 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+    x.lineWidth = fs * 0.32; x.strokeStyle = '#4a1600'; x.strokeText('BONUS', s / 2, s * 0.84);
+    const g = x.createLinearGradient(0, s * 0.74, 0, s * 0.94); g.addColorStop(0, '#fff6c0'); g.addColorStop(1, '#ff9a1a'); x.fillStyle = g; x.fillText('BONUS', s / 2, s * 0.84);
+    if (v === 'd') { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(8,4,20,0.62)'; x.fillRect(0, 0, s, s); }
+    scatArt[key] = c;
+    return c;
+  }
+};
+THEME.names = Object.assign({}, THEME.names, { scat: 'Sol BONUS' });
 
 // Líneas para N filas: los 20 patrones base desplazados por bandas (máx. 100)
 const lineCache = {};
@@ -122,7 +141,9 @@ export function evalLines(grid, rows, lineBet, PAY = PAYT) {
 export default class XLink {
   static id = 'xlink';
   static name = 'Xtension Link';
-  static music = 'disco';
+  static music = 'gold';
+  static bonusMusic = 'goldBonus';
+  static sfxTheme = 'gold';
   static lobby = {
     icons: [S.SEVEN, S.RSTAR, S.MELON], c1: '#ff9d1c', c2: '#5a1580', mechanic: 'Filas que se expanden + Golden Spins',
     desc: 'Estrellas abren hasta 5 filas extra (100 líneas). 6 bolas = Golden Spins con rayos y 4 jackpots.'
@@ -132,7 +153,7 @@ export default class XLink {
     this.app = app;
     this.T = this.constructor.theme || THEME;
     this.id = this.constructor.id;
-    this.hint = '6 bolas doradas activan <b>GOLDEN SPINS</b>. Las ★ abren filas extra.';
+    this.hint = '6 bolas doradas activan <b>GOLDEN SPINS</b>. Las ★ abren filas extra. 3 soles BONUS = <b>10 giros gratis</b>.';
     const drawSym = (x, s, px, py, w, h, o) => this.drawSym(x, s, px, py, w, h, o);
     this.base = new ReelSet({ cols: COLS, rows: BASE_R, pick: c => pickSym(this.wFor(c), app.bet), drawSym });
     this.upper = new ReelSet({ cols: COLS, rows: 5, pick: c => pickSym(this.wFor(c, true), app.bet), drawSym });
@@ -387,6 +408,7 @@ export default class XLink {
       x.restore();
     }
     if (this.decorate) this.decorate(x);
+    else if (this.inFree) goldText(x, 'GIRO GRATIS ' + this.freeCount, this.bx + this.cw * 2.5, this.by + this.ch * 0.5, Math.min(22, this.cw * 0.34), { maxW: this.cw * 4.8, glowColor: '#ffb020' });
   }
 
   cellFx(c, r, upper) {
@@ -740,7 +762,7 @@ export default class XLink {
       app.message('Giros gratis: <b>' + app.fmt(fs) + '</b>');
       celebrated = true;
     }
-    app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? 'siguiente: ' + (this.freeTotal - this.freeLeft + 1) + ' de ' + this.freeTotal : '');
+    app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? (this.freeTotal - this.freeLeft + 1) + ' de ' + this.freeTotal : '');
     return { win: total, celebrated: celebrated || this.inFree };
   }
 
@@ -865,9 +887,9 @@ export default class XLink {
       else app.addWin(v);
       sfx.collect(n); sfx.lightning(n, !!s.jp); n++;
       // Rayo y trueno desde la bola hasta la suma del premio
-      app.boltToWin(px, py, s.jp ? '#ffe36a' : '#9fe8ff', s.jp ? 3.4 : 2.6);
+      app.boltToWin(px, py, s.jp ? '#ffe36a' : '#9fe8ff', s.jp ? 9 : 6);
       app.burst(px, py, 10, { color: s.jp ? '#fff4b0' : '#bff0ff', speed: 240, size: 8 });
-      app.flash(s.jp ? '#fff2b0' : '#cfefff', s.jp ? 0.35 : 0.14);
+      app.flash(s.jp ? '#fff2b0' : '#dff4ff', s.jp ? 0.5 : 0.28); app.shake(!!s.jp);
       app.popText(px, py, short(v), 20);
       sum += v;
       await app.wait(240);
@@ -1016,7 +1038,7 @@ export default class XLink {
       '<li><b>Upgrade</b> (monedas con flecha): duplica el valor de todas las bolas del tablero.</li>' +
       '<li><b>BONO</b>: compra Golden Spins directo por 60× la apuesta.</li></ul>' +
       '<h3>Tabla de pagos (apuesta ' + fmt(bet) + (this.T.ways ? ', por forma' : ', por línea') + ')</h3><table>' +
-      Object.keys(P).map(k => row(k, this.T.names[k] + (k === 'cherry' && P.cherry[2] ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * unit)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
+      Object.keys(P).map(k => row(k, this.T.names[k] + (k === 'cherry' && P.cherry[2] ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * unit)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : this.T.variant[k] ? '<img class="ico" src="' + spriteURL(this.symImg(k, 96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
   }
 }
 

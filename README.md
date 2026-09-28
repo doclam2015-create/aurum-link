@@ -4,7 +4,7 @@ Colección de 12 tragamonedas para iPhone / iPad (Safari), con **créditos ficti
 
 | Juego | Dinámica |
 |---|---|
-| **Xtension Link** | 5×3 (20 líneas). Las estrellas abren hasta 5 filas extra (100 líneas). 6+ bolas = **Golden Spins**: bolas fijas, 3 giros que se reinician, filas que se desbloquean con rayos a las 8 · 12 · 17 · 23 · 30 bolas, bolas +1 a +5 GIROS, Multiplicador y Upgrade (las especiales desaparecen tras actuar y liberan su casilla), jackpots MINI/MINOR/MAJOR y GRAND con tablero lleno. |
+| **Xtension Link** | 5×3 (20 líneas). Las estrellas abren hasta 5 filas extra (100 líneas). 6+ bolas = **Golden Spins**: bolas fijas, 3 giros que se reinician, filas que se desbloquean con rayos a las 8 · 12 · 17 · 23 · 30 bolas, bolas +1 a +5 GIROS, Multiplicador y Upgrade (las especiales desaparecen tras actuar y liberan su casilla), jackpots MINI/MINOR/MAJOR y GRAND con tablero lleno. **3+ soles BONUS = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite; conteo "7 DE 20"). Música disco dorada propia. |
 | **Sueño Rojo** | Estilo *Red Dream*: pagoda roja, paneles lacados con borlas y rodillos de jade. Símbolos: noble china, noble de azul, noble chino, taza de porcelana, papiro, huevo de la suerte y K Q J. **243 formas**; hasta **25 posiciones se abren al azar**, cada rodillo por su cuenta (hasta 32.768 formas), con WILD. **3+ flores de loto = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
 | **Reino de Nieve** | Estilo *Snow Kingdom*: hielo escarchado, aurora, carámbanos y nevada. Símbolos: Reina, lobo, leopardo de las nieves, halcón blanco, antílope y K Q J 10. 20 líneas (hasta 100): cada **Reina de 2 filas sube la cortina 1 fila, en cadena** (las Reinas que aparecen en las filas abiertas la suben más). **3+ copos de nieve = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
 | **Avalancha Glacial** | 6×5 sin líneas: 8+ iguales en cualquier lugar. Cascadas con multiplicador x1→x5; 4 copos = 10 giros gratis con multiplicador progresivo. |
@@ -19,6 +19,8 @@ Colección de 12 tragamonedas para iPhone / iPad (Safari), con **créditos ficti
 
 **Los 12 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
 Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND), Duelo del Oeste (3/4/5/6+ forajidos a la vez) y Galaxia Infinita (8/10/12/15 rodillos).
+
+**Anuncios de premio** en todos los juegos: **BIG WIN** (5× la apuesta), **AWESOME** (15×) y **SUPER WIN** (40×), con lluvia de monedas, fanfarria y voz.
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 

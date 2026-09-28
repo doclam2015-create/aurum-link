@@ -39,10 +39,21 @@ class Sfx {
       // Buffer silencioso: requisito de iOS para habilitar el audio
       const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
       s.buffer = b; s.connect(ctx.destination); s.start(0);
+      // iOS solo habla si la primera frase se pide dentro de un toque
+      try { if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) { }
     }
     if (this.ctx.state !== 'running') this.ctx.resume();
   }
 
+  // Voz del anuncio (BIG WIN…): síntesis de voz del sistema, en inglés como en las máquinas
+  say(text) {
+    try {
+      if (!this.enabled || !window.speechSynthesis || !text) return;
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.92; u.pitch = 0.75; u.volume = Math.min(1, this.sfxVol * 1.1);
+      const v = speechSynthesis.getVoices().find(v => /^en[-_]US/i.test(v.lang)); if (v) u.voice = v;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { }
+  }
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
 
@@ -164,6 +175,7 @@ class Sfx {
   spinStart(turbo) {
     if (!this.ok) return;
     if (this.theme === 'china') { [0, 1, 2, 3, 4, 5].forEach(i => this.pluck(this._scale(i), i * 0.035, 0.07, 0.5)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
+    if (this.theme === 'gold') { this.noise(0.3, { vol: 0.22, freq: 400, freqEnd: 5000, q: 3 }); this.tone(220, 0.25, { type: 'sawtooth', vol: 0.08, slide: 2 }); this.coin(0.05); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     if (this.theme === 'snow') { this.wind(0.6, 0.14); [7, 6, 5, 4].forEach((n, i) => this.celesta(this._scale(n), i * 0.04, 0.035, 0.6)); this.startLoop('reels', turbo ? 1.35 : 1); return; }
     this.noise(0.25, { vol: 0.25, freq: 300, freqEnd: 2400, q: 2 });
     this.tone(180, 0.2, { type: 'triangle', vol: 0.15, slide: 2.2 });
@@ -190,6 +202,7 @@ class Sfx {
     l.s.stop(t + 0.3); l.lfo.stop(t + 0.3);
   }
   reelStop(i = 0, last = false) {
+    if (this.theme === 'gold') { this.tone(120 - i * 5, 0.18, { vol: 0.5, slide: 0.4 }); this.noise(0.05, { vol: 0.25, freq: 3000, q: 2 }); this.tone(1760 + i * 110, 0.15, { vol: 0.05, verb: 0.3 }); if (last) this.stopLoop('reels'); return; }
     if (this.theme === 'china') { this.wood(0, 0.2, 820 + i * 60); this.tone(95, 0.2, { vol: 0.35, slide: 0.5 }); if (last) this.stopLoop('reels'); return; }
     if (this.theme === 'snow') { this.celesta(this._scale(5 + i), 0, 0.05, 0.5); this.tone(130 - i * 5, 0.14, { vol: 0.3, slide: 0.5 }); this.noise(0.04, { vol: 0.12, type: 'highpass', freq: 6000 }); if (last) this.stopLoop('reels'); return; }
     this.tone(150 - i * 6, 0.16, { type: 'sine', vol: 0.4, slide: 0.45 });
@@ -264,10 +277,15 @@ class Sfx {
   // Cada bola cobrada: chasquido + retumbo. Los retumbos se encadenan como una tormenta;
   // se van atenuando para no saturar cuando hay muchas bolas seguidas
   lightning(n = 0, big = false) {
-    const k = big ? 1 : Math.max(0.45, 1 - n * 0.03);
-    this.crack((big ? 0.6 : 0.42) * k);
-    this.rumble(big ? 3.4 : 2 + Math.random() * 0.8, (big ? 0.75 : 0.34) * k, 0.03 + Math.random() * 0.05, big ? 200 : 260);
-    if (big) this.tone(44, 1.6, { type: 'sine', vol: 0.35, slide: 0.6, at: 0.05, attack: 0.03 });
+    const k = big ? 1 : Math.max(0.6, 1 - n * 0.02);
+    // estallido: doble chasquido seco y golpe grave que se siente
+    this.crack((big ? 1 : 0.8) * k);
+    this.crack((big ? 0.7 : 0.5) * k, 0.07);
+    this.tone(58, big ? 1.2 : 0.7, { type: 'sine', vol: (big ? 0.9 : 0.7) * k, slide: 0.5, attack: 0.004 });
+    this.tone(110, 0.35, { type: 'triangle', vol: 0.4 * k, slide: 0.45, attack: 0.003 });
+    // retumbo largo y fuerte (con cuerpo en medios para que se oiga en el parlante del teléfono)
+    this.rumble(big ? 4 : 2.6 + Math.random() * 0.8, (big ? 1.2 : 0.8) * k, 0.03 + Math.random() * 0.05, big ? 260 : 320);
+    this.noise(big ? 1.4 : 0.9, { at: 0.05, vol: 0.35 * k, type: 'bandpass', freq: 450, freqEnd: 140, q: 0.8, verb: 0.5 });
   }
   rowUnlock(level = 0) {
     if (this.theme === 'china') { this.gong(98 * Math.pow(2, level / 12), 2.2, 0.35); [0, 1, 2, 3].forEach(i => this.pluck(this._scale(5 + level + i), 0.2 + i * 0.07, 0.1)); return; }
@@ -298,6 +316,7 @@ class Sfx {
     }));
   }
   win(level = 0) {
+    if (this.theme === 'gold') { const ch = [[261.6, 329.6, 392], [293.7, 370, 440], [329.6, 415.3, 493.9]]; this.brass(ch[Math.min(2, level)], 0, 0.35); this.brass(ch[Math.min(2, level)].map(f => f * 1.5), 0.18, 0.5); for (let i = 0; i < 3 + level * 2; i++) this.coin(0.1 + i * 0.07); return; }
     if (this.theme === 'china') { for (let i = 0; i < 4 + level * 2; i++) this.pluck(this._scale(5 + i), i * 0.07, 0.1); if (level >= 2) this.gong(147, 2, 0.2); return; }
     if (this.theme === 'snow') { for (let i = 0; i < 4 + level * 2; i++) this.celesta(this._scale(5 + i), i * 0.07, 0.09); if (level >= 1) this.jingle(0.1, 0.09); return; }
     const notes = [523, 659, 784, 1047, 1319];
@@ -396,6 +415,13 @@ class Sfx {
       snowBonus: { bpm: 124, root: 50, prog: [[0, J], [5, J], [7, J], [0, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: '................', bass: [0, 12, 7, 12, 0, 12, 7, 12], arp: 'up', lead: 'celesta', pad: 'sine', bells: 0.5,
         scale: [0, 2, 4, 7, 9], mel: 'celesta', jingle: 'x.x.x.x.x.x.x.x.', wind: true,
         melody: [5, 7, 8, 7, 5, 7, 8, 10, 9, -2, 8, 7, 6, -2, 5, -2, 6, 8, 9, 8, 6, 8, 9, 11, 10, -2, 9, 8, 7, -2, -2, -1] },
+      // Xtension Link: disco-funk dorado con melodía de sintetizador
+      gold: { bpm: 124, root: 45, prog: [[0, M], [8, J], [3, J], [10, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.', bass: [0, 12, 0, 12, 7, 12, 10, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.3,
+        scale: [0, 3, 5, 7, 10], mel: 'synth', claps: true,
+        melody: [5, -2, 7, 8, 7, 5, 3, -2, 5, -2, 7, 8, 10, -2, 8, 7, 8, -2, 7, 5, 7, -2, 3, 5, 3, 2, 3, 5, 5, -2, -2, -1] },
+      goldBonus: { bpm: 140, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45,
+        scale: [0, 2, 4, 7, 9], mel: 'synth', claps: true,
+        melody: [5, 7, 8, 10, 8, 7, 5, -2, 6, 8, 9, -2, 8, 7, 6, -2, 7, 9, 10, 12, 10, 9, 7, -2, 8, 7, 6, 5, 5, -2, -2, -1] },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];
@@ -433,6 +459,13 @@ class Sfx {
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.07); g.gain.setValueAtTime(v, t + Math.max(0.08, d - 0.08)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
       o.connect(fl); fl.connect(g); g.connect(bus); o.start(t); vib.start(t); o.stop(t + d + 0.05); vib.stop(t + d + 0.05);
       if (breathy) noiseHit(t, 'bandpass', f * 2, d * 0.5, v * 0.25, 3); };
+    // Sintetizador principal (disco): dos dientes de sierra desafinados con filtro que se abre
+    const synthM = (f, t, d, v) => { const fl = ctx.createBiquadFilter(), g = ctx.createGain(); fl.type = 'lowpass'; fl.Q.value = 4;
+      fl.frequency.setValueAtTime(f * 2, t); fl.frequency.exponentialRampToValueAtTime(f * 7, t + 0.05); fl.frequency.exponentialRampToValueAtTime(f * 3, t + d);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.setValueAtTime(v * 0.8, t + Math.max(0.02, d - 0.06)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      [-8, 8].forEach(det => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; o.connect(fl); o.start(t); o.stop(t + d + 0.05); });
+      fl.connect(g); g.connect(bus); };
+    const clapM = t => { [0, 0.012, 0.024].forEach(dt => noiseHit(t + dt, 'bandpass', 1400, 0.09, 0.18, 1.5)); };
     const woodM = t => { osc('square', 880, t, 0.05, 0.05, bus, 0.001); osc('sine', 1320, t, 0.05, 0.12, bus, 0.001); };
     const jingleM = t => { for (let k = 0; k < 3; k++) noiseHit(t + k * 0.018, 'bandpass', 6500 + Math.random() * 2500, 0.07, 0.07 * (1 - k * 0.25), 7); };
     const gongM = (t, f = 82) => [1, 1.48, 2.02, 2.73].forEach((mm, k) => osc('sine', f * mm, t, 3 / (1 + k * 0.4), 0.09 / (1 + k), bus, 0.015));
@@ -463,6 +496,7 @@ class Sfx {
         // Percusión de los temas
         if (st.wood && st.wood[s16] === 'x') woodM(t);
         if (st.jingle && st.jingle[s16] === 'x') jingleM(t);
+        if (st.claps && (s16 === 4 || s16 === 12)) clapM(t);
         if (st.gong && s16 === 0 && (i / 16 | 0) % st.gong === 0) gongM(t);
         // Melodía en corcheas (-1 silencio, -2 sostiene la nota anterior)
         if (st.melody && s16 % 2 === 0) {
@@ -470,6 +504,7 @@ class Sfx {
           if (d >= 0) { let n = 1; while (st.melody[(e + n) % L] === -2 && n < 8) n++;
             const dur = step * 2 * n, f = scaleHz(d);
             if (st.mel === 'celesta') celestaM(f, t, 0.06, Math.max(0.8, dur));
+            else if (st.mel === 'synth') synthM(f, t, dur * 0.9, 0.045);
             else voiceM(f, t, dur * 0.95, st.mel === 'dizi' ? 0.05 : 0.055, st.mel === 'dizi'); }
         }
         // Campanitas brillantes
