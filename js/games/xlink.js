@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=32';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=32';
+import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=33';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=33';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -540,17 +540,30 @@ export default class XLink {
     // Las dos últimas usan la misma probabilidad que las estrellas para no cambiar el equilibrio.
     const mode = this.T.expand || 'stars';
     let target = mode === 'stars' ? 0 : hiddenStars(bet);
-    const stacks = [];
+    const stacks = [], chain = [];
     if (mode === 'princess' && target) {
+      // Cadena: algunas Reinas caen en las filas base; las demás aparecen en las filas que se van abriendo
+      const baseN = 1 + (Math.random() * target | 0);
       const cols = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
       for (const c of cols) {
-        if (stacks.length >= target) break;
+        if (stacks.length >= baseN * 2) break; // 2 casillas por Reina
         const free2 = s => !s.ball && s.k !== 'scat';
         const opts = [0, 1].filter(r => free2(final[c][r]) && free2(final[c][r + 1]));
         if (!opts.length) continue;
         const r = opts[Math.random() * opts.length | 0];
         final[c][r] = { k: 's7r', stack: 'top' }; final[c][r + 1] = { k: 's7r', stack: 'bot' };
         stacks.push([c, r], [c, r + 1]);
+      }
+      // Etapas siguientes: cada Reina nueva tiene su casilla de abajo en una fila ya abierta
+      let R = stacks.length / 2, rem = target - R;
+      const freeCols = cols.filter(c => !stacks.some(([cc]) => cc === c));
+      while (rem > 0 && R > 0 && R < 5 && freeCols.length) {
+        const n = Math.min(1 + (Math.random() * rem | 0), freeCols.length, 5 - R), cells = [];
+        for (let i = 0; i < n; i++) {
+          const c = freeCols.shift(), lo = Math.max(1, 5 - R), bot = lo + (Math.random() * (5 - lo) | 0);
+          cells.push([c, bot - 1], [c, bot]);
+        }
+        chain.push({ n, cells }); R += n; rem -= n;
       }
     }
     // Suspenso: si los primeros rodillos ya traen 4+ bolas
@@ -602,6 +615,7 @@ export default class XLink {
       await app.wait(400);
       const up = [];
       for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(this.wFor(c, true), bet)); }
+      chain.forEach(st => st.cells.forEach(([c, r], i) => { up[c][r] = { k: 's7r', stack: i % 2 ? 'bot' : 'top' }; }));
       sfx.spinStart(app.speed >= 2);
       this.upper.start(app.speed);
       await this.upper.stopTo(up, {
@@ -610,6 +624,22 @@ export default class XLink {
           up[c].forEach((s, r) => { if (s.ball && r >= 5 - kc[c]) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } });
         }
       });
+      // La cadena: cada Reina que aparece en las filas abiertas sube la cortina otra fila
+      for (const st of chain) {
+        await app.wait(650);
+        const k2 = Math.min(5, this.expand + st.n);
+        st.cells.forEach(([c, r], i) => {
+          if (i % 2) return;
+          const [x1, y1] = this.cellCenter(c, r + 1), [x2, y2] = this.cellCenter(c, 5 - k2);
+          this.bolts.push({ x1, y1, x2, y2, t: 0, life: 0.9, w: 2.4, color: '#e8f8ff' });
+          app.burst(x1, y1, 14, { type: 'spark', color: '#dff6ff', speed: 260, size: 10 });
+        });
+        sfx.rowUnlock(k2); app.flash('#9fe8ff', 0.3); app.shake(false);
+        this.expand = k2; kc.fill(k2);
+        app.message('¡Otra Reina! La cortina sube <b>+' + st.n + '</b> · ' + linesFor(BASE_R + k2).length + ' líneas');
+        up.forEach((col, c) => col.forEach((s, r) => { if (s.ball && r >= 5 - k2) { const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } }));
+        await app.wait(450);
+      }
       grid = up.map((col, c) => col.slice(5 - kc[c]).concat(final[c]));
     }
     const rows = BASE_R + this.expand;
@@ -618,7 +648,7 @@ export default class XLink {
     const ways = !!this.T.ways;
     const pay = this.T.pay || PAY;
     const heights = grid.map(col => col.length);
-    const wins = ways ? evalWays(grid, heights, bet, pay) : evalLines(grid, rows, lineBet, pay);
+    const wins = ways ? evalWays(grid, heights, bet, pay) : evalLines(grid, rows, lineBet * (this.T.lineScale || 1), pay);
     let total = 0;
     const off = MAXR - rows, offC = heights.map(h => MAXR - h);
     if (wins.length) {
@@ -953,7 +983,7 @@ export default class XLink {
 
   info(bet, fmt) {
     const lb = bet / 20;
-    const unit = this.T.ways ? bet * WAYS_UNIT : lb, money = v => '$' + v.toLocaleString('es-CL', { maximumFractionDigits: v < 10 ? 2 : 0 });
+    const unit = this.T.ways ? bet * WAYS_UNIT : lb * (this.T.lineScale || 1), money = v => '$' + v.toLocaleString('es-CL', { maximumFractionDigits: v < 10 ? 2 : 0 });
     const P = this.T.pay || PAY;
     const row = (k, name, icon) => '<tr><td>' + icon + '</td><td>' + name + '</td><td>' + [3, 4, 5].map(n => P[k][n] ? (this.T.ways ? money(P[k][n] * unit) : fmt(P[k][n] * unit)) : '—').join(' · ') + '</td></tr>';
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
@@ -967,7 +997,7 @@ export default class XLink {
           '<li><b>Velos al azar</b>: en cualquier giro se abren por sorpresa <b>hasta 25 posiciones</b>; cada rodillo abre su propia cantidad (0 a 5) solo para ese giro. Las formas son la multiplicación de las alturas: hasta <b>32.768</b>.</li>'
         : '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
           (this.T.expand === 'princess'
-            ? '<li><b>Reina en pila de 2</b>: cada pila derrite el hielo y abre <b>1 fila</b> (máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>'
+            ? '<li><b>Reina de 2 filas</b>: cada Reina sube la cortina de hielo <b>1 fila</b>. Si en las filas que se abren aparece otra Reina, la cortina sigue subiendo (en cadena), hasta 5 filas y una Reina por columna, solo para ese giro. Hasta <b>100 líneas</b>.</li>'
             : '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>')) +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
       (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. <b>4</b> pagan antes ' + fmt(this.T.scatter.pay[0] * bet) + ' y <b>5</b> pagan ' + fmt(this.T.scatter.pay[1] * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
@@ -979,7 +1009,7 @@ export default class XLink {
       '<li><b>Upgrade</b> (monedas con flecha): duplica el valor de todas las bolas del tablero.</li>' +
       '<li><b>BONO</b>: compra Golden Spins directo por 60× la apuesta.</li></ul>' +
       '<h3>Tabla de pagos (apuesta ' + fmt(bet) + (this.T.ways ? ', por forma' : ', por línea') + ')</h3><table>' +
-      Object.keys(PAY).map(k => row(k, this.T.names[k] + (k === 'cherry' ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * lb)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
+      Object.keys(PAY).map(k => row(k, this.T.names[k] + (k === 'cherry' && P.cherry[2] ? ' (2+: ' + (this.T.ways ? money(P.cherry[2] * unit) : fmt(P.cherry[2] * unit)) + ')' : ''), this.isBar(k) ? '<i class="ico bar">BAR</i>' : this.T.draw && this.T.draw[k] ? '<img class="ico" src="' + spriteURL(this.T.draw[k](96)) + '" alt="">' : ic(this.T.icon[k]))).join('') + '</table>';
   }
 }
 
