@@ -1,10 +1,12 @@
 # Aurum Link
 
-Colección de 10 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
+Colección de 12 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
 
 | Juego | Dinámica |
 |---|---|
 | **Xtension Link** | 5×3 (20 líneas). Las estrellas abren hasta 5 filas extra (100 líneas). 6+ bolas = **Golden Spins**: bolas fijas, 3 giros que se reinician, filas que se desbloquean con rayos a las 8 · 12 · 17 · 23 · 30 bolas, bolas +1 a +5 GIROS, Multiplicador y Upgrade (las especiales desaparecen tras actuar y liberan su casilla), jackpots MINI/MINOR/MAJOR y GRAND con tablero lleno. |
+| **Sueño Rojo** | Estilo *Red Dream*: pagoda roja, paneles lacados con borlas, rodillos de jade, tetera, papiro, huevo de jade y princesa. **243 formas**; hasta **25 posiciones se abren al azar**, cada rodillo por su cuenta (hasta 32.768 formas), con WILD. **3+ flores de loto = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
+| **Reino de Nieve** | Estilo *Snow Kingdom*: hielo escarchado, aurora, carámbanos y nevada. 20 líneas (hasta 100): cada **Reina alta de 2 casillas** derrite el hielo y abre una fila. **3+ cristales de hielo = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
 | **Avalancha Glacial** | 6×5 sin líneas: 8+ iguales en cualquier lugar. Cascadas con multiplicador x1→x5; 4 copos = 10 giros gratis con multiplicador progresivo. |
 | **Rueda de Fuego** | Clásica 3×3, 5 líneas. Wild de fuego expansivo x2; 3 soles = rueda de multiplicadores y jackpots. |
 | **Legión Dorada** | 5×4, 1024 formas. Fénix = giros gratis con coronas pegajosas x2/x3 que se multiplican. |
@@ -15,8 +17,8 @@ Colección de 10 tragamonedas para iPhone / iPad (Safari), con **créditos ficti
 | **Duelo del Oeste** | Pueblo del desierto de noche, 5×3 y 20 líneas. **Wilds caminantes**: cada forajido da un re-giro y avanza un rodillo a la izquierda hasta salir. 3+ estrellas de sheriff = 10 giros gratis donde cada forajido duplica su línea. |
 | **Galaxia Infinita** | Espacio profundo. **Rodillos infinitos**: empieza con 3 y cada premio que llega al último rodillo agrega uno nuevo (hasta 15). 3+ portales = 8 giros gratis con multiplicador que sube con cada rodillo nuevo. |
 
-**Los 10 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
-Xtension Link (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND), Duelo del Oeste (3/4/5/6+ forajidos a la vez) y Galaxia Infinita (8/10/12/15 rodillos).
+**Los 12 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
+Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lleno), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND), Duelo del Oeste (3/4/5/6+ forajidos a la vez) y Galaxia Infinita (8/10/12/15 rodillos).
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 

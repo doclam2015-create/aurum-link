@@ -11,6 +11,8 @@ body[data-game=legion]{--bg1:#6e1418;--bg2:#120304;--accent:#ffd77a;--accent2:#d
 body[data-game=bull]{--bg1:#7a4a12;--bg2:#160a02;--accent:#ffd36a;--accent2:#e08a1a}
 body[data-game=dragon]{--bg1:#6a0f3a;--bg2:#12020c;--accent:#ffc27a;--accent2:#ff4a3a}
 body[data-game=codex]{--bg1:#7a3a12;--bg2:#0c1a06;--accent:#ffcf6a;--accent2:#ff8a2a}
+body[data-game=reddream]{--bg1:#9a0c12;--bg2:#1e0204;--accent:#ffd06a;--accent2:#ff3a2a}
+body[data-game=snowking]{--bg1:#1f5ea8;--bg2:#030c24;--accent:#e6f6ff;--accent2:#7fc8ff;--line:rgba(170,225,255,.4);--muted:#b8d8ee}
 body[data-game=western]{--bg1:#5a2a3a;--bg2:#12060a;--accent:#ffcf7a;--accent2:#e07a2a}
 body[data-game=galaxy]{--bg1:#2a1a6a;--bg2:#03020f;--accent:#d8c8ff;--accent2:#8a5aff;--line:rgba(190,170,255,.4);--muted:#b8b0e0}
 body[data-game=reef]{--bg1:#0a5a86;--bg2:#021a2e;--accent:#9ff0ff;--accent2:#3ec9d6;--line:rgba(160,235,255,.4);--muted:#a9d8e6}
@@ -145,6 +147,7 @@ body.busy #btnExtra,body.busy #btnInfo{opacity:.4}
 .sheet-body td{padding:4px 3px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:middle}
 .sheet-body td:last-child{text-align:right;font-variant-numeric:tabular-nums;color:#fff}
 .ico{display:inline-block;width:34px;height:34px;background:url(../assets/symbols.webp) no-repeat;background-size:600% 500%;vertical-align:middle}
+img.ico{background:none;object-fit:contain}
 .ico.bar{background:#3a1690;color:#fff;font-style:normal;font-weight:900;font-size:10px;line-height:34px;text-align:center;border-radius:6px}
 .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px;margin-top:10px}
 .choices button{height:50px;border-radius:12px;font-weight:900;font-size:17px;color:#2a1400;background:linear-gradient(#fff3c0,var(--accent) 55%,#b8741a)}
