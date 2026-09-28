@@ -143,13 +143,18 @@ export default class XLink {
     this.wins = null; this.winT = 0;
     this.time = 0;
     this.bolts = [];
-    this.extra = {
+    this.buy = {
       label: 'BONO', sub: b => app.fmt(b * 60),
       cost: b => b * 60, run: b => this.buyBonus(b)
     };
+    // Giros gratis (temas con dispersor: flor de loto, cristal de hielo…)
+    this.freeLeft = 0; this.inFree = false; this.fsTotal = 0;
   }
-  get animating() { return this.base.spinning || this.upper.spinning || !!this.bonus || this.bolts.length > 0 || !!this.wins; }
-  get locked() { return !!this.bonus; }
+  get animating() { return this.base.spinning || this.upper.spinning || !!this.bonus || this.bolts.length > 0 || !!this.wins || this.inFree; }
+  get locked() { return !!this.bonus || this.inFree; }
+  get extra() { return this.inFree ? null : this.buy; }
+  get freeRound() { return this.freeLeft > 0; }
+  get keepWin() { return this.inFree; }
 
   resize(W, H) {
     this.W = W; this.H = H;
@@ -241,7 +246,7 @@ export default class XLink {
   // por princesa o al azar, y sin princesa suelta si solo aparece en pilas
   wFor(c, up) {
     const T = this.T, mode = T.expand || 'stars', wild = T.wild && c >= 1 && c <= 3;
-    if (!wild && mode === 'stars' && !T.ball) return up ? W_UP : W_BASE;
+    if (!wild && mode === 'stars' && !T.ball && !T.scatter) return up ? W_UP : W_BASE;
     const key = (up ? 'u' : 'b') + (wild ? 'w' : '');
     const cache = this._wcache || (this._wcache = {});
     if (!cache[key]) {
@@ -250,6 +255,7 @@ export default class XLink {
       if (mode !== 'stars') { w.g1 = 0; w.g2 = 0; w.g3 = 0; }
       if (mode === 'princess') w.s7r = 0;
       if (T.ball) w.ball *= T.ball; // escala la frecuencia de bolas
+      if (T.scatter) w.scat = T.scatter.w; // dispersor de giros gratis
       cache[key] = w;
     }
     return cache[key];
@@ -275,6 +281,8 @@ export default class XLink {
     shape(); x.lineWidth = w * 0.03; x.strokeStyle = '#e8f8ff'; x.stroke();
     return (cache[key] = c);
   }
+  // Montos con centavos cuando son chicos (premios por formas)
+  money(v) { return v < 10 && v % 1 ? '$' + v.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : this.app.fmt(v); }
   // Filas abiertas en un rodillo (iguales en todos salvo en temas con apertura por rodillo)
   colOpen(c) { return this.expandCols ? this.expandCols[c] : this.expand; }
   isBar(k) { return k === 'bar' && !this.T.icon.bar; }
@@ -400,7 +408,7 @@ export default class XLink {
     w.cells.forEach(([c, r]) => { x.strokeStyle = '#ffe27a'; x.lineWidth = 3; x.strokeRect(bx + c * cw + 3, by + r * ch + 3, cw - 6, ch - 6); });
     x.restore();
     const ty = w.line ? by + (w.line[2] + 0.5) * ch : by + (MAXR - 1.5) * ch;
-    if (w.win) goldText(x, this.app.fmt(w.win) + (w.label ? ' · ' + w.label : ''), bx + cw * 2.5, ty, Math.min(30, cw * 0.45), { maxW: cw * 5 });
+    if (w.win) goldText(x, this.money(w.win) + (w.label ? ' · ' + w.label : ''), bx + cw * 2.5, ty, Math.min(30, cw * 0.45), { maxW: cw * 5 });
   }
 
   drawGlass(x) {
@@ -522,8 +530,12 @@ export default class XLink {
   async play(bet) {
     const app = this.app, sfx = app.sfx;
     this.wins = null; this.expand = 0; this.expandCols = null;
+    const free = this.freeLeft > 0;
+    if (free) this.freeLeft--;
     const final = [];
     for (let c = 0; c < COLS; c++) { final.push([]); for (let r = 0; r < BASE_R; r++) final[c].push(pickSym(this.wFor(c), bet)); }
+    // Ayuda de prueba: fuerza N dispersores en el tablero base
+    if (app._forceScat && this.T.scatter) { const n = app._forceScat; app._forceScat = 0; for (let i = 0; i < n; i++) final[i][i % 3] = { k: 'scat' }; }
     // Filas extra según el tema: estrellas (original), pilas de princesa o velos que se abren al azar.
     // Las dos últimas usan la misma probabilidad que las estrellas para no cambiar el equilibrio.
     const mode = this.T.expand || 'stars';
@@ -533,7 +545,8 @@ export default class XLink {
       const cols = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
       for (const c of cols) {
         if (stacks.length >= target) break;
-        const opts = [0, 1].filter(r => !final[c][r].ball && !final[c][r + 1].ball);
+        const free2 = s => !s.ball && s.k !== 'scat';
+        const opts = [0, 1].filter(r => free2(final[c][r]) && free2(final[c][r + 1]));
         if (!opts.length) continue;
         const r = opts[Math.random() * opts.length | 0];
         final[c][r] = { k: 's7r', stack: 'top' }; final[c][r + 1] = { k: 's7r', stack: 'bot' };
@@ -544,7 +557,7 @@ export default class XLink {
     let anticFrom = -1, acc = 0;
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
     sfx.spinStart(app.speed >= 2);
-    app.setSpinLabel('PARAR');
+    app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeLeft + ' restantes' : '');
     this.base.start(app.speed);
     let landed = 0;
     await this.base.stopTo(final, {
@@ -555,6 +568,7 @@ export default class XLink {
         final[c].forEach((s, r) => {
           const [px, py] = this.cellCenter(c, r + 5);
           if (s.ball) { sfx.ballLand(landed++); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); }
+          if (s.k === 'scat') { sfx.bell(880 + c * 110, 1, 0.14); app.burst(px, py, 16, { type: 'spark', color: this.T.scatter.color, speed: 280, size: 11 }); }
           if (s.stack) { app.burst(px, py, 12, { type: 'spark', color: '#dff6ff', speed: 260, size: 10 }); sfx.tone(1320, 0.3, { type: 'triangle', vol: 0.1 }); }
           if (s.star) { app.burst(px, py, 12, { color: ['', '#6cff8a', '#6cc8ff', '#ff6a6a'][s.star], speed: 260, size: 9 }); sfx.tone(880 + s.star * 220, 0.3, { type: 'triangle', vol: 0.1 }); }
         });
@@ -614,7 +628,7 @@ export default class XLink {
       this.winT = 0;
       sfx.win(total >= bet * 5 ? 2 : 0);
       app.addWin(total);
-      app.message(ways ? wins.map(w => w.ways + '× ' + this.T.names[w.k]).join(' · ') + ' = <b>' + app.fmt(total) + '</b>' : 'Premio en ' + wins.length + ' línea' + (wins.length > 1 ? 's' : '') + ': <b>' + app.fmt(total) + '</b>');
+      app.message(ways ? wins.map(w => w.ways + '× ' + this.T.names[w.k]).join(' · ') + ' = <b>' + this.money(total) + '</b>' : 'Premio en ' + wins.length + ' línea' + (wins.length > 1 ? 's' : '') + ': <b>' + app.fmt(total) + '</b>');
       const [px, py] = this.cellCenter(2, MAXR - 2);
       app.flyCoins(px, py, Math.min(14, 4 + wins.length * 2));
     } else if (stars === 0) app.message(this.hint);
@@ -645,13 +659,55 @@ export default class XLink {
       this.wins = null;
       const bw = await this.golden(bet, balls, rows);
       total += bw;
-      app.setSpinLabel('GIRAR');
-      return { win: total, celebrated: bw > 0 };
+      if (this.inFree) sfx.music('bonus');
+      return this.afterSpin(bet, total, grid, free, bw > 0);
     }
     if (balls.length >= 4) app.message(balls.length + ' bolas… ¡faltan ' + (6 - balls.length) + ' para Golden Spins!');
-    app.setSpinLabel('GIRAR');
     if (wins.length) await app.wait(Math.min(2200, 700 + wins.length * 350));
-    return { win: total };
+    return this.afterSpin(bet, total, grid, free, false);
+  }
+  // Dispersores: 3+ = 10 giros gratis (o +10 si ya están en curso). Cierra los giros gratis.
+  async afterSpin(bet, total, grid, free, celebrated) {
+    const app = this.app, sfx = app.sfx, T = this.T;
+    if (free) this.fsTotal += total;
+    const scat = T.scatter ? grid.flat().filter(s => s.k === 'scat').length : 0;
+    if (scat >= 3) {
+      this.wins = null;
+      // 4 o 5 dispersores pagan un premio antes de los giros
+      const mult = scat >= 5 ? T.scatter.pay[1] : scat === 4 ? T.scatter.pay[0] : 0;
+      if (mult) {
+        const v = mult * bet;
+        total += v; if (free) this.fsTotal += v;
+        app.addWin(v); sfx.win(2);
+        app.popText(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), scat + ' ' + T.scatter.name + ' · ' + app.fmt(v), 24);
+        app.flyCoins(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), 12);
+        app.message('<b>' + scat + ' ' + T.scatter.name + '</b> pagan <b>' + app.fmt(v) + '</b>');
+        await app.wait(1200);
+      }
+      grid.forEach((col, c) => col.forEach((s, r) => { if (s.k === 'scat') { const [px, py] = this.cellCenter(c, r + MAXR - col.length); app.burst(px, py, 1, { type: 'ring', color: T.scatter.color, size: 10, grow: this.cw * 1.2, width: 6, life: 0.7, speed: 0 }); } }));
+      sfx.featureStart(); app.flash(T.scatter.color, 0.5); app.shake(true);
+      await app.wait(700);
+      if (this.inFree) {
+        this.freeLeft += 10;
+        await app.banner('+10 GIROS', scat + ' ' + T.scatter.name + ' más', { color: T.scatter.color, ms: 1800 });
+      } else {
+        this.inFree = true; this.freeLeft = 10; this.fsTotal = 0;
+        sfx.stopMusic();
+        await app.banner('10 GIROS GRATIS', scat + ' ' + T.scatter.name + ' · 3 más = +10 giros', { color: T.scatter.color, ms: 2600 });
+        sfx.music('bonus');
+      }
+    }
+    if (this.inFree && this.freeLeft === 0 && free) {
+      await app.wait(500);
+      const fs = this.fsTotal;
+      this.inFree = false; this.wins = null;
+      if (fs > 0) await app.celebrate(fs, bet, 'GIROS GRATIS');
+      sfx.stopMusic(); sfx.music(this.constructor.music);
+      app.message('Giros gratis: <b>' + app.fmt(fs) + '</b>');
+      celebrated = true;
+    }
+    app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? this.freeLeft + ' restantes' : '');
+    return { win: total, celebrated: celebrated || this.inFree };
   }
 
   async buyBonus(bet) {
@@ -914,6 +970,7 @@ export default class XLink {
             ? '<li><b>Reina en pila de 2</b>: cada pila derrite el hielo y abre <b>1 fila</b> (máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>'
             : '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>')) +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
+      (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. <b>4</b> pagan antes ' + fmt(this.T.scatter.pay[0] * bet) + ' y <b>5</b> pagan ' + fmt(this.T.scatter.pay[1] * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
       '<li>En Golden Spins las bolas quedan fijas, tienes <b>3 giros</b> y cada bola nueva los reinicia a 3. Las bolas azules <b>+1 · +2 · +3 · +4 · +5 GIROS</b> suman esos giros encima del reinicio.</li>' +
       '<li>Las bolas especiales (<b>+GIROS</b>, <b>Multiplicador</b> y <b>Upgrade</b>) entregan su efecto y <b>desaparecen</b>: la casilla queda libre para que caiga otra bola.</li>' +
       '<li>Al acumular <b>8 · 12 · 17 · 23 · 30</b> bolas un rayo desbloquea una fila más (hasta 8 filas, 40 posiciones).</li>' +

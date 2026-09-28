@@ -25,6 +25,8 @@ function waysBadge(x, cx, cy, w, text, col, txt, l1 = 'FORMAS', l2 = 'DE GANAR')
 // ---------- SUEÑO ROJO ----------
 const RED = Object.assign({}, THEME, {
   ways: true, wild: 2.5, top: 34, bottom: 14, expand: 'random', perReel: true, ball: 1.12,
+  // Por formas no se paga con solo 2 "10" (daba premios de centavos)
+  pay: Object.assign({}, PAY, { cherry: [0, 0, 0, 5, 20, 80] }),
   icon: Object.assign({}, THEME.icon, { s7r: S.GEISHA, s7b: S.DRAGON, bar: S.PHOENIX, bell: S.BELL, melon: S.CLOVER, grapes: S.K, plum: S.Q, orange: S.J, cherry: S.TEN, wild: S.WILD }),
   variant: {},
   names: { s7r: 'Princesa', s7b: 'Dragón', bar: 'Fénix', bell: 'Campana de oro', melon: 'Jade', grapes: 'K', plum: 'Q', orange: 'J', cherry: '10' },
@@ -73,7 +75,7 @@ export class RedDream extends XLink {
     x.beginPath(); x.moveTo(W / 2 - rw / 2 - 8, ry - 12); x.quadraticCurveTo(W / 2 - rw / 2 + 20, ry - 2, W / 2 - rw * 0.3, ry - top + 12);
     x.lineTo(W / 2 + rw * 0.3, ry - top + 12); x.quadraticCurveTo(W / 2 + rw / 2 - 20, ry - 2, W / 2 + rw / 2 + 8, ry - 12); x.lineTo(W / 2 + rw / 2 - 6, ry); x.lineTo(W / 2 - rw / 2 + 6, ry); x.closePath(); x.fill();
     x.strokeStyle = '#ffd06a'; x.lineWidth = 2; x.stroke();
-    goldText(x, 'SUEÑO ROJO · ' + waysText(this) + ' FORMAS', W / 2, ry - top / 2 + 4, Math.min(14, bw * 0.045), { maxW: bw * 0.62 });
+    goldText(x, (this.inFree ? 'GIROS GRATIS ' + this.freeLeft + ' · ' : 'SUEÑO ROJO · ') + waysText(this) + ' FORMAS', W / 2, ry - top / 2 + 4, Math.min(14, bw * 0.045), { maxW: bw * 0.62 });
     // Letreros laterales de formas de ganar (a la altura de las filas base)
     const yy = by + (MAXR - BASE_R + 0.45) * ch, wb = Math.min(this.rail - 6, 40);
     [bx - 7 - this.rail / 2, bx + bw + 7 + this.rail / 2].forEach(px => waysBadge(x, px, yy, wb, waysText(this), ['#1a0a06', '#ffd06a'], '#ffe9b0'));
@@ -143,7 +145,7 @@ export class SnowKingdom extends XLink {
   decorate(x) {
     const { W, H, time, bx, by, cw, ch } = this, bw = cw * 5;
     // Corona de hielo con el título
-    goldText(x, 'REINO DE NIEVE · ' + linesText(this) + ' LÍNEAS', W / 2, by - this.T.top / 2 - 4, Math.min(14, bw * 0.045), { maxW: bw * 0.8, colors: ['#fff', '#eaf8ff', '#8fd0ff', '#fff'], stroke: '#0a2a5a', glowColor: '#7fc8ff' });
+    goldText(x, (this.inFree ? 'GIROS GRATIS ' + this.freeLeft + ' · ' : 'REINO DE NIEVE · ') + linesText(this) + ' LÍNEAS', W / 2, by - this.T.top / 2 - 4, Math.min(14, bw * 0.045), { maxW: bw * 0.8, colors: ['#fff', '#eaf8ff', '#8fd0ff', '#fff'], stroke: '#0a2a5a', glowColor: '#7fc8ff' });
     const yy = by + (MAXR - BASE_R + 0.45) * ch, wb = Math.min(this.rail - 6, 40);
     [bx - 7 - this.rail / 2, bx + bw + 7 + this.rail / 2].forEach(px => waysBadge(x, px, yy, wb, linesText(this), ['#06183a', '#cfeeff'], '#eaf8ff', 'LÍNEAS', ''));
     // Carámbanos bajo el borde superior del marco
@@ -244,3 +246,59 @@ export const drawEgg = drawn('egg', (x, s) => {
 });
 RED.draw = { s7b: drawScroll, bar: drawTea, melon: drawEgg };
 RED.names = Object.assign({}, RED.names, { s7b: 'Papiro de la suerte', bar: 'Tetera y taza', melon: 'Huevo de jade' });
+
+// ---------- Dispersores de giros gratis ----------
+// Texto BONUS dorado sobre el símbolo
+function bonusLabel(x, s, y, fill = ['#fff6c0', '#e8a820'], stroke = '#5a2a00') {
+  const fs = s * 0.2;
+  x.font = '900 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.lineWidth = fs * 0.32; x.strokeStyle = stroke; x.strokeText('BONUS', s / 2, y);
+  const g = x.createLinearGradient(0, y - fs / 2, 0, y + fs / 2); g.addColorStop(0, fill[0]); g.addColorStop(1, fill[1]);
+  x.fillStyle = g; x.fillText('BONUS', s / 2, y);
+}
+// Flor de loto rosa y blanca
+export const drawLotus = drawn('lotus', (x, s) => {
+  const cx = s / 2, base = s * 0.66;
+  x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.35; x.drawImage(glow('rgba(255,150,210,1)', 64), cx - s * 0.45, base - s * 0.5, s * 0.9, s * 0.8); x.restore();
+  // hojas verdes
+  x.fillStyle = '#2f9a4a';
+  [-1, 1].forEach(d => { x.beginPath(); x.ellipse(cx + d * s * 0.22, base + s * 0.05, s * 0.2, s * 0.06, d * 0.25, 0, 7); x.fill(); });
+  const petal = (ang, len, wid, c1, c2) => {
+    x.save(); x.translate(cx, base); x.rotate(ang);
+    const g = x.createLinearGradient(0, 0, 0, -len); g.addColorStop(0, c2); g.addColorStop(1, c1);
+    x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(wid, -len * 0.55, 0, -len); x.quadraticCurveTo(-wid, -len * 0.55, 0, 0); x.fill();
+    x.strokeStyle = 'rgba(200,60,130,0.5)'; x.lineWidth = s * 0.008; x.stroke();
+    x.restore();
+  };
+  // capa trasera, media y frontal
+  [-1.25, -0.75, 0.75, 1.25].forEach(a => petal(a, s * 0.34, s * 0.12, '#ff9ac8', '#ffe6f2'));
+  [-0.45, 0.45].forEach(a => petal(a, s * 0.42, s * 0.14, '#ff7ab8', '#fff0f6'));
+  petal(0, s * 0.46, s * 0.15, '#ff5aa8', '#ffffff');
+  x.fillStyle = '#ffd24a'; x.beginPath(); x.arc(cx, base - s * 0.05, s * 0.04, 0, 7); x.fill();
+  bonusLabel(x, s, s * 0.86);
+});
+// Cristal de hielo facetado
+export const drawCrystal = drawn('crystal', (x, s) => {
+  const cx = s / 2, cy = s * 0.42, R = s * 0.3;
+  x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.45; x.drawImage(glow('rgba(140,220,255,1)', 64), cx - s * 0.45, cy - s * 0.45, s * 0.9, s * 0.9); x.restore();
+  const pts = []; for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i * Math.PI / 3; pts.push([cx + Math.cos(a) * R * (i % 3 === 0 ? 1.25 : 0.85), cy + Math.sin(a) * R]); }
+  // facetas
+  for (let i = 0; i < 6; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % 6];
+    const g = x.createLinearGradient(ax, ay, cx, cy);
+    g.addColorStop(0, i % 2 ? '#bfe8ff' : '#6ab8ff'); g.addColorStop(1, i % 2 ? '#ffffff' : '#d8f2ff');
+    x.fillStyle = g; x.beginPath(); x.moveTo(cx, cy); x.lineTo(ax, ay); x.lineTo(bx, by); x.closePath(); x.fill();
+  }
+  x.strokeStyle = '#ffffff'; x.lineWidth = s * 0.015; x.beginPath(); pts.forEach(([px, py], i) => i ? x.lineTo(px, py) : x.moveTo(px, py)); x.closePath(); x.stroke();
+  x.strokeStyle = 'rgba(255,255,255,0.6)'; x.lineWidth = s * 0.008; pts.forEach(([px, py]) => { x.beginPath(); x.moveTo(cx, cy); x.lineTo(px, py); x.stroke(); });
+  // destellos
+  x.strokeStyle = '#ffffff'; x.lineWidth = s * 0.012;
+  [[0.25, 0.2, 0.06], [0.78, 0.3, 0.045], [0.7, 0.62, 0.035]].forEach(([u, v, r]) => { const px = s * u, py = s * v; x.beginPath(); x.moveTo(px - s * r, py); x.lineTo(px + s * r, py); x.moveTo(px, py - s * r); x.lineTo(px, py + s * r); x.stroke(); });
+  bonusLabel(x, s, s * 0.86, ['#ffffff', '#8fd0ff'], '#0a2a5a');
+});
+RED.scatter = { w: 1.6, name: 'flores de loto', color: '#ff7ab8', pay: [5, 20] };
+RED.draw = Object.assign({}, RED.draw, { scat: drawLotus });
+RED.names = Object.assign({}, RED.names, { scat: 'Flor de loto' });
+SNOW.scatter = { w: 1.6, name: 'cristales de hielo', color: '#8fd8ff', pay: [5, 20] };
+SNOW.draw = Object.assign({}, SNOW.draw || {}, { scat: drawCrystal });
+SNOW.names = Object.assign({}, SNOW.names, { scat: 'Cristal de hielo' });
