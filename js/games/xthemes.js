@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=33';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=33';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=34';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=34';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
@@ -75,7 +75,7 @@ export class RedDream extends XLink {
     x.beginPath(); x.moveTo(W / 2 - rw / 2 - 8, ry - 12); x.quadraticCurveTo(W / 2 - rw / 2 + 20, ry - 2, W / 2 - rw * 0.3, ry - top + 12);
     x.lineTo(W / 2 + rw * 0.3, ry - top + 12); x.quadraticCurveTo(W / 2 + rw / 2 - 20, ry - 2, W / 2 + rw / 2 + 8, ry - 12); x.lineTo(W / 2 + rw / 2 - 6, ry); x.lineTo(W / 2 - rw / 2 + 6, ry); x.closePath(); x.fill();
     x.strokeStyle = '#ffd06a'; x.lineWidth = 2; x.stroke();
-    goldText(x, (this.inFree ? 'GIROS GRATIS ' + this.freeLeft + ' · ' : 'SUEÑO ROJO · ') + waysText(this) + ' FORMAS', W / 2, ry - top / 2 + 4, Math.min(14, bw * 0.045), { maxW: bw * 0.62 });
+    goldText(x, (this.inFree ? 'GIRO GRATIS ' + this.freeCount + ' · ' : 'SUEÑO ROJO · ') + waysText(this) + ' FORMAS', W / 2, ry - top / 2 + 4, Math.min(14, bw * 0.045), { maxW: bw * 0.62 });
     // Letreros laterales de formas de ganar (a la altura de las filas base)
     const yy = by + (MAXR - BASE_R + 0.45) * ch, wb = Math.min(this.rail - 6, 40);
     [bx - 7 - this.rail / 2, bx + bw + 7 + this.rail / 2].forEach(px => waysBadge(x, px, yy, wb, waysText(this), ['#1a0a06', '#ffd06a'], '#ffe9b0'));
@@ -120,7 +120,7 @@ export class SnowKingdom extends XLink {
   };
   constructor(app) {
     super(app);
-    this.hint = 'Cada <b>Reina de 2 filas</b> sube la cortina 1 fila, <b>en cadena</b>. 3 cristales = <b>10 giros gratis</b>.';
+    this.hint = 'Cada <b>Reina de 2 filas</b> sube la cortina 1 fila, <b>en cadena</b>. 3 copos de nieve = <b>10 giros gratis</b>.';
     this.flakes = []; for (let i = 0; i < 55; i++) this.flakes.push({ x: Math.random(), y: Math.random(), v: rand(0.03, 0.09), s: rand(1.2, 3.2), p: Math.random() * 6 });
     this.icicles = []; for (let i = 0; i < 24; i++) this.icicles.push({ u: (i + Math.random() * 0.6) / 24, l: rand(0.35, 1) });
   }
@@ -145,7 +145,7 @@ export class SnowKingdom extends XLink {
   decorate(x) {
     const { W, H, time, bx, by, cw, ch } = this, bw = cw * 5;
     // Corona de hielo con el título
-    goldText(x, (this.inFree ? 'GIROS GRATIS ' + this.freeLeft + ' · ' : 'REINO DE NIEVE · ') + linesText(this) + ' LÍNEAS', W / 2, by - this.T.top / 2 - 4, Math.min(14, bw * 0.045), { maxW: bw * 0.8, colors: ['#fff', '#eaf8ff', '#8fd0ff', '#fff'], stroke: '#0a2a5a', glowColor: '#7fc8ff' });
+    goldText(x, (this.inFree ? 'GIRO GRATIS ' + this.freeCount + ' · ' : 'REINO DE NIEVE · ') + linesText(this) + ' LÍNEAS', W / 2, by - this.T.top / 2 - 4, Math.min(14, bw * 0.045), { maxW: bw * 0.8, colors: ['#fff', '#eaf8ff', '#8fd0ff', '#fff'], stroke: '#0a2a5a', glowColor: '#7fc8ff' });
     const yy = by + (MAXR - BASE_R + 0.45) * ch, wb = Math.min(this.rail - 6, 40);
     [bx - 7 - this.rail / 2, bx + bw + 7 + this.rail / 2].forEach(px => waysBadge(x, px, yy, wb, linesText(this), ['#06183a', '#cfeeff'], '#eaf8ff', 'LÍNEAS', ''));
     // Carámbanos bajo el borde superior del marco
@@ -166,14 +166,30 @@ export class SnowKingdom extends XLink {
   }
 }
 
+// ---------- Hoja de imágenes de los temas (assets/themes.webp, ver tools/build_themes.py) ----------
+// 10 casillas de 200×200 en 5 columnas y la Reina alta (240×400) en x=1000
+let SHEET = null;
+const SHEET_POS = { noble: 0, tea: 1, scroll: 2, lotus: 3, wolf: 4, leopard: 5, falcon: 6, antelope: 7, queen: 8, snowflake: 9 };
+export function loadThemeArt(src = 'assets/themes.webp') {
+  return new Promise((res, rej) => { const img = new Image(); img.decoding = 'async'; img.onload = () => { SHEET = img; res(img); }; img.onerror = rej; img.src = src; });
+}
+function sheetDraw(x, k, dx, dy, dw, dh) {
+  const n = SHEET_POS[k]; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(SHEET, (n % 5) * 200, Math.floor(n / 5) * 200, 200, 200, dx, dy, dw, dh);
+}
+// Ícono del lobby desde la hoja de temas (estilo CSS)
+export function sheetIconStyle(k) { const n = SHEET_POS[k]; return 'background-image:url(assets/themes.webp);background-size:620% 200%;background-position:' + ((n % 5) * 200 / 1040 * 100).toFixed(2) + '% ' + Math.floor(n / 5) * 100 + '%'; }
+
 // ---------- Símbolos dibujados para Sueño Rojo ----------
 const art = new Map();
 // Envuelve un dibujo con caché por tamaño; variante 'd' = atenuado (relleno del bono)
-function drawn(name, fn) {
+// needSheet: no se guarda en caché mientras la hoja de imágenes no haya cargado
+function drawn(name, fn, needSheet = false) {
   return (size, v = 'n') => {
     const key = name + '|' + size + '|' + (v === 'd' ? 'd' : 'n');
     let c = art.get(key); if (c) return c;
     c = makeCanvas(size, size); const x = c.getContext('2d');
+    if (needSheet && !SHEET) return c;
     fn(x, size);
     if (v === 'd') { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(8,4,20,0.62)'; x.fillRect(0, 0, size, size); }
     art.set(key, c); return c;
@@ -460,3 +476,58 @@ SNOW.pay = Object.assign({}, PAY, {
 SNOW.lineScale = 0.58;
 SNOW.ball = 0.99;
 SNOW.scatter = Object.assign({}, SNOW.scatter, { w: 1.45 });
+
+// ---------- Imágenes de los temas (reemplazan a los dibujos anteriores) ----------
+// Figura recortada con sombra suave (Sueño Rojo)
+const figure = k => drawn('img-' + k, (x, s) => {
+  x.save(); x.shadowColor = 'rgba(0,0,0,0.55)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+  sheetDraw(x, k, s * 0.02, s * 0.02, s * 0.96, s * 0.96); x.restore();
+}, true);
+// Retrato en azulejo de hielo (Reino de Nieve). ice: el fondo blanco del dibujo se tiñe celeste
+function iceFrame(x, s, pad) {
+  const m = s * pad, r = s * 0.1;
+  x.beginPath(); x.moveTo(m + r, m); x.arcTo(s - m, m, s - m, s - m, r); x.arcTo(s - m, s - m, m, s - m, r); x.arcTo(m, s - m, m, m, r); x.arcTo(m, m, s - m, m, r); x.closePath();
+}
+const card = (k, ice) => drawn('card-' + k, (x, s) => {
+  const m = s * 0.04;
+  x.save(); x.shadowColor = 'rgba(0,10,40,0.6)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+  iceFrame(x, s, 0.04); x.fillStyle = '#dff2ff'; x.fill(); x.restore();
+  x.save(); iceFrame(x, s, 0.04); x.clip();
+  if (ice) { const g = x.createLinearGradient(0, 0, 0, s); g.addColorStop(0, '#f2fbff'); g.addColorStop(1, '#a8d4f4'); x.fillStyle = g; x.fillRect(0, 0, s, s); x.globalCompositeOperation = 'multiply'; }
+  sheetDraw(x, k, m, m, s - m * 2, s - m * 2);
+  x.globalCompositeOperation = 'source-over';
+  // brillo helado en la esquina
+  const gl = x.createLinearGradient(0, 0, s * 0.6, s * 0.6); gl.addColorStop(0, 'rgba(255,255,255,0.35)'); gl.addColorStop(0.4, 'rgba(255,255,255,0)');
+  x.fillStyle = gl; x.fillRect(0, 0, s, s); x.restore();
+  // marco de hielo
+  iceFrame(x, s, 0.04); const gb = x.createLinearGradient(0, 0, s, s); gb.addColorStop(0, '#ffffff'); gb.addColorStop(0.5, '#8fd0ff'); gb.addColorStop(1, '#e8f8ff');
+  x.lineWidth = s * 0.045; x.strokeStyle = gb; x.stroke();
+  iceFrame(x, s, 0.075); x.lineWidth = s * 0.01; x.strokeStyle = 'rgba(20,60,120,0.45)'; x.stroke();
+}, true);
+// Dispersor de Reino de Nieve: copo de nieve con BONUS
+const drawSnowflake = drawn('snowflake', (x, s) => {
+  x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.4; x.drawImage(glow('rgba(140,220,255,1)', 64), s * 0.05, 0, s * 0.9, s * 0.9); x.restore();
+  sheetDraw(x, 'snowflake', s * 0.1, s * 0.02, s * 0.8, s * 0.8);
+  bonusLabel(x, s, s * 0.86, ['#ffffff', '#8fd0ff'], '#0a2a5a');
+}, true);
+
+// Sueño Rojo: noble chino, taza de porcelana, papiro y flor de loto BONUS
+RED.draw = Object.assign({}, RED.draw, { s7b: figure('noble'), bar: figure('tea'), bell: figure('scroll'), scat: figure('lotus') });
+RED.names = Object.assign({}, RED.names, { bar: 'Taza de porcelana' });
+// Reino de Nieve: Reina, lobo, leopardo, halcón, antílope y copo de nieve BONUS
+SNOW.draw = Object.assign({}, SNOW.draw, { s7r: card('queen'), s7b: card('wolf'), bar: card('leopard', true), bell: card('falcon', true), melon: card('antelope', true), scat: drawSnowflake });
+SNOW.names = Object.assign({}, SNOW.names, { scat: 'Copo de nieve' });
+SNOW.scatter = Object.assign({}, SNOW.scatter, { name: 'copos de nieve' });
+// Reina de 2 casillas: retrato alto recortado al marco en punta
+SNOW.stackArt = (x, w, h, m) => {
+  if (!SHEET) return false;
+  const k = Math.max(w / 240, h / 400), dw = 240 * k, dh = 400 * k;
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(SHEET, 1000, 0, 240, 400, (w - dw) / 2, 0, dw, dh);
+  // escarcha en la base
+  const g = x.createLinearGradient(0, h * 0.82, 0, h); g.addColorStop(0, 'rgba(230,245,255,0)'); g.addColorStop(1, 'rgba(230,245,255,0.85)');
+  x.fillStyle = g; x.fillRect(0, h * 0.82, w, h * 0.18);
+  return true;
+};
+RedDream.lobby.icons = ['noble', S.GEISHA, 'lotus'];
+SnowKingdom.lobby.icons = ['wolf', 'queen', 'leopard'];

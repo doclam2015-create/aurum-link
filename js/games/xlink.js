@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=33';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=33';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=34';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=34';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -148,12 +148,14 @@ export default class XLink {
       cost: b => b * 60, run: b => this.buyBonus(b)
     };
     // Giros gratis (temas con dispersor: flor de loto, cristal de hielo…)
-    this.freeLeft = 0; this.inFree = false; this.fsTotal = 0;
+    this.freeLeft = 0; this.freeTotal = 0; this.inFree = false; this.fsTotal = 0;
   }
   get animating() { return this.base.spinning || this.upper.spinning || !!this.bonus || this.bolts.length > 0 || !!this.wins || this.inFree; }
   get locked() { return !!this.bonus || this.inFree; }
   get extra() { return this.inFree ? null : this.buy; }
   get freeRound() { return this.freeLeft > 0; }
+  // Conteo de giros gratis: "7 DE 20" (el giro en curso sobre el total ganado, con repeticiones)
+  get freeCount() { return Math.max(1, this.freeTotal - this.freeLeft) + ' DE ' + this.freeTotal; }
   get keepWin() { return this.inFree; }
 
   resize(W, H) {
@@ -237,9 +239,11 @@ export default class XLink {
   }
   ballImg(s, size) {
     if (s.special) return specialIcon(s.special, size);
-    if (s.jp) return s.value ? jackpotBall(s.jp, short(s.value), size) : ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
-    if (s.extra) return ball('blue', '+' + s.extra, size, s.extra > 1 ? 'GIROS' : 'GIRO');
-    return ball('gold', short(s.value), size);
+    // Estilo gabinete: monto del jackpot arriba (redondeado a 2 cifras para no regenerar el sprite a cada giro),
+    // cinta con el nombre y "+ valor" de la bola abajo
+    if (s.jp) return s.value ? jackpotRibbonBall(s.jp, short(round2(this.app.jackpot(s.jp))), short(s.value), size) : ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
+    if (s.extra) return spinsBall('+' + s.extra, size, s.extra > 1 ? 'GIROS' : 'GIRO');
+    return cashBall(short(s.value), size);
   }
   // Pesos por rodillo: el tema puede agregar WILD en los rodillos 2 a 4
   // Pesos por rodillo según el tema: WILD en rodillos 2 a 4, sin estrellas si la expansión es
@@ -271,6 +275,8 @@ export default class XLink {
     shape(); x.fillStyle = g; x.fill();
     // Interior con la figura
     x.save(); shape(); x.clip();
+    // El tema puede traer su propio retrato de 2 casillas (la Reina de Reino de Nieve)
+    if (this.T.stackArt && this.T.stackArt(x, w, h, m)) { x.restore(); shape(); x.lineWidth = w * 0.03; x.strokeStyle = '#e8f8ff'; x.stroke(); return (cache[key] = c); }
     g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2a4a8a'); g.addColorStop(1, '#0a1a4a');
     x.fillStyle = g; x.fillRect(m * 2.2, m * 2.2, w - m * 4.4, h - m * 4.4);
     const img = sym(this.T.icon[k], w * 1.15);
@@ -570,7 +576,7 @@ export default class XLink {
     let anticFrom = -1, acc = 0;
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
     sfx.spinStart(app.speed >= 2);
-    app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeLeft + ' restantes' : '');
+    app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeCount.toLowerCase() : '');
     this.base.start(app.speed);
     let landed = 0;
     await this.base.stopTo(final, {
@@ -718,10 +724,10 @@ export default class XLink {
       sfx.featureStart(); app.flash(T.scatter.color, 0.5); app.shake(true);
       await app.wait(700);
       if (this.inFree) {
-        this.freeLeft += 10;
+        this.freeLeft += 10; this.freeTotal += 10;
         await app.banner('+10 GIROS', scat + ' ' + T.scatter.name + ' más', { color: T.scatter.color, ms: 1800 });
       } else {
-        this.inFree = true; this.freeLeft = 10; this.fsTotal = 0;
+        this.inFree = true; this.freeLeft = 10; this.freeTotal = 10; this.fsTotal = 0;
         sfx.stopMusic();
         await app.banner('10 GIROS GRATIS', scat + ' ' + T.scatter.name + ' · 3 más = +10 giros', { color: T.scatter.color, ms: 2600 });
         sfx.music('bonus');
@@ -736,7 +742,7 @@ export default class XLink {
       app.message('Giros gratis: <b>' + app.fmt(fs) + '</b>');
       celebrated = true;
     }
-    app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? this.freeLeft + ' restantes' : '');
+    app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? 'siguiente: ' + (this.freeTotal - this.freeLeft + 1) + ' de ' + this.freeTotal : '');
     return { win: total, celebrated: celebrated || this.inFree };
   }
 
@@ -989,8 +995,8 @@ export default class XLink {
     const ic = i => '<i class="ico" style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>';
     const img = (c, t) => '<figure><img src="' + spriteURL(c) + '" alt=""><figcaption>' + t + '</figcaption></figure>';
     const gallery = '<div class="gallery">' +
-      ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotBall(j, short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
-      img(specialIcon('launch', 144), 'Multiplicador') + img(specialIcon('upgrade', 144), 'Upgrade') + img(ball('blue', '+1…5', 144, 'GIROS'), '+1 a +5 giros') + '</div>';
+      ['mini', 'minor', 'major', 'grand'].map(j => img(jackpotRibbonBall(j, short(round2(this.app.jackpot(j))), short(bet * 2), 144), j.toUpperCase() + ' + valor')).join('') +
+      img(specialIcon('launch', 144), 'Multiplicador') + img(specialIcon('upgrade', 144), 'Upgrade') + img(spinsBall('+1…5', 144), '+1 a +5 giros') + '</div>';
     return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
       (this.T.ways
         ? '<li><b>5 rodillos × 3 filas, 243 formas</b>: pagan iguales en rodillos contiguos desde la izquierda, en cualquier fila; el premio se multiplica por las formas. <b>WILD</b> en los rodillos 2 a 4.</li>' +
@@ -1013,9 +1019,11 @@ export default class XLink {
   }
 }
 
+// Redondeo a 2 cifras significativas
+function round2(v) { if (!(v > 0)) return 0; const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1)); return Math.floor(v / p) * p; }
 export function short(v) {
   v = Math.round(v);
   if (v >= 1e6) return '$' + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1).replace('.', ',') + 'M';
-  if (v >= 1e4) return '$' + (v / 1e3).toFixed(v >= 1e5 ? 0 : 1).replace('.', ',') + 'K';
+  if (v >= 1e4) return '$' + (v / 1e3).toFixed(v >= 1e5 ? 0 : 1).replace('.0', '').replace('.', ',') + 'K';
   return '$' + v.toLocaleString('es-CL');
 }

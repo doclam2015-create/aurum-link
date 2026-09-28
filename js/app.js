@@ -1,17 +1,17 @@
-import { sfx } from './audio.js?v=33';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=33';
-import { sleep } from './reels.js?v=33';
-import XLink from './games/xlink.js?v=33';
-import Avalanche from './games/avalanche.js?v=33';
-import FireWheel from './games/firewheel.js?v=33';
-import Legion from './games/legion.js?v=33';
-import Bull from './games/bull.js?v=33';
-import Dragon from './games/dragon.js?v=33';
-import Codex from './games/codex.js?v=33';
-import Reef from './games/reef.js?v=33';
-import Western from './games/western.js?v=33';
-import Galaxy from './games/galaxy.js?v=33';
-import { RedDream, SnowKingdom } from './games/xthemes.js?v=33';
+import { sfx } from './audio.js?v=34';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=34';
+import { sleep } from './reels.js?v=34';
+import XLink from './games/xlink.js?v=34';
+import Avalanche from './games/avalanche.js?v=34';
+import FireWheel from './games/firewheel.js?v=34';
+import Legion from './games/legion.js?v=34';
+import Bull from './games/bull.js?v=34';
+import Dragon from './games/dragon.js?v=34';
+import Codex from './games/codex.js?v=34';
+import Reef from './games/reef.js?v=34';
+import Western from './games/western.js?v=34';
+import Galaxy from './games/galaxy.js?v=34';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=34';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -340,7 +340,8 @@ function openSettings() {
 // ---------- Lobby ----------
 function buildLobby() {
   $('lobbyGrid').innerHTML = GAMES.map(G => {
-    const icons = G.lobby.icons.map(i => '<i style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>').join('');
+    // Íconos: número = casilla del atlas; texto = imagen de la hoja de temas
+    const icons = G.lobby.icons.map(i => typeof i === 'string' ? '<i class="art" style="' + sheetIconStyle(i) + '"></i>' : '<i style="background-position:' + (i % 6) * 20 + '% ' + Math.floor(i / 6) * 25 + '%"></i>').join('');
     return '<button class="card" data-game="' + G.id + '" style="--c1:' + G.lobby.c1 + ';--c2:' + G.lobby.c2 + '"><div class="icons">' + icons + '</div><b>' + G.name + '</b><em>' + G.lobby.mechanic + '</em><small>' + G.lobby.desc + '</small></button>';
   }).join('');
 }
@@ -445,7 +446,7 @@ async function boot() {
   buildLobby();
   $('verLabel').textContent = 'v' + VERSION;
   bind();
-  try { await loadAtlas('assets/symbols.webp'); } catch (e) { console.warn('atlas', e); }
+  await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e))]);
   $('loader').classList.add('gone');
   selectGame(state.game || GAMES[0].id);
   if (!state.game || !localStorage.getItem(SAVE_KEY + '.seen')) { openLobby(); try { localStorage.setItem(SAVE_KEY + '.seen', '1'); } catch (e) { } }
