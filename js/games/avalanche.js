@@ -2,8 +2,8 @@
 // 6x5, pagos en cualquier posición (8+ iguales). Los símbolos ganadores estallan en hielo y
 // caen nuevos (cascadas). Multiplicador base x1→x2→x3→x5 por cascada. 4+ copos = 10 giros
 // gratis con multiplicador progresivo que NO se reinicia (+1 por cada cascada ganadora).
-import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js?v=26';
-import { weighted } from '../reels.js?v=26';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js?v=27';
+import { weighted } from '../reels.js?v=27';
 
 const COLS = 6, ROWS = 5;
 export const PAY = {
@@ -124,6 +124,7 @@ export default class Avalanche {
   }
 
   draw(x) {
+    if (!this.W) return; // aún sin medidas (primer cuadro)
     const { gx, gy, cs, W, H, time } = this;
     const dpr = this.app.dpr;
     // Nieve ambiente

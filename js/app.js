@@ -1,10 +1,10 @@
-import { sfx } from './audio.js?v=26';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=26';
-import { sleep } from './reels.js?v=26';
-import XLink from './games/xlink.js?v=26';
-import Avalanche from './games/avalanche.js?v=26';
-import FireWheel from './games/firewheel.js?v=26';
-import Legion from './games/legion.js?v=26';
+import { sfx } from './audio.js?v=27';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=27';
+import { sleep } from './reels.js?v=27';
+import XLink from './games/xlink.js?v=27';
+import Avalanche from './games/avalanche.js?v=27';
+import FireWheel from './games/firewheel.js?v=27';
+import Legion from './games/legion.js?v=27';
 
 const GAMES = [XLink, Avalanche, FireWheel, Legion];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -124,6 +124,8 @@ const app = {
 
 // ---------- Overlays de celebración en el canvas FX ----------
 function showOverlay(o) {
+  // Si quedara un cartel anterior pendiente, se resuelve para no dejar ninguna promesa colgada
+  if (overlay && overlay.done) overlay.done();
   return new Promise(res => { o.done = res; overlay = o; skipReq = false; });
 }
 const TIERS = [[100, 'ÉPICO', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff']], [50, 'MEGA PREMIO', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff']], [25, 'SÚPER PREMIO', ['#fff', '#ffb27a', '#ff4b1f', '#ffe2c0']], [10, 'GRAN PREMIO', null]];
@@ -132,7 +134,9 @@ function drawOverlay(x, dt) {
   o.t += dt;
   const bigDur = o.kind === 'big' ? o.dur : o.dur / 1000;
   if (skipReq && o.kind === 'big' && o.t < bigDur - 1.2) { o.t = bigDur - 1.2; skipReq = false; }
-  if (skipReq && o.kind === 'banner') { o.t = bigDur; }
+  // Al tocar se salta el cartel. Antes quedaba o.t === bigDur con skipReq activo y la condición
+  // "t > bigDur" nunca se cumplía: el cartel (invisible) no terminaba y el juego se congelaba.
+  if (skipReq && o.kind === 'banner') { o.t = bigDur + 0.001; skipReq = false; }
   const t = o.t, inA = Math.min(1, t / 0.3), outA = Math.min(1, Math.max(0, (bigDur - t) / 0.35)), a = inA * outA;
   const cx = FW / 2, cy = FH * 0.44;
   x.save();
