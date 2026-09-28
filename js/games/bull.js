@@ -3,8 +3,8 @@
 // todas las monedas visibles. Monedas MINI/MINOR/MAJOR/GRAND entregan su jackpot al ser recogidas.
 // 3 tréboles (rodillos 1, 3 y 5) = ESTAMPIDA: 10 giros gratis donde cada toro sube el
 // multiplicador de recolección (x1 → x2 → x3 …) y el toro aparece más seguido.
-import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=33';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=33';
+import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=34';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=34';
 
 const COLS = 5, ROWS = 3;
 export const PAY = {

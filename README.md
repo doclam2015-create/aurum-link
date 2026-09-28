@@ -5,8 +5,8 @@ Colección de 12 tragamonedas para iPhone / iPad (Safari), con **créditos ficti
 | Juego | Dinámica |
 |---|---|
 | **Xtension Link** | 5×3 (20 líneas). Las estrellas abren hasta 5 filas extra (100 líneas). 6+ bolas = **Golden Spins**: bolas fijas, 3 giros que se reinician, filas que se desbloquean con rayos a las 8 · 12 · 17 · 23 · 30 bolas, bolas +1 a +5 GIROS, Multiplicador y Upgrade (las especiales desaparecen tras actuar y liberan su casilla), jackpots MINI/MINOR/MAJOR y GRAND con tablero lleno. |
-| **Sueño Rojo** | Estilo *Red Dream*: pagoda roja, paneles lacados con borlas y rodillos de jade. Símbolos: noble china, noble chino, tetera y tazas, papiro, huevo de la suerte, campanas y K Q J. **243 formas**; hasta **25 posiciones se abren al azar**, cada rodillo por su cuenta (hasta 32.768 formas), con WILD. **3+ flores de loto = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
-| **Reino de Nieve** | Estilo *Snow Kingdom*: hielo escarchado, aurora, carámbanos y nevada. Símbolos: Reina, lobo, leopardo de las nieves, halcón blanco, antílope y K Q J 10. 20 líneas (hasta 100): cada **Reina de 2 filas sube la cortina 1 fila, en cadena** (las Reinas que aparecen en las filas abiertas la suben más). **3+ cristales de hielo = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
+| **Sueño Rojo** | Estilo *Red Dream*: pagoda roja, paneles lacados con borlas y rodillos de jade. Símbolos: noble china, noble chino, taza de porcelana, papiro, huevo de la suerte, campanas y K Q J. **243 formas**; hasta **25 posiciones se abren al azar**, cada rodillo por su cuenta (hasta 32.768 formas), con WILD. **3+ flores de loto = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
+| **Reino de Nieve** | Estilo *Snow Kingdom*: hielo escarchado, aurora, carámbanos y nevada. Símbolos: Reina, lobo, leopardo de las nieves, halcón blanco, antílope y K Q J 10. 20 líneas (hasta 100): cada **Reina de 2 filas sube la cortina 1 fila, en cadena** (las Reinas que aparecen en las filas abiertas la suben más). **3+ copos de nieve = 10 giros gratis** (4 y 5 pagan antes; +10 si se repite). Golden Spins de Xtension Link. |
 | **Avalancha Glacial** | 6×5 sin líneas: 8+ iguales en cualquier lugar. Cascadas con multiplicador x1→x5; 4 copos = 10 giros gratis con multiplicador progresivo. |
 | **Rueda de Fuego** | Clásica 3×3, 5 líneas. Wild de fuego expansivo x2; 3 soles = rueda de multiplicadores y jackpots. |
 | **Legión Dorada** | 5×4, 1024 formas. Fénix = giros gratis con coronas pegajosas x2/x3 que se multiplican. |
@@ -32,6 +32,6 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 ## Técnica
 - Render en `<canvas>` con sprites pre-escalados (sin reescalado por cuadro), fondos cacheados, DPR limitado a 2 y 30 fps en reposo → fluido en iOS.
 - Sonido y música 100 % sintetizados con Web Audio (sin archivos).
-- `assets/symbols.webp` (475 KB) reemplaza los ~4 MB de imágenes embebidas del diseño anterior. Se regenera con `python3 tools/build_atlas.py` desde `assets/src/`.
+- `assets/symbols.webp` (475 KB) reemplaza los ~4 MB de imágenes embebidas del diseño anterior. Se regenera con `python3 tools/build_atlas.py` desde `assets/src/`. Las imágenes de Sueño Rojo y Reino de Nieve van en `assets/themes.webp`, generada con `python3 tools/build_themes.py` desde `assets/src/themes/`.
 - Tras cada cambio: `python3 tools/bump_version.py N` para que Safari/iOS descargue todos los archivos nuevos (la versión aparece en el lobby y en Ajustes).
 - Service worker para uso offline. Se publica con GitHub Pages desde `main` (`.github/workflows/pages.yml`).

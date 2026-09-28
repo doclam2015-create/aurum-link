@@ -3,8 +3,8 @@
 // estalla un grupo queda MARCADA; si vuelve a estallar ahí se enciende un multiplicador x2 que
 // se duplica cada vez (x4, x8 … x128). Un grupo sobre casillas encendidas se multiplica por la
 // suma de sus multiplicadores. 3+ perlas = giros gratis donde las marcas NO se borran.
-import { S, sym, ball, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=33';
-import { weighted } from '../reels.js?v=33';
+import { S, sym, ball, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=34';
+import { weighted } from '../reels.js?v=34';
 
 const COLS = 7, ROWS = 7;
 // Pago (× apuesta) según tamaño del grupo: 5, 6, 7, 8, 9-10, 11-12, 13-14, 15+

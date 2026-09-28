@@ -125,6 +125,7 @@ body.busy #btnExtra,body.busy #btnInfo{opacity:.4}
 .card:active{transform:scale(.97)}
 .card .icons{display:flex;justify-content:center;margin:2px 0 8px;height:80px}
 .card .icons i{width:72px;height:72px;margin:0 -12px;background:url(../assets/symbols.webp) no-repeat;background-size:600% 500%;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+.card .icons i.art{border-radius:12px;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
 .card .icons i:nth-child(2){width:84px;height:84px;margin-top:-6px;z-index:1}
 .card b{font-size:18px;font-weight:900;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6)}
 .card em{font-style:normal;font-size:11px;font-weight:800;color:#ffe9a8;letter-spacing:.04em;margin:3px 0 5px;text-transform:uppercase}
