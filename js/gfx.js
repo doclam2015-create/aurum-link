@@ -336,3 +336,104 @@ export class Particles {
     x.restore();
   }
 }
+
+// Bola de jackpot estilo gabinete: bola dorada con banda de color (MINI/MINOR/MAJOR/GRAND) y "+ valor"
+const JP_BAND = { mini: ['#7dff8f', '#16a52c', '#064a12'], minor: ['#8fe6ff', '#1680d6', '#05305e'], major: ['#f0a8ff', '#9a27d6', '#3b0757'], grand: ['#ff9c8a', '#e0231a', '#5a0404'] };
+export function jackpotBall(jp, valueText, size) {
+  size = Math.round(size);
+  const key = 'jpball|' + jp + '|' + valueText + '|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d'), cx = size / 2, cy = size / 2, r = size * 0.46;
+  x.drawImage(ball('gold', '', size), 0, 0);
+  // Banda superior (casquete) recortada al círculo
+  const col = JP_BAND[jp] || JP_BAND.mini;
+  x.save(); x.beginPath(); x.arc(cx, cy, r * 0.98, 0, 7); x.clip();
+  const top = cy - r, bandH = r * 0.95;
+  let g = x.createLinearGradient(0, top, 0, top + bandH);
+  g.addColorStop(0, col[0]); g.addColorStop(0.45, col[1]); g.addColorStop(1, col[2]);
+  x.fillStyle = g;
+  x.beginPath(); x.moveTo(cx - r * 1.1, top); x.lineTo(cx + r * 1.1, top); x.lineTo(cx + r * 1.1, top + bandH); x.quadraticCurveTo(cx, top + bandH * 1.18, cx - r * 1.1, top + bandH); x.closePath(); x.fill();
+  x.strokeStyle = '#fff6c8'; x.lineWidth = size * 0.025;
+  x.beginPath(); x.moveTo(cx - r * 1.1, top + bandH); x.quadraticCurveTo(cx, top + bandH * 1.18, cx + r * 1.1, top + bandH); x.stroke();
+  // brillo sobre la banda
+  g = x.createRadialGradient(cx - r * 0.3, top + bandH * 0.3, 1, cx - r * 0.3, top + bandH * 0.3, r * 0.6);
+  g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, size, cy);
+  x.restore();
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  let fs = size * (jp === 'grand' || jp === 'major' || jp === 'minor' ? 0.2 : 0.22);
+  x.font = '900 ' + fs + 'px ' + FONT;
+  const label = jp.toUpperCase(), ly = cy - r * 0.42;
+  x.lineWidth = fs * 0.3; x.strokeStyle = col[2]; x.strokeText(label, cx, ly);
+  x.fillStyle = '#ffffff'; x.fillText(label, cx, ly);
+  // "+" y valor
+  x.font = '900 ' + size * 0.14 + 'px ' + FONT;
+  x.lineWidth = size * 0.04; x.strokeStyle = '#4a2200'; x.strokeText('+', cx, cy + r * 0.08);
+  x.fillStyle = '#fff3a0'; x.fillText('+', cx, cy + r * 0.08);
+  fs = size * (valueText.length > 5 ? 0.18 : 0.22);
+  x.font = '900 ' + fs + 'px ' + FONT;
+  x.lineWidth = fs * 0.28; x.strokeStyle = 'rgba(40,18,0,0.95)'; x.strokeText(valueText, cx, cy + r * 0.52);
+  g = x.createLinearGradient(0, cy + r * 0.4, 0, cy + r * 0.65);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#ffd35a');
+  x.fillStyle = g; x.fillText(valueText, cx, cy + r * 0.52);
+  cache.set(key, c);
+  return c;
+}
+
+// Íconos especiales del bono: 'launch' (esfera eléctrica que lanza bolas) y 'upgrade' (monedas con flecha)
+export function specialIcon(kind, size) {
+  size = Math.round(size);
+  const key = 'special|' + kind + '|' + size;
+  let c = cache.get(key);
+  if (c) return c;
+  c = makeCanvas(size, size);
+  const x = c.getContext('2d'), cx = size / 2, cy = size / 2, r = size * 0.44;
+  // Disco azul eléctrico
+  let g = x.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+  g.addColorStop(0, '#5fb8ff'); g.addColorStop(0.6, '#1546b8'); g.addColorStop(1, '#071a55');
+  x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  x.lineWidth = size * 0.035; x.strokeStyle = '#bfe8ff'; x.stroke();
+  x.lineWidth = size * 0.015; x.strokeStyle = '#ffffff'; x.beginPath(); x.arc(cx, cy, r * 0.9, 0, 7); x.stroke();
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  if (kind === 'launch') {
+    // Rayos radiales en zigzag
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + 0.2, r0 = r * 0.42, r1 = r * 1.0;
+      x.beginPath();
+      for (let k = 0; k <= 4; k++) {
+        const rr = r0 + (r1 - r0) * k / 4, off = (k % 2 ? 1 : -1) * 0.14;
+        const px = cx + Math.cos(a + off) * rr, py = cy + Math.sin(a + off) * rr;
+        k ? x.lineTo(px, py) : x.moveTo(px, py);
+      }
+      x.strokeStyle = 'rgba(160,230,255,0.6)'; x.lineWidth = size * 0.06; x.stroke();
+      x.strokeStyle = '#ffffff'; x.lineWidth = size * 0.022; x.stroke();
+    }
+    // Núcleo dorado
+    x.drawImage(ball('gold', '', r * 0.95), cx - r * 0.475, cy - r * 0.475, r * 0.95, r * 0.95);
+  } else {
+    // Pila de monedas
+    const cw = r * 0.62, ch = r * 0.2;
+    for (let i = 0; i < 5; i++) {
+      const py = cy + r * 0.45 - i * ch * 0.75, px = cx - r * 0.12 + (i % 2 ? 1 : -1) * r * 0.03;
+      g = x.createLinearGradient(px - cw, 0, px + cw, 0);
+      g.addColorStop(0, '#8a5206'); g.addColorStop(0.3, '#ffe27a'); g.addColorStop(0.6, '#f0b12c'); g.addColorStop(1, '#8a5206');
+      x.fillStyle = g; x.beginPath(); x.ellipse(px, py, cw, ch, 0, 0, 7); x.fill();
+      x.strokeStyle = '#5a3000'; x.lineWidth = size * 0.012; x.stroke();
+    }
+    // Flecha curva hacia arriba
+    x.strokeStyle = '#ffffff'; x.lineWidth = size * 0.07;
+    x.beginPath(); x.moveTo(cx - r * 0.55, cy + r * 0.55); x.quadraticCurveTo(cx + r * 0.1, cy + r * 0.2, cx + r * 0.45, cy - r * 0.45); x.stroke();
+    x.fillStyle = '#ffffff';
+    x.beginPath(); x.moveTo(cx + r * 0.72, cy - r * 0.72); x.lineTo(cx + r * 0.15, cy - r * 0.55); x.lineTo(cx + r * 0.6, cy - r * 0.12); x.closePath(); x.fill();
+    x.strokeStyle = '#2a7bff'; x.lineWidth = size * 0.02;
+    x.beginPath(); x.moveTo(cx - r * 0.55, cy + r * 0.55); x.quadraticCurveTo(cx + r * 0.1, cy + r * 0.2, cx + r * 0.45, cy - r * 0.45); x.stroke();
+  }
+  // Reflejo
+  g = x.createRadialGradient(cx - r * 0.35, cy - r * 0.45, 1, cx - r * 0.35, cy - r * 0.45, r * 0.5);
+  g.addColorStop(0, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  cache.set(key, c);
+  return c;
+}

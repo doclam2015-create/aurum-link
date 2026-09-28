@@ -3,7 +3,7 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js';
+import { S, sym, ball, jackpotBall, specialIcon, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js';
 import { ReelSet, LINES_5x3, weighted } from '../reels.js';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
@@ -14,11 +14,11 @@ export const PAY = {
   bell: [0, 0, 0, 15, 50, 200], melon: [0, 0, 0, 12, 40, 160], grapes: [0, 0, 0, 12, 40, 160],
   plum: [0, 0, 0, 8, 25, 100], orange: [0, 0, 0, 8, 25, 100], cherry: [0, 0, 2, 5, 20, 80]
 };
-const W_BASE = { s7r: 3, s7b: 4, bar: 5, bell: 7, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, ball: 6.7, g1: 1.1, g2: 0.6, g3: 0.3 };
+const W_BASE = { s7r: 3, s7b: 4, bar: 5, bell: 7, melon: 8, grapes: 8, plum: 11, orange: 11, cherry: 12, ball: 6.15, g1: 1.1, g2: 0.6, g3: 0.3 };
 const W_UP = Object.assign({}, W_BASE, { g1: 0, g2: 0, g3: 0, ball: 7.5 });
 const VALS = [1, 2, 3, 4, 5, 8, 10, 15, 20, 50];
 const VAL_W = [26, 22, 16, 10, 9, 6, 4, 2.5, 1.5, 0.3];
-const JP_W = { mini: 2.2, minor: 0.8, major: 0.12 };
+const JP_W = { mini: 2.2, minor: 0.8, major: 0.12, grand: 0.01 };
 const ICON = { s7r: S.SEVEN, s7b: S.SEVEN, bell: S.BELL, melon: S.MELON, grapes: S.GRAPES, plum: S.PLUM, orange: S.ORANGE, cherry: S.CHERRY, g1: S.GSTAR, g2: S.BSTAR, g3: S.RSTAR };
 
 // Líneas para N filas: los 20 patrones base desplazados por bandas (máx. 100)
@@ -32,11 +32,22 @@ export function linesFor(rows) {
   return (lineCache[rows] = out);
 }
 
-export function makeBall(bet, inBonus) {
+// Probabilidades de especiales dentro de Golden Spins (por bola que cae)
+export const SPECIAL_W = { extra: 0.05, launch: 0.03, upgrade: 0.025 };
+// jpBoost > 1 aumenta la chance de jackpot (bolas lanzadas por el Multiplicador)
+export function makeBall(bet, inBonus, jpBoost = 1, noSpecial = false) {
   const r = Math.random() * 100;
   let acc = 0;
-  for (const k in JP_W) { acc += JP_W[k]; if (r < acc) return { ball: true, jp: k }; }
-  if (inBonus && Math.random() < 0.06) return { ball: true, extra: 2, mult: 1, value: bet };
+  for (const k in JP_W) {
+    acc += JP_W[k] * jpBoost;
+    if (r < acc) { const m = [1, 2, 3, 5][Math.random() * 4 | 0]; return { ball: true, jp: k, mult: m, value: m * bet }; }
+  }
+  if (inBonus && !noSpecial) {
+    const q = Math.random();
+    if (q < SPECIAL_W.extra) return { ball: true, extra: 2, mult: 1, value: bet };
+    if (q < SPECIAL_W.extra + SPECIAL_W.launch) return { ball: true, special: 'launch', mult: 2, value: 2 * bet };
+    if (q < SPECIAL_W.extra + SPECIAL_W.launch + SPECIAL_W.upgrade) return { ball: true, special: 'upgrade', mult: 2, value: 2 * bet };
+  }
   let t = 0; VAL_W.forEach(w => t += w);
   let x = Math.random() * t, i = 0;
   for (; i < VALS.length; i++) { x -= VAL_W[i]; if (x < 0) break; }
@@ -164,7 +175,8 @@ export default class XLink {
     return (this._bar[key] = c);
   }
   ballImg(s, size) {
-    if (s.jp) return ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
+    if (s.special) return specialIcon(s.special, size);
+    if (s.jp) return s.value ? jackpotBall(s.jp, short(s.value), size) : ball({ mini: 'green', minor: 'cyan', major: 'purple', grand: 'red' }[s.jp], s.jp.toUpperCase(), size);
     if (s.extra) return ball('blue', '+' + s.extra, size, 'GIROS');
     return ball('gold', short(s.value), size);
   }
@@ -467,14 +479,16 @@ export default class XLink {
       await app.wait(600);
       empties.sort((a, z) => a[0] - z[0] || z[1] - a[1]);
       // Probabilidad por celda: más difícil con tablero grande
-      const p = 0.085 - Math.min(0.03, b.count * 0.0009);
+      const p = 0.08 - Math.min(0.028, b.count * 0.0009);
       let got = 0;
       const step = Math.max(35, Math.min(90, 900 / empties.length)) / app.speed;
       for (let i = 0; i < empties.length; i++) {
         const [c, r] = empties[i];
         b.spinning.delete(r * COLS + c);
-        if (Math.random() < p || app._forceBall) {
-          const s = makeBall(bet, true);
+        if (cells[r][c]) continue; // ya llenada por un Multiplicador
+        if (Math.random() < p || app._forceBall || app._forceSpecial) {
+          let s = makeBall(bet, true);
+          if (app._forceSpecial) { s = { ball: true, special: app._forceSpecial, mult: 2, value: 2 * bet }; app._forceSpecial = null; }
           cells[r][c] = Object.assign({ t: 0 }, s);
           b.count++; got++;
           sfx.ballLand(b.count);
@@ -483,6 +497,8 @@ export default class XLink {
           app.burst(px, py, 1, { type: 'ring', color: '#8feaff', size: 10, grow: this.cw, width: 5, life: 0.5, speed: 0 });
           this.bolts.push({ x1: this.orb[0], y1: this.orb[1], x2: px, y2: py, t: 0, life: 0.35, w: 1.8 });
           if (s.extra) { b.spins += s.extra; b.spinsFlash = 1; sfx.multiplier(4); app.popText(px, py - 20, '+' + s.extra + ' GIROS', 22); }
+          if (s.special === 'launch') { got += await this.launch(c, r, bet); }
+          if (s.special === 'upgrade') await this.upgrade(c, r);
           await app.wait(step * 2);
         } else {
           if (i % 3 === 0) sfx.reelStop(c % 5);
@@ -519,7 +535,7 @@ export default class XLink {
       let v = s.value || 0;
       s.collect = 1;
       const [px, py] = this.cellCenter(c, r);
-      if (s.jp) v = await app.awardJackpot(s.jp);
+      if (s.jp) { v += await app.awardJackpot(s.jp); if (s.value) app.addWin(s.value); }
       else app.addWin(v);
       sfx.collect(n++);
       app.flyCoins(px, py, 3, 'spark');
@@ -538,6 +554,62 @@ export default class XLink {
     return sum;
   }
 
+  // MULTIPLICADOR: lanza bolas (con chance de jackpot) a todas las casillas vacías adyacentes
+  async launch(c0, r0, bet) {
+    const app = this.app, sfx = app.sfx, b = this.bonus, cells = b.cells;
+    const me = cells[r0][c0];
+    await app.wait(250);
+    me.charge = 1;
+    sfx.thunder(0.5); sfx.siren(0.7);
+    app.flash('#9fe8ff', 0.4); app.shake(true);
+    app.message('¡<b>MULTIPLICADOR</b>! Lanza bolas a las casillas vecinas');
+    const [ox, oy] = this.cellCenter(c0, r0);
+    app.burst(ox, oy, 1, { type: 'ring', color: '#9feaff', size: 10, grow: this.cw * 1.6, width: 8, life: 0.6, speed: 0 });
+    await app.wait(450);
+    let n = 0;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const r = r0 + dr, c = c0 + dc;
+      if ((!dr && !dc) || c < 0 || c >= COLS || r < MAXR - b.rows || r >= MAXR || cells[r][c]) continue;
+      const s = makeBall(bet, true, 4, true);
+      cells[r][c] = Object.assign({ t: 0 }, s);
+      b.spinning.delete(r * COLS + c);
+      b.count++; n++;
+      const [px, py] = this.cellCenter(c, r);
+      this.bolts.push({ x1: ox, y1: oy, x2: px, y2: py, t: 0, life: 0.5, w: 2.6 });
+      sfx.zap(0.3, 0.2); sfx.ballLand(b.count);
+      app.burst(px, py, 14, { color: s.jp ? '#fff4b0' : '#ffe07a', speed: 300, size: 10 });
+      if (s.jp) { sfx.bell(1568, 1, 0.14); app.popText(px, py - 18, s.jp.toUpperCase() + '!', 20); }
+      await app.wait(160);
+    }
+    me.charge = 0;
+    // El multiplicador queda como bola dorada
+    me.special = null; me.t = 0;
+    app.popText(ox, oy, n ? '+' + n + ' BOLAS' : 'x2', 22, ['#fff', '#bff0ff', '#3aa8ff', '#e8fbff']);
+    return n;
+  }
+  // UPGRADE: duplica el valor de todas las bolas del tablero
+  async upgrade(c0, r0) {
+    const app = this.app, sfx = app.sfx, cells = this.bonus.cells;
+    await app.wait(250);
+    const [ox, oy] = this.cellCenter(c0, r0);
+    sfx.featureStart(); app.flash('#ffe8a0', 0.4);
+    app.message('¡<b>UPGRADE</b>! Todas las bolas duplican su valor');
+    app.burst(ox, oy, 1, { type: 'ring', color: '#ffd76a', size: 10, grow: this.cw * 3, width: 10, life: 0.8, speed: 0 });
+    await app.wait(400);
+    let k = 0;
+    for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
+      const s = cells[r][c];
+      if (!s || s.special || !s.value || (r === r0 && c === c0)) continue;
+      s.value *= 2; s.t = 0;
+      const [px, py] = this.cellCenter(c, r);
+      this.bolts.push({ x1: ox, y1: oy, x2: px, y2: py, t: 0, life: 0.3, w: 1.4, color: '#ffd76a' });
+      app.popText(px, py - 14, 'x2', 18);
+      sfx.collect(k++);
+      await app.wait(70);
+    }
+    const me = cells[r0][c0]; me.special = null; me.t = 0;
+  }
+
   drawBonus(x) {
     const b = this.bonus, { bx, by, cw, ch, time } = this;
     const dpr = this.app.dpr;
@@ -553,6 +625,7 @@ export default class XLink {
         x.drawImage(img, px + cw / 2 - d / 2, py + ch / 2 - d / 2, d, d);
         x.globalAlpha = 1;
         if (!s.done && Math.random() < 0.45) electricRing(x, px + cw / 2, py + ch / 2, size * 0.47, 1.2, s.jp ? '#ffe36a' : '#7fe0ff', 0.8);
+        if (s.special || s.charge) { electricRing(x, px + cw / 2, py + ch / 2, size * 0.52, 1.8, s.special === 'upgrade' ? '#ffd76a' : '#bff4ff', 1); if (s.charge) electricRing(x, px + cw / 2, py + ch / 2, size * 0.7, 2.4, '#ffffff', 1); }
       } else if (active) {
         const spin = b.spinning.get(r * COLS + c);
         if (spin) {
@@ -586,7 +659,9 @@ export default class XLink {
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
       '<li>En Golden Spins las bolas quedan fijas, tienes <b>3 giros</b> y cada bola nueva los reinicia a 3. La bola azul <b>+2 GIROS</b> suma giros.</li>' +
       '<li>Al acumular <b>8 · 12 · 17 · 23 · 30</b> bolas un rayo desbloquea una fila más (hasta 8 filas, 40 posiciones).</li>' +
-      '<li>Bolas <b>MINI · MINOR · MAJOR</b> pagan su jackpot. Tablero lleno = <b>GRAND</b>.</li>' +
+      '<li>Bolas <b>MINI · MINOR · MAJOR · GRAND</b> pagan su jackpot progresivo <b>+ el valor</b> que muestran. Tablero lleno = <b>GRAND</b>.</li>' +
+      '<li><b>Multiplicador</b> (esfera eléctrica): lanza bolas a todas las casillas vacías vecinas, con mucha más chance de jackpot.</li>' +
+      '<li><b>Upgrade</b> (monedas con flecha): duplica el valor de todas las bolas del tablero.</li>' +
       '<li><b>BONO</b>: compra Golden Spins directo por 60× la apuesta.</li></ul>' +
       '<h3>Tabla de pagos (apuesta ' + fmt(bet) + ')</h3><table>' +
       row('s7r', '7 rojo', ic(S.SEVEN)) + row('s7b', '7 azul', ic(S.SEVEN)) + row('bar', 'BAR', '<i class="ico bar">BAR</i>') +
