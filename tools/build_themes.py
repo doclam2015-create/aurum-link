@@ -1,7 +1,7 @@
 # Genera assets/themes.webp (símbolos de Sueño Rojo y Reino de Nieve) desde assets/src/themes/.
-# Hoja de 1240×400: 10 casillas de 200×200 (5 columnas × 2 filas) + la Reina alta de 240×400 en x=1000.
+# Hoja de 1000×400: 10 casillas de 200×200 (5 columnas × 2 filas).
 # Figuras con fondo liso (noble, tetera, papiro, loto) → fondo recortado (transparente).
-# Retratos de Reino de Nieve → recorte cuadrado con su fondo (el marco de hielo se dibuja en el juego).
+# Retratos (Reino de Nieve y la noble de azul) → recorte cuadrado con su fondo (el marco de hielo se dibuja en el juego).
 from PIL import Image, ImageFilter, ImageChops
 from collections import deque
 T = 200
@@ -51,14 +51,12 @@ tiles['wolf'] = square(Image.open(SRC + 'wolf.png'), (0, 0, 222, 222))
 tiles['leopard'] = square(Image.open(SRC + 'leopard.jpg'), (92, 0, 392, 300))
 tiles['falcon'] = square(Image.open(SRC + 'falcon.png'), (0, 0, 225, 225))
 tiles['antelope'] = square(Image.open(SRC + 'antelope.jpg'), (6, 0, 212, 206))
-queen = Image.open(SRC + 'queen.jpg')
-tiles['queen'] = square(queen, (0, 0, 189, 189))
+lady = Image.open(SRC + 'lady.jpg')
+# Noble de azul (Sueño Rojo): retrato con su fondo (el marco lacado se dibuja en el juego)
+tiles['lady'] = square(lady, (0, 0, 189, 189))
 tiles['snowflake'] = fit(flood_key(Image.open(SRC + 'snowflake.png').convert('RGB'), lambda p: min(p) > 238), pad=4)
-ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'queen', 'snowflake']
-A = Image.new('RGBA', (1240, 400), (0, 0, 0, 0))
+ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'lady', 'snowflake']
+A = Image.new('RGBA', (1000, 400), (0, 0, 0, 0))
 for n, k in enumerate(ORDER): A.alpha_composite(tiles[k], ((n % 5) * T, (n // 5) * T))
-# Reina alta (proporción 0,6) para la figura de 2 casillas
-qw = round(queen.size[1] * 0.6); qx = (queen.size[0] - qw) // 2
-A.alpha_composite(queen.convert('RGBA').crop((qx, 0, qx + qw, queen.size[1])).resize((240, 400), Image.LANCZOS), (1000, 0))
 A.save('assets/themes.webp', 'WEBP', quality=82, method=6)
 print(ORDER, A.size)

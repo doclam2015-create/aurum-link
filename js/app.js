@@ -1,17 +1,17 @@
-import { sfx } from './audio.js?v=34';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=34';
-import { sleep } from './reels.js?v=34';
-import XLink from './games/xlink.js?v=34';
-import Avalanche from './games/avalanche.js?v=34';
-import FireWheel from './games/firewheel.js?v=34';
-import Legion from './games/legion.js?v=34';
-import Bull from './games/bull.js?v=34';
-import Dragon from './games/dragon.js?v=34';
-import Codex from './games/codex.js?v=34';
-import Reef from './games/reef.js?v=34';
-import Western from './games/western.js?v=34';
-import Galaxy from './games/galaxy.js?v=34';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=34';
+import { sfx } from './audio.js?v=35';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=35';
+import { sleep } from './reels.js?v=35';
+import XLink from './games/xlink.js?v=35';
+import Avalanche from './games/avalanche.js?v=35';
+import FireWheel from './games/firewheel.js?v=35';
+import Legion from './games/legion.js?v=35';
+import Bull from './games/bull.js?v=35';
+import Dragon from './games/dragon.js?v=35';
+import Codex from './games/codex.js?v=35';
+import Reef from './games/reef.js?v=35';
+import Western from './games/western.js?v=35';
+import Galaxy from './games/galaxy.js?v=35';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=35';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -84,6 +84,14 @@ const app = {
     for (let i = 0; i < n; i++) {
       fx.add({ type, color: color || '#ffd76a', sx: fx0 + rand(-10, 10), sy: fy0 + rand(-10, 10), x: fx0, y: fy0, target: tgt, arc: rand(-80, 80), life: 0.55 + i * 0.05 + Math.random() * 0.15, size: type === 'coin' ? 11 : 16, vr: 10 });
     }
+  },
+  // Rayo desde un punto del tablero hasta el medidor de premio (cobro de bolas)
+  boltToWin(x, y, color = '#9fe8ff', w = 2.6) {
+    const [a, b] = app.toFx(x, y), [tx, ty] = app.winTarget();
+    fx.add({ type: 'bolt', x1: a, y1: b, x2: tx, y2: ty, life: 0.38, w, color });
+    fx.burst(tx, ty, 8, { color: '#fff4b0', speed: 220, size: 8 });
+    fx.add({ type: 'ring', x: tx, y: ty, size: 6, grow: 60, width: 5, life: 0.4, color });
+    const el = $('win'); el.classList.remove('zap'); void el.offsetWidth; el.classList.add('zap');
   },
   burst(x, y, n, opts) { const [a, b] = app.toFx(x, y); fx.burst(a, b, n, opts); },
   popText(x, y, text, size = 28, colors) { const [a, b] = app.toFx(x, y); fx.add({ type: 'text', text, x: a, y: b, life: 1.2, size, colors }); },
@@ -350,6 +358,7 @@ function selectGame(id) {
   const G = GAMES.find(g => g.id === id) || GAMES[0];
   if (game && game.destroy) game.destroy();
   game = new G(app);
+  sfx.theme = G.sfxTheme || null; // efectos de sonido propios del tema
   state.game = G.id; save();
   document.body.dataset.game = G.id;
   $('gameName').textContent = G.name;
