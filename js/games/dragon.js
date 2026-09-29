@@ -3,8 +3,8 @@
 // (hasta 7^6 = 117.649). La LLAMARADA (wild, rodillos 2-5) trae multiplicador x2/x3/x5
 // que se multiplica en cada forma. 4+ perlas = giros gratis con TODOS los rodillos al
 // máximo (117.649 formas) y llamaradas más frecuentes.
-import { S, sym, ball, glow, goldText, roundRect, FONT } from '../gfx.js?v=55';
-import { ReelSet, weighted } from '../reels.js?v=55';
+import { S, sym, ball, glow, goldText, roundRect, FONT } from '../gfx.js?v=56';
+import { ReelSet, weighted } from '../reels.js?v=56';
 
 const COLS = 6, MAXH = 7;
 export const PAY = {
