@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=47';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=47';
-import { sleep } from './reels.js?v=47';
-import XLink from './games/xlink.js?v=47';
-import Avalanche from './games/avalanche.js?v=47';
-import FireWheel from './games/firewheel.js?v=47';
-import Legion from './games/legion.js?v=47';
-import Bull from './games/bull.js?v=47';
-import Dragon from './games/dragon.js?v=47';
-import Codex from './games/codex.js?v=47';
-import Reef from './games/reef.js?v=47';
-import Western from './games/western.js?v=47';
-import Galaxy from './games/galaxy.js?v=47';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=47';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=47';
+import { sfx } from './audio.js?v=48';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=48';
+import { sleep } from './reels.js?v=48';
+import XLink from './games/xlink.js?v=48';
+import Avalanche from './games/avalanche.js?v=48';
+import FireWheel from './games/firewheel.js?v=48';
+import Legion from './games/legion.js?v=48';
+import Bull from './games/bull.js?v=48';
+import Dragon from './games/dragon.js?v=48';
+import Codex from './games/codex.js?v=48';
+import Reef from './games/reef.js?v=48';
+import Western from './games/western.js?v=48';
+import Galaxy from './games/galaxy.js?v=48';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=48';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=48';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -100,6 +100,13 @@ const app = {
   burst(x, y, n, opts) { const [a, b] = app.toFx(x, y); fx.burst(a, b, n, opts); },
   popText(x, y, text, size = 28, colors) { const [a, b] = app.toFx(x, y); fx.add({ type: 'text', text, x: a, y: b, life: 1.2, size, colors }); },
   flash(color = '#fff', a = 0.8) { flashColor = color; flashA = a; },
+  // Parafernalia de la máquina al pagar: marquesina de ampolletas, reflectores, confeti y fuegos artificiales.
+  // lvl 0 premio chico · 1 mediano · 2 BIG · 3 AWESOME · 4 SUPER
+  party(lvl, dur) {
+    party.lvl = Math.max(party.t < party.dur ? party.lvl : 0, lvl);
+    party.dur = Math.max(party.dur - party.t, dur); party.t = 0;
+    const m = $('win').parentNode; m.classList.add('hot'); m.style.setProperty('--hot', PARTY_COL[Math.min(4, party.lvl)][0]);
+  },
   shake(strong) {
     const el = $('board'); el.classList.remove('shake', 'shake2'); void el.offsetWidth; el.classList.add(strong ? 'shake2' : 'shake');
   },
@@ -133,9 +140,13 @@ const app = {
   },
   // Anuncio de premio: BIG WIN (5×) · AWESOME (15×) · SUPER WIN (40×), con monedas, fanfarria y voz
   celebrate(amount, bet, label) {
-    const ratio = amount / bet, ti = TIERS.findIndex(tt => ratio >= tt[0]), tier = TIERS[ti < 0 ? TIERS.length - 1 : ti], lvl = TIERS.length - 1 - (ti < 0 ? TIERS.length - 1 : ti);
-    sfx.bigWin(lvl + 1); setTimeout(() => sfx.announce(tier[3]), 550);
-    return showOverlay({ kind: 'big', amount, bet, label, tier, t: 0, dur: label ? Math.max(4.5, tier[4]) : tier[4] });
+    // El cartel parte en BIG WIN y va subiendo de categoría a medida que cuenta (como en los casinos)
+    const ratio = amount / bet, ti = TIERS.findIndex(tt => ratio >= tt[0]), fi = ti < 0 ? TIERS.length - 1 : ti;
+    const steps = TIERS.length - 1 - fi, start = label ? fi : TIERS.length - 1, tier = TIERS[start];
+    sfx.bigWin(TIERS.length - start); setTimeout(() => sfx.announce(tier[3]), 550);
+    const dur = (label ? Math.max(4.5, TIERS[fi][4]) : TIERS[fi][4]) + (label ? 0 : steps * 1.3);
+    app.party(2 + (TIERS.length - 1 - fi), dur + 0.8);
+    return showOverlay({ kind: 'big', amount, bet, label, tier, ti: start, t: 0, dur });
   },
   setSpinLabel(t, sub) { $('spinLabel').textContent = t; $('spinSub').textContent = sub || ''; },
   wait(ms) { return sleep(ms / state.speed); },
@@ -202,22 +213,96 @@ function drawOverlay(x, dt) {
     if (o.sub) goldText(x, o.sub, cx, cy + size * 0.75, size * 0.42 * pop, { colors: ['#fff', '#fff', '#e8f6ff', '#fff'], stroke: '#10183a', maxW: FW * 0.9 });
     if (t > bigDur) finishOverlay();
   } else {
-    const ratio = o.amount / o.bet;
-    const tier = o.tier || TIERS.find(tt => ratio >= tt[0]) || TIERS[TIERS.length - 1];
     const countT = clamp((t - 0.3) / Math.max(0.8, o.dur - 1.6), 0, 1), shown = o.amount * ease.outCubic(countT);
-    if (countT < 1 && Math.random() < 0.5) sfx.tick(countT);
+    // Sube de categoría cuando el conteo cruza 15× y 40× la apuesta
+    if (o.ti > 0 && shown >= o.bet * TIERS[o.ti - 1][0]) {
+      o.ti--; o.tier = TIERS[o.ti]; o.up = t;
+      const lv = TIERS.length - o.ti;
+      sfx.tierUp(lv); sfx.hype(lv); setTimeout(() => sfx.announce(o.tier[3]), 450);
+      app.flash(o.ti === 0 ? '#ffb8ff' : '#bff4ff', 0.55); app.shake(true);
+      fx.burst(cx, cy, 80, { type: 'spark', color: o.ti === 0 ? '#ff9bf5' : '#8ff0ff', speed: 800, life: 1.2, size: 16 });
+      fx.add({ type: 'ring', x: cx, y: cy, size: 10, grow: FW * 0.7, width: 12, life: 0.7, color: '#fff' });
+    }
+    const tier = o.tier || TIERS[TIERS.length - 1];
+    // Timbre de la máquina repicando mientras cuenta
+    if (countT < 1 && t - (o.bellT || 0) > 0.07) { o.bellT = t; o.bi = (o.bi || 0) + 1; sfx.slotBell(o.bi, 0, 0.04); if (o.bi % 3 === 0) sfx.tick(countT); }
     if (countT >= 1 && !o.landed) { o.landed = true; sfx.win(3); fx.burst(cx, cy, 60, { type: 'spark', color: '#ffd76a', speed: 700, life: 1.2, size: 14 }); }
     // Lluvia de monedas
     if (Math.random() < 0.9) fx.add({ type: 'coin', x: rand(0, FW), y: -20, vx: rand(-40, 40), vy: rand(100, 300), g: 900, life: 2.2, size: rand(9, 16), vr: rand(6, 14) });
     if (Math.random() < 0.35) fx.add({ type: 'coin', x: cx + rand(-40, 40), y: FH + 20, vx: rand(-250, 250), vy: rand(-1100, -800), g: 1000, life: 2.2, size: rand(10, 18), vr: rand(6, 14) });
     if (o.label) goldText(x, o.label, cx, cy - size * 1.95, size * 0.42 * pop, { maxW: FW * 0.9, glowColor: '#ff9d2e' });
-    goldText(x, tier[1], cx, cy - size * 1.05, size * 0.95 * pop * (1 + Math.sin(t * 6) * 0.05), { colors: tier[2], maxW: FW * 0.92, glowColor: '#ff9d2e' });
+    const upPop = o.up != null && t - o.up < 0.5 ? 1 + 0.5 * (1 - ease.outBack((t - o.up) / 0.5)) : 1;
+    goldText(x, tier[1], cx, cy - size * 1.05, size * 0.95 * pop * upPop * (1 + Math.sin(t * 6) * 0.05), { colors: tier[2], maxW: FW * 0.92, glowColor: '#ff9d2e' });
     goldText(x, fmt(shown), cx, cy + size * 0.35, size * 1.15 * pop, { maxW: FW * 0.92, glowColor: '#ffcc40' });
     x.font = '700 13px ' + FONT; x.fillStyle = 'rgba(255,255,255,0.6)'; x.textAlign = 'center';
     x.fillText('Toca para continuar', cx, cy + size * 1.6);
     if (t > o.dur) finishOverlay();
   }
   x.restore();
+}
+const party = { t: 1, dur: 0, lvl: 0, fw: 0, cf: 0 };
+// Colores de ampolletas por nivel
+const PARTY_COL = [['#ffd76a', '#fff3c0'], ['#ffd76a', '#ff5a4a'], ['#ffd76a', '#ff5a4a', '#5ad0ff'], ['#8ff0ff', '#1b8cff', '#ffffff', '#ffd76a'], ['#ff9bf5', '#b13cff', '#ffd76a', '#5ad0ff', '#7dff8f']];
+function drawParty(x, dt) {
+  party.t += dt;
+  const on = party.t < party.dur;
+  const m = $('win').parentNode;
+  if (!on) { if (m.classList.contains('hot')) m.classList.remove('hot'); return; }
+  const L = party.lvl, t = party.t, fade = Math.min(1, (party.dur - t) / 0.5, t / 0.15);
+  const r = $('board').getBoundingClientRect(), cols = PARTY_COL[Math.min(4, L)];
+  x.save(); x.globalCompositeOperation = 'lighter';
+  // Reflectores que barren desde abajo (premios medianos en adelante)
+  if (L >= 1) {
+    const n = L >= 3 ? 3 : 2;
+    for (let i = 0; i < n; i++) {
+      const ox = n === 2 ? (i ? FW * 1.02 : -FW * 0.02) : [-FW * 0.02, FW / 2, FW * 1.02][i], oy = FH + 10;
+      const ang = -Math.PI / 2 + Math.sin(t * (1.1 + i * 0.35) + i * 2) * 0.55 + (i === 0 ? 0.35 : i === n - 1 ? -0.35 : 0);
+      x.save(); x.translate(ox, oy); x.rotate(ang);
+      const len = FH * 1.2, g = x.createLinearGradient(0, 0, len, 0), c = cols[i % cols.length];
+      g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.globalAlpha = 0.16 * fade * (0.8 + 0.2 * Math.sin(t * 9 + i)); x.fillStyle = g;
+      x.beginPath(); x.moveTo(0, -8); x.lineTo(len, -len * 0.13); x.lineTo(len, len * 0.13); x.lineTo(0, 8); x.fill();
+      x.restore();
+    }
+  }
+  // Marquesina de ampolletas alrededor de los rodillos, persiguiéndose (más rápido cuanto mayor el premio)
+  const pad = 7, step = 17, per = 2 * (r.width + r.height + pad * 4), n = Math.floor(per / step);
+  const speed = 8 + L * 5, phase = Math.floor(t * speed), blink = L >= 3 && Math.floor(t * 6) % 2;
+  const spr = cols.map(c => glow(c, 32));
+  for (let i = 0; i < n; i++) {
+    let d = i * per / n, px, py;
+    const w = r.width + pad * 2, h = r.height + pad * 2, x0 = r.left - pad, y0 = r.top - pad;
+    if (d < w) { px = x0 + d; py = y0; } else if ((d -= w) < h) { px = x0 + w; py = y0 + d; } else if ((d -= h) < w) { px = x0 + w - d; py = y0 + h; } else { d -= w; px = x0; py = y0 + h - d; }
+    const lit = blink ? (i % 2 === 0) : ((i + phase) % 3 === 0);
+    x.globalAlpha = fade * (lit ? 1 : 0.18);
+    const sz = lit ? 11 : 6;
+    x.drawImage(spr[(i + (L >= 2 ? phase >> 2 : 0)) % spr.length], px - sz, py - sz, sz * 2, sz * 2);
+    if (lit) { x.globalAlpha = fade; x.fillStyle = '#fff'; x.beginPath(); x.arc(px, py, 1.8, 0, 7); x.fill(); }
+  }
+  x.restore();
+  // Confeti y fuegos artificiales (premios grandes)
+  if (L >= 1 && t < party.dur - 0.6) {
+    party.cf += dt * (L === 1 ? 14 : 18 + L * 10);
+    while (party.cf >= 1) {
+      party.cf--;
+      const c = ['#ff4a5a', '#ffd76a', '#5ad0ff', '#7dff8f', '#ff9bf5', '#ffffff'][Math.random() * 6 | 0];
+      fx.add({ type: 'confetti', x: rand(0, FW), y: -10, vx: rand(-30, 30), vy: rand(80, 200), g: 60, drag: 0.02, life: 3, size: rand(6, 11), rot: rand(0, 6), vr: rand(-5, 5), color: c });
+    }
+  }
+  if (L >= 2 && t < party.dur - 1) {
+    party.fw -= dt;
+    if (party.fw <= 0) {
+      party.fw = rand(0.35, 0.7) / (L - 1);
+      const c = cols[Math.random() * cols.length | 0], x1 = rand(FW * 0.12, FW * 0.88), up = rand(0.55, 0.8);
+      sfx.firework(0, 0.12 + L * 0.02, up);
+      fx.add({ type: 'rocket', x: x1, y: FH, vx: rand(-40, 40), vy: -FH * rand(0.95, 1.3), g: FH * 0.6, life: up, color: c,
+        onEnd: p => {
+          fx.burst(p.x, p.y, 34 + L * 6, { type: 'spark', color: c, speed: 260 + L * 30, life: 1.1, size: 9, g: 160, drag: 0.03 });
+          fx.burst(p.x, p.y, 12, { type: 'spark', color: '#ffffff', speed: 120, life: 0.6, size: 7 });
+          fx.add({ type: 'ring', x: p.x, y: p.y, size: 4, grow: 90, width: 3, life: 0.5, color: c });
+        } });
+    }
+  }
 }
 function finishOverlay() { const o = overlay; overlay = null; skipReq = false; if (o && o.done) o.done(); }
 
@@ -274,10 +359,11 @@ function frame(now) {
     game.draw(gctx);
   }
   fx.update(dt);
-  const fxNeeded = fx.active || !!overlay || flashA > 0;
+  const fxNeeded = fx.active || !!overlay || flashA > 0 || party.t < party.dur + 0.1;
   if (fxNeeded || fxDrawn) {
     fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     fctx.clearRect(0, 0, FW, FH);
+    drawParty(fctx, dt);
     if (overlay) drawOverlay(fctx, dt);
     fx.draw(fctx);
     if (flashA > 0) { fctx.globalAlpha = flashA; fctx.fillStyle = flashColor; fctx.fillRect(0, 0, FW, FH); fctx.globalAlpha = 1; flashA = Math.max(0, flashA - dt * 2.5); }
@@ -353,6 +439,13 @@ async function spin(paid = true) {
   try { res = await game.play(bet); } catch (e) { console.error(e); res = { win: 0 }; }
   const win = res && res.win || 0;
   if (win > 0 && !res.celebrated && win >= bet * WIN_MIN) await app.celebrate(win, bet);
+  else if (win > 0 && !res.celebrated) {
+    // Premios chicos y medianos también se festejan: ampolletas, campana y arpegio; desde 2× "NICE WIN!"
+    const r = win / bet, [bxc, byc] = (() => { const b = $('board').getBoundingClientRect(); return [b.width / 2, b.height * 0.42]; })();
+    app.party(r >= 2 ? 1 : 0, r >= 2 ? 2.6 : 1.5);
+    sfx.winJingle(r >= 2 ? 1 : 0);
+    if (r >= 2) { app.popText(bxc, byc, 'NICE WIN!', 34, ['#fff', '#ffe28a', '#ff9d2e', '#fff3c0']); app.flash('#ffe8a0', 0.2); }
+  }
   if (win > 0) {
     state.balance += win; state.stats.won += win; state.stats.best = Math.max(state.stats.best, win);
     app.pulseMeter('credit');

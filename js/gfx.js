@@ -308,7 +308,7 @@ export class Particles {
     for (let i = L.length - 1; i >= 0; i--) {
       const p = L[i];
       p.age += dt;
-      if (p.age >= p.life) { L[i] = L[L.length - 1]; L.pop(); continue; }
+      if (p.age >= p.life) { const end = p.onEnd; L[i] = L[L.length - 1]; L.pop(); if (end) end(p); continue; }
       if (p.target) {
         // Vuelo guiado hacia un punto (monedas al medidor de premio)
         const t = p.age / p.life, e = ease.inCubic(t);
@@ -359,6 +359,17 @@ export class Particles {
         goldText(x, p.text, p.x, p.y - t * 30, p.size * sc, { colors: p.colors });
       } else if (p.type === 'bolt') {
         if (Math.random() < 0.85) bolt(x, p.x1, p.y1, p.x2, p.y2, p.w || 2.5, p.color, p.alpha * fade);
+      } else if (p.type === 'confetti') {
+        // Papel picado que cae girando y aleteando
+        x.globalCompositeOperation = 'source-over';
+        x.save(); x.translate(p.x + Math.sin(p.age * 5 + p.rot) * 8, p.y); x.rotate(p.rot);
+        x.scale(1, Math.abs(Math.cos(p.age * 7 + p.size))); x.fillStyle = p.color;
+        x.fillRect(-p.size / 2, -p.size * 0.3, p.size, p.size * 0.6); x.restore();
+      } else if (p.type === 'rocket') {
+        // Cohete de fuego artificial: punto brillante con estela
+        x.globalCompositeOperation = 'lighter';
+        x.drawImage(glow(p.color), p.x - 7, p.y - 7, 14, 14);
+        x.globalAlpha = 0.5; x.drawImage(glow('#fff2c0'), p.x - p.vx * 0.04 - 5, p.y - p.vy * 0.04 - 5, 10, 10);
       } else if (p.type === 'snow') {
         x.globalCompositeOperation = 'lighter';
         x.drawImage(glow('rgba(200,235,255,0.9)', 32), p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);

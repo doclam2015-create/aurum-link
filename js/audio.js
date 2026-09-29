@@ -77,6 +77,42 @@ class Sfx {
       if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.3, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 1.6 + lines.length * 0.9, 0.4); }
     } catch (e) { }
   }
+  // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
+  slotBell(i = 0, at = 0, vol = 0.06) {
+    const f = i % 2 ? 2637 : 2093;
+    [1, 2.76, 5.4].forEach((m, j) => this.tone(f * m, 0.35 - j * 0.08, { vol: vol / (1 + j * 1.5), at, attack: 0.001, verb: 0.2 }));
+    this.noise(0.015, { at, vol: vol * 0.6, type: 'highpass', freq: 6000 });
+  }
+  // Timbre repicando (como la campana de un gabinete al pagar)
+  bellRing(dur = 1.2, vol = 0.06, at = 0) { const n = Math.round(dur / 0.055); for (let i = 0; i < n; i++) this.slotBell(i, at + i * 0.055, vol * (i < n - 4 ? 1 : 0.5)); }
+  // Premios chicos y medianos: arpegio alegre + monedas + campanilla
+  winJingle(level = 0) {
+    if (!this.ok) return;
+    const notes = level ? [523.3, 659.3, 784, 1046.5, 1318.5, 1568] : [659.3, 784, 1046.5, 1318.5];
+    notes.forEach((f, i) => { this.tone(f, 0.22, { type: 'square', vol: 0.035, at: i * 0.07 }); this.tone(f * 2, 0.3, { type: 'triangle', vol: 0.05, at: i * 0.07, verb: 0.3 }); });
+    this.bellRing(level ? 1.1 : 0.5, 0.045, 0.1);
+    if (level) { this.noise(1.2, { at: 0.35, vol: 0.12, type: 'highpass', freq: 6000, q: 0.4, verb: 0.5 }); this.tone(1568, 0.2, { type: 'sine', vol: 0.05, at: 0.45, slide: 1.4 }); }
+  }
+  // Sube de categoría el cartel (BIG → AWESOME → SUPER): barrido ascendente y golpe de platillo
+  tierUp(level = 2) {
+    if (!this.ok) return;
+    this.noise(0.55, { vol: 0.25, type: 'bandpass', freq: 400, freqEnd: 6000, q: 1.5 });
+    this.tone(200, 0.55, { type: 'sawtooth', vol: 0.06, slide: 4 });
+    this.noise(1.8, { at: 0.5, vol: 0.3, type: 'highpass', freq: 5000, q: 0.4, verb: 0.6 });
+    this.tone(50, 0.7, { vol: 0.6, at: 0.5, slide: 0.5 });
+    this.brass(level >= 3 ? [587.3, 740, 880, 1174.7] : [523.3, 659.3, 784, 1046.5], 0.5, 0.9);
+    this.bellRing(1.4, 0.05, 0.55);
+  }
+  // Fuego artificial: silbido de subida y estallido con chisporroteo
+  firework(at = 0, vol = 0.18, launch = 0.5) {
+    if (!this.ok) return;
+    this.tone(900 + Math.random() * 400, launch, { type: 'sine', vol: vol * 0.25, at, slide: 2.4 });
+    this.noise(launch, { at, vol: vol * 0.15, type: 'bandpass', freq: 2500, freqEnd: 6000, q: 5 });
+    const b = at + launch;
+    this.noise(0.9, { at: b, vol: vol * 1.4, buf: this.brownBuf, type: 'lowpass', freq: 700, freqEnd: 90, q: 0.6, verb: 0.7 });
+    this.noise(0.08, { at: b, vol: vol, type: 'highpass', freq: 1200, q: 0.5 });
+    this.noise(0.9, { at: b + 0.12, vol: vol * 0.35, buf: this.crackleBuf, type: 'highpass', freq: 3000, q: 0.6, verb: 0.4 });
+  }
   // Parafernalia de gran premio: redoble, platillo, bocinas, silbatos y público que celebra
   hype(level = 1) {
     if (!this.ok) return;
