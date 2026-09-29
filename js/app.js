@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=40';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=40';
-import { sleep } from './reels.js?v=40';
-import XLink from './games/xlink.js?v=40';
-import Avalanche from './games/avalanche.js?v=40';
-import FireWheel from './games/firewheel.js?v=40';
-import Legion from './games/legion.js?v=40';
-import Bull from './games/bull.js?v=40';
-import Dragon from './games/dragon.js?v=40';
-import Codex from './games/codex.js?v=40';
-import Reef from './games/reef.js?v=40';
-import Western from './games/western.js?v=40';
-import Galaxy from './games/galaxy.js?v=40';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=40';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=40';
+import { sfx } from './audio.js?v=41';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=41';
+import { sleep } from './reels.js?v=41';
+import XLink from './games/xlink.js?v=41';
+import Avalanche from './games/avalanche.js?v=41';
+import FireWheel from './games/firewheel.js?v=41';
+import Legion from './games/legion.js?v=41';
+import Bull from './games/bull.js?v=41';
+import Dragon from './games/dragon.js?v=41';
+import Codex from './games/codex.js?v=41';
+import Reef from './games/reef.js?v=41';
+import Western from './games/western.js?v=41';
+import Galaxy from './games/galaxy.js?v=41';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=41';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=41';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -78,16 +78,13 @@ const app = {
   get bet() { return BETS[state.betIdx]; },
   get skip() { return skipReq; },
   message(t) { $('msg').innerHTML = t || ''; },
-  addWin(v) { meter.win += v; },
+  // Cada premio suma al medidor y lanza monedas (se agrupan por cuadro, ver coinShower)
+  addWin(v) { meter.win += v; if (v > 0) coinQ.win += v; },
   toFx(x, y) { return [boardRect.left + x, boardRect.top + y]; },
   winTarget() { const r = $('win').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; },
   // Monedas que vuelan desde el tablero al medidor de premio
-  flyCoins(x, y, n = 6, type = 'coin', color) {
-    const [fx0, fy0] = app.toFx(x, y), tgt = app.winTarget();
-    for (let i = 0; i < n; i++) {
-      fx.add({ type, color: color || '#ffd76a', sx: fx0 + rand(-10, 10), sy: fy0 + rand(-10, 10), x: fx0, y: fy0, target: tgt, arc: rand(-80, 80), life: 0.55 + i * 0.05 + Math.random() * 0.15, size: type === 'coin' ? 11 : 16, vr: 10 });
-    }
-  },
+  // (marca desde dónde salen las monedas del premio; si no hubo premio, lanza n monedas)
+  flyCoins(x, y, n = 6) { coinQ.origin = app.toFx(x, y); coinQ.n = Math.max(coinQ.n, n); },
   // Rayo desde un punto del tablero hasta el medidor de premio (cobro de bolas)
   boltToWin(x, y, color = '#9fe8ff', w = 6) {
     const [a, b] = app.toFx(x, y), [tx, ty] = app.winTarget();
@@ -215,11 +212,36 @@ function finishOverlay() { const o = overlay; overlay = null; skipReq = false; i
 
 // ---------- Bucle de render ----------
 let last = performance.now(), frameSkip = 0, running = true;
+// ---------- Monedas de premio ----------
+// Todas las ganancias del cuadro se juntan en una sola lluvia: monedas que vuelan al medidor de
+// PREMIO (más cuanto mayor el premio) y, desde 2× la apuesta, monedas que saltan hacia la pantalla.
+const coinQ = { win: 0, n: 0, origin: null };
+function coinShower() {
+  if (!coinQ.win && !coinQ.n) return;
+  const bet = app.bet || 1, r = coinQ.win / bet, tgt = app.winTarget();
+  const b = $('board').getBoundingClientRect(), o = coinQ.origin || [b.left + b.width / 2, b.top + b.height / 2];
+  const n = coinQ.win ? Math.round(clamp(4 + r * 2.2, 5, 34)) : coinQ.n;
+  for (let i = 0; i < n; i++) {
+    const sx = o[0] + rand(-b.width * 0.25, b.width * 0.25), sy = o[1] + rand(-b.height * 0.15, b.height * 0.15);
+    fx.add({ type: 'coin', sx, sy, x: sx, y: sy, target: tgt, arc: rand(-110, 110), life: 0.6 + i * 0.035 + Math.random() * 0.2, size: rand(10, 14), vr: rand(8, 14) });
+  }
+  // Monedas hacia el espectador: salen del tablero, crecen girando y se desvanecen
+  if (r >= 2) {
+    const m = Math.round(clamp(r * 0.9, 3, 22));
+    for (let i = 0; i < m; i++) {
+      const a = rand(0, Math.PI * 2), sp = rand(60, 220);
+      fx.add({ type: 'zoom', x: o[0] + rand(-30, 30), y: o[1] + rand(-30, 30), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, g: 120, life: 0.9 + Math.random() * 0.5, size: rand(7, 11), grow: rand(5, 9), vr: rand(6, 12), rot: rand(0, 6) });
+    }
+  }
+  if (coinQ.win) for (let i = 0; i < Math.min(9, 2 + (r | 0)); i++) sfx.coin(0.35 + i * 0.06);
+  coinQ.win = 0; coinQ.n = 0; coinQ.origin = null;
+}
 function frame(now) {
   if (!running) return;
   requestAnimationFrame(frame);
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.1) dt = 0.1;
+  coinShower();
   // Contadores
   if (meter.winShown !== meter.win) {
     const d = meter.win - meter.winShown;
