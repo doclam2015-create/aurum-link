@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=41';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=41';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=42';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -566,6 +566,8 @@ export default class XLink {
     // Las dos últimas usan la misma probabilidad que las estrellas para no cambiar el equilibrio.
     const mode = this.T.expand || 'stars';
     let target = mode === 'stars' ? 0 : hiddenStars(bet);
+    // En los giros gratis de algunos temas (Sueño Rojo) los velos se abren SIEMPRE, parcial o totalmente
+    if (free && this.T.freeOpen && !target) { const r = Math.random() * 100; target = r < 34 ? 1 : r < 58 ? 2 : r < 76 ? 3 : r < 90 ? 4 : 5; }
     const stacks = [], chain = [];
     if (mode === 'princess' && target) {
       // Cadena: algunas Reinas caen en las filas base; las demás aparecen en las filas que se van abriendo
@@ -595,9 +597,16 @@ export default class XLink {
     // Suspenso: si los primeros rodillos ya traen 4+ bolas
     let anticFrom = -1, acc = 0;
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
+    // Las 5 filas de arriba giran desde el inicio junto con las de abajo (detrás de la cortina):
+    // al abrirse, se descubren los símbolos que ya traía el giro.
+    const up = [];
+    for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(this.wFor(c, true), bet)); }
+    chain.forEach(st => st.cells.forEach(([c, r], i) => { up[c][r] = { k: 's7r', stack: i % 2 ? 'bot' : 'top' }; }));
     sfx.spinStart(app.speed >= 2);
     app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeCount.toLowerCase() : '');
     this.base.start(app.speed);
+    this.upper.start(app.speed);
+    const upStop = this.upper.stopTo(up, { anticFrom });
     let landed = 0;
     await this.base.stopTo(final, {
       anticFrom,
@@ -614,6 +623,7 @@ export default class XLink {
         if (last) sfx.anticipation(false);
       }
     });
+    await upStop;
     sfx.anticipation(false);
     // Expansión
     const stars = mode === 'stars' ? final.flat().reduce((a, s) => a + (s.star || 0), 0) : mode === 'princess' ? stacks.length / 2 : target;
@@ -638,18 +648,10 @@ export default class XLink {
       const why = mode === 'random' ? '¡Se abren los velos!' : mode === 'princess' ? '¡La princesa derrite el hielo!' : '¡Estrellas!';
       app.message(why + (this.T.perReel ? ' <b>+' + opened + ' posiciones</b> · ' : ' <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ') + cnt);
       for (let i = 0; i < k; i++) { const [px, py] = this.cellCenter(2, 4 - i); app.burst(px, py, 18, { type: 'shard', color: '#bfe6ff', speed: 300, size: 7, g: 500 }); }
-      await app.wait(400);
-      const up = [];
-      for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(this.wFor(c, true), bet)); }
-      chain.forEach(st => st.cells.forEach(([c, r], i) => { up[c][r] = { k: 's7r', stack: i % 2 ? 'bot' : 'top' }; }));
-      sfx.spinStart(app.speed >= 2);
-      this.upper.start(app.speed);
-      await this.upper.stopTo(up, {
-        onStop: (c, last) => {
-          sfx.reelStop(c, last);
-          up[c].forEach((s, r) => { if (s.ball && r >= 5 - kc[c]) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } });
-        }
-      });
+      // Lo que ya venía girando detrás de la cortina queda a la vista
+      await app.wait(350);
+      up.forEach((col, c) => col.forEach((s, r) => { if (s.ball && r >= 5 - kc[c]) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } }));
+      await app.wait(300);
       // La cadena: cada Reina que aparece en las filas abiertas sube la cortina otra fila
       for (const st of chain) {
         await app.wait(650);
@@ -1023,7 +1025,7 @@ export default class XLink {
     return '<h3>Bolas especiales de Golden Spins</h3>' + gallery + '<h3>Cómo se juega</h3><ul>' +
       (this.T.ways
         ? '<li><b>5 rodillos × 3 filas, 243 formas</b>: pagan iguales en rodillos contiguos desde la izquierda, en cualquier fila; el premio se multiplica por las formas. <b>WILD</b> en los rodillos 2 a 4.</li>' +
-          '<li><b>Velos al azar</b>: en cualquier giro se abren por sorpresa <b>hasta 25 posiciones</b>; cada rodillo abre su propia cantidad (0 a 5) solo para ese giro. Las formas son la multiplicación de las alturas: hasta <b>32.768</b>.</li>'
+          '<li><b>Velos al azar</b>: en cualquier giro se abren por sorpresa <b>hasta 25 posiciones</b>; cada rodillo abre su propia cantidad (0 a 5) solo para ese giro. Las formas son la multiplicación de las alturas: hasta <b>32.768</b>.' + (this.T.freeOpen ? ' En los <b>giros gratis los velos se abren en cada giro</b>, parcial o totalmente.' : '') + '</li>'
         : '<li><b>5 rodillos × 3 filas, 20 líneas</b>. Pagan 3+ símbolos iguales desde la izquierda.</li>' +
           (this.T.expand === 'princess'
             ? '<li><b>Reina de 2 filas</b>: cada Reina sube la cortina de hielo <b>1 fila</b>. Si en las filas que se abren aparece otra Reina, la cortina sigue subiendo (en cadena), hasta 5 filas y una Reina por columna, solo para ese giro. Hasta <b>100 líneas</b>.</li>'
