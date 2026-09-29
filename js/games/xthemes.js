@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=47';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=47';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=48';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=48';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
@@ -100,7 +100,7 @@ const SNOW = Object.assign({}, THEME, {
   // La Reina aparece en pilas que abren filas, así que paga menos que en la original
   pay: Object.assign({}, PAY, { s7r: [0, 0, 0, 1, 3, 10] }),
   tiles: ['rgba(90,120,255,0.16)', 'rgba(170,90,255,0.16)'],
-  glass: ['rgba(110,170,240,0.78)', 'rgba(50,100,200,0.86)'], glassL: ['rgba(215,235,252,0.88)', 'rgba(185,215,245,0.92)'],
+  glass: ['rgba(110,170,240,0.6)', 'rgba(50,100,200,0.68)'], glassL: ['rgba(215,235,252,0.7)', 'rgba(185,215,245,0.76)'],
   icon: Object.assign({}, THEME.icon, { s7r: S.QUEEN, s7b: S.SNOW, bar: S.DIAMOND, bell: S.BELL, melon: S.SEVEN, grapes: S.K, plum: S.Q, orange: S.J, cherry: S.TEN, wild: S.WILD }),
   variant: { melon: 'blue' },
   names: { s7r: 'Reina de hielo', s7b: 'Copo real', bar: 'Diamante', bell: 'Campana de plata', melon: '7 de hielo', grapes: 'K', plum: 'Q', orange: 'J', cherry: '10' },

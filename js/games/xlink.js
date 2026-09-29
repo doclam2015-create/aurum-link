@@ -3,10 +3,11 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=47';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=47';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=48';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=48';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
+const TEASE = 0.07, TEASE_EDGE = 0.18; // bolas extra detrás de la cortina (efecto "casi")
 const THRESH = [8, 12, 17, 23, 30];
 // Pago por línea (en apuestas por línea = apuesta/20)
 export const PAY = {
@@ -29,7 +30,7 @@ export const THEME = {
   frame: ['#ffcf6a', '#d47a12', '#ffc14d'],
   board: ['#1b1566', '#2b0f5c', '#3a0d6a'], boardL: ['#f6f1ff', '#e6dcfb', '#d9ccf6'],
   grid: 'rgba(80,190,255,0.35)', gridL: 'rgba(120,80,200,0.35)',
-  glass: ['rgba(40,40,110,0.82)', 'rgba(25,20,80,0.88)'], glassL: ['rgba(205,195,245,0.86)', 'rgba(180,165,235,0.9)'],
+  glass: ['rgba(40,40,110,0.64)', 'rgba(25,20,80,0.72)'], glassL: ['rgba(205,195,245,0.68)', 'rgba(180,165,235,0.74)'],
   // Giros gratis: 3+ soles BONUS = 10 giros (repetibles, +10)
   scatter: { w: 1.5, name: 'soles BONUS', color: '#ffc23a', pay: [5, 20] }
 };
@@ -707,8 +708,22 @@ export default class XLink {
     for (let c = 0; c < COLS - 1; c++) { acc += final[c].filter(s => s.ball).length; if (acc >= 4 && anticFrom < 0) anticFrom = c + 1; }
     // Las 5 filas de arriba giran desde el inicio junto con las de abajo (detrás de la cortina):
     // al abrirse, se descubren los símbolos que ya traía el giro.
+    // Apertura que tendrá cada rodillo (se decide antes para saber qué casillas quedarán tapadas)
+    const stars = mode === 'stars' ? final.flat().reduce((a, s) => a + (s.star || 0), 0) : mode === 'princess' ? stacks.length / 2 : target;
+    const k = Math.min(5, stars), kc = [k, k, k, k, k];
+    if (stars > 0 && this.T.perReel) { for (let c = 0; c < COLS; c++) kc[c] = Math.max(0, k - (Math.random() * 3 | 0)); kc[Math.random() * COLS | 0] = k; }
+    const openEnd = kc.map(v => Math.min(5, chain.reduce((a, st) => Math.max(a, Math.min(5, a + st.n)), v)));
     const up = [];
-    for (let c = 0; c < COLS; c++) { up.push([]); for (let r = 0; r < 5; r++) up[c].push(pickSym(this.wFor(c, true), bet)); }
+    for (let c = 0; c < COLS; c++) {
+      up.push([]);
+      for (let r = 0; r < 5; r++) {
+        let sy = pickSym(this.wFor(c, true), bet);
+        // Casi premio: bolas que quedan detrás de la cortina (no pagan ni cuentan), sobre todo justo encima de lo abierto
+        const edge = 5 - openEnd[c] - 1;
+        if (r <= edge && !sy.ball && Math.random() < (r === edge ? TEASE_EDGE : TEASE)) sy = makeBall(bet, false);
+        up[c].push(sy);
+      }
+    }
     chain.forEach(st => st.cells.forEach(([c, r], i) => { up[c][r] = { k: 's7r', stack: i % 2 ? 'bot' : 'top' }; }));
     sfx.spinStart(app.speed >= 2);
     app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeCount.toLowerCase() : '');
@@ -734,10 +749,8 @@ export default class XLink {
     await upStop;
     sfx.anticipation(false);
     // Expansión
-    const stars = mode === 'stars' ? final.flat().reduce((a, s) => a + (s.star || 0), 0) : mode === 'princess' ? stacks.length / 2 : target;
     let grid = final.map(col => col.slice());
     if (stars > 0) {
-      const k = Math.min(5, stars);
       await app.wait(250);
       final.forEach((col, c) => col.forEach((s, r) => {
         if (!s.star && !(s.stack && (r === 0 || !col[r - 1].stack))) return;
@@ -745,8 +758,7 @@ export default class XLink {
         this.bolts.push({ x1, y1, x2, y2, t: 0, life: 0.9, w: 2.4, color: s.stack ? '#e8f8ff' : undefined });
       }));
       // Apertura por rodillo: cada rodillo abre de 0 a k posiciones (al menos uno abre k)
-      const kc = [k, k, k, k, k];
-      if (this.T.perReel) { for (let c = 0; c < COLS; c++) kc[c] = Math.max(0, k - (Math.random() * 3 | 0)); kc[Math.random() * COLS | 0] = k; this.expandCols = kc; }
+      if (this.T.perReel) this.expandCols = kc;
       if (mode === 'random') for (let c = 0; c < COLS; c++) { if (!kc[c]) continue; const [px, py] = this.cellCenter(c, 5 - kc[c]); app.burst(px, py, 10, { type: 'spark', color: '#ffd06a', speed: 220, size: 9 }); }
       sfx.rowUnlock(k);
       app.flash(mode === 'random' ? '#ffd0a0' : '#9fe8ff', 0.35); app.shake(false);

@@ -282,3 +282,8 @@ body.layout-v #btnLayout .lv{display:none}body.layout-v #btnLayout .lh{display:i
 @keyframes potgrow{0%{filter:brightness(1.5);box-shadow:0 0 14px rgba(255,240,180,.8)}100%{filter:none}}
 .pot.grow{animation:potgrow .9s ease-out}
 body.light .ver b{color:#9a6200;text-shadow:none}
+
+/* Medidor de PREMIO encendido mientras la máquina festeja */
+.meter.hot{animation:hotm .32s ease-in-out infinite alternate;border-color:var(--hot,#ffd76a)!important}
+.meter.hot #win{text-shadow:0 0 10px var(--hot,#ffd76a),0 0 22px var(--hot,#ffd76a)}
+@keyframes hotm{from{box-shadow:0 0 4px var(--hot,#ffd76a),inset 0 0 4px var(--hot,#ffd76a)}to{box-shadow:0 0 22px var(--hot,#ffd76a),inset 0 0 12px var(--hot,#ffd76a);transform:scale(1.04)}}
