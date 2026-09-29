@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=53';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=53';
-import { sleep } from './reels.js?v=53';
-import XLink from './games/xlink.js?v=53';
-import Avalanche from './games/avalanche.js?v=53';
-import FireWheel from './games/firewheel.js?v=53';
-import Legion from './games/legion.js?v=53';
-import Bull from './games/bull.js?v=53';
-import Dragon from './games/dragon.js?v=53';
-import Codex from './games/codex.js?v=53';
-import Reef from './games/reef.js?v=53';
-import Western from './games/western.js?v=53';
-import Galaxy from './games/galaxy.js?v=53';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=53';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=53';
+import { sfx } from './audio.js?v=54';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=54';
+import { sleep } from './reels.js?v=54';
+import XLink from './games/xlink.js?v=54';
+import Avalanche from './games/avalanche.js?v=54';
+import FireWheel from './games/firewheel.js?v=54';
+import Legion from './games/legion.js?v=54';
+import Bull from './games/bull.js?v=54';
+import Dragon from './games/dragon.js?v=54';
+import Codex from './games/codex.js?v=54';
+import Reef from './games/reef.js?v=54';
+import Western from './games/western.js?v=54';
+import Galaxy from './games/galaxy.js?v=54';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=54';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=54';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -521,6 +521,8 @@ function openSettings() {
     '<div class="set"><label>Volumen de música</label><input id="setMusic" type="range" min="0" max="100" value="' + Math.round(state.musicVol * 100) + '"></div>' +
     '<label class="set switch"><span>Música de fondo</span><input id="setMusicOn" type="checkbox"' + (state.music ? ' checked' : '') + '><i></i></label>' +
     '<label class="set switch"><span>Rodillos en modo claro</span><input id="setLight" type="checkbox"' + (state.light ? ' checked' : '') + '><i></i></label>' +
+    '<div class="set voice"><label>Voz del locutor <output>' + sfx.voiceName('es') + '</output></label><button id="setVoiceTest" class="vtest" type="button">🔊 Probar voz</button>' +
+    '<p class="fine">Si no se oye: sube el volumen, quita el modo silencio y revisa Ajustes del iPhone → Accesibilidad → Contenido leído → Voces.</p></div>' +
     '<p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>' +
     '<div class="ver"><small>Aurum Link</small><b>Versión ' + VERSION + '</b></div>');
 }
@@ -601,6 +603,17 @@ function bind() {
     if (t.id === 'setMusic') state.musicVol = +t.value / 100;
     sfx.setVolumes(state.sfxVol, state.musicVol);
     save();
+  });
+  $('sheet').addEventListener('click', e => {
+    if (e.target.id !== 'setVoiceTest') return;
+    // Dentro del toque: habilita la voz en iOS y la prueba
+    sfx.unlock(); const ss = window.speechSynthesis;
+    if (!ss) { e.target.textContent = 'Este navegador no tiene voz'; return; }
+    ss.cancel(); const u = new SpeechSynthesisUtterance('¡Bono! Big win!'); u.lang = 'es-ES'; u.volume = 1; u.rate = 0.85;
+    u.onstart = () => { sfx._speechOk = true; e.target.textContent = '🔊 Sonando…'; };
+    u.onend = () => { e.target.textContent = '🔊 Probar voz'; sfx.announce([['¡Bono!', 1.2, 0.8], ['Big win!', 1.2, 0.8]], 'es'); };
+    u.onerror = ev => { e.target.textContent = 'Error de voz: ' + (ev.error || '?'); };
+    ss.speak(u);
   });
   $('sheet').addEventListener('change', e => {
     const t = e.target;

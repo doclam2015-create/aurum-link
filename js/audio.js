@@ -3,8 +3,11 @@
 const AC = window.AudioContext || window.webkitAudioContext;
 
 // Elige la voz más clara: primero las versiones de alta calidad (iOS "Mejorada"/"Premium"), luego por nombre
-const HQ = /enhanced|premium|mejorada|siri|natural|neural/i;
+const HQ = /enhanced|premium|mejorada/i;
+const BAD = /siri|novelty|eloquence|bad news|bells|boing|bubbles|cellos|jester|organ|trinoids|whisper|zarvox|albert|bahh|superstar|wobble|good news/i;
 function pickVoice(vs, pref, regional) {
+  vs = vs.filter(v => !BAD.test(v.name + ' ' + v.voiceURI) && v.localService !== false);
+  if (!vs.length) return null;
   const hq = vs.filter(v => HQ.test(v.name));
   for (const pool of [hq, vs]) {
     for (const n of pref) { const v = pool.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
@@ -52,8 +55,8 @@ class Sfx {
       const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
       s.buffer = b; s.connect(ctx.destination); s.start(0);
       // iOS solo habla si la primera frase se pide dentro de un toque
-      try { if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) { }
     }
+    this.unlockSpeech();
     if (this.ctx.state !== 'running') this.ctx.resume();
   }
 
@@ -81,26 +84,43 @@ class Sfx {
     try {
       if (!this.enabled || !window.speechSynthesis) return;
       // Safari iOS ignora lo que se habla justo después de cancel(): solo se corta si hay algo sonando y se espera un poco
-      const ss = speechSynthesis, busy = ss.speaking || ss.pending;
-      if (busy) ss.cancel();
+      const ss = speechSynthesis;
+      ss.cancel();
       clearTimeout(this._sayT);
-      this._sayT = setTimeout(() => this._speakLines(lines, lang), busy ? 160 : 0);
+      this._sayT = setTimeout(() => this._speakLines(lines, lang), 120);
       this._duck(lines.length, o.sfx !== false);
     } catch (e) { }
   }
-  _speakLines(lines, lang) {
+  // iOS: se habilita con una frase pedida dentro de un toque; se repite en cada toque hasta confirmar que habló
+  unlockSpeech() {
     try {
-      const ss = speechSynthesis; if (ss.paused) ss.resume();
-      const v = lang === 'es' ? this._voiceEs() : this._voice();
-      lines.forEach(([text, pitch, rate]) => {
-        // Tono casi natural y ritmo pausado: los tonos muy agudos o rápidos deforman las palabras
-        const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'es' ? (v ? v.lang : 'es-MX') : 'en-US';
-        u.pitch = Math.min(1.08, Math.max(0.95, 1 + (pitch - 1) * 0.35)); u.rate = Math.min(0.82, rate * 0.95); u.volume = 1;
-        if (v) u.voice = v;
-        ss.speak(u);
-      });
+      const ss = window.speechSynthesis; if (!ss || this._speechOk) return;
+      ss.getVoices();
+      const u = new SpeechSynthesisUtterance('hola'); u.volume = 0.01; u.rate = 2; u.lang = 'es-ES';
+      u.onstart = u.onend = () => { this._speechOk = true; };
+      ss.cancel(); ss.speak(u);
     } catch (e) { }
   }
+  _speakLines(lines, lang, plain = false) {
+    try {
+      const ss = speechSynthesis; if (ss.paused) ss.resume();
+      // plain: sin elegir voz (la del sistema para el idioma), respaldo si la voz elegida no suena
+      const v = plain ? null : (lang === 'es' ? this._voiceEs() : this._voice());
+      let started = false;
+      lines.forEach(([text, pitch, rate]) => {
+        // Tono casi natural y ritmo pausado: los tonos muy agudos o rápidos deforman las palabras
+        const u = new SpeechSynthesisUtterance(text); u.lang = v ? v.lang : (lang === 'es' ? 'es-ES' : 'en-US');
+        u.pitch = Math.min(1.08, Math.max(0.95, 1 + (pitch - 1) * 0.35)); u.rate = Math.min(0.82, rate * 0.95); u.volume = 1;
+        if (v) u.voice = v;
+        u.onstart = () => { started = true; this._speechOk = true; };
+        ss.speak(u);
+      });
+      // Si en 1,5 s no empezó a hablar, reintenta con la voz por defecto del sistema
+      if (!plain) setTimeout(() => { if (!started && !ss.speaking) { ss.cancel(); setTimeout(() => this._speakLines(lines, lang, true), 60); } }, 1500);
+    } catch (e) { }
+  }
+  // Nombre de la voz que se usará (para Ajustes)
+  voiceName(lang = 'es') { try { const v = lang === 'es' ? this._voiceEs() : this._voice(); return v ? v.name : 'predeterminada del sistema'; } catch (e) { return '—'; } }
   // Baja la música y los efectos mientras habla el locutor
   _duck(n, sfxToo = true) {
     try {
