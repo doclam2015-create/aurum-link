@@ -4,12 +4,18 @@ const AC = window.AudioContext || window.webkitAudioContext;
 
 // Elige la voz más clara: primero las versiones de alta calidad (iOS "Mejorada"/"Premium"), luego por nombre
 const HQ = /enhanced|premium|mejorada/i;
-const MALE = /aaron|arthur|daniel|gordon|nathan|alex|fred|male|rishi|tom|evan|jorge|juan|diego|carlos|enrique|pablo/i;
+const MALE = /aaron|arthur|daniel|gordon|nathan|alex|fred|male|rishi|tom|evan|jorge|juan|diego|carlos|enrique|pablo|reed|eddy|rocko|grandpa|abuelo/i;
 const HYPE = /^¡?\s*(bono|big|awesome|super|súper|mega|epic|jackpot|mini|minor|major|grand|multiplicador|estampida)/i;
-const BAD = /siri|novelty|eloquence|bad news|bells|boing|bubbles|cellos|jester|organ|trinoids|whisper|zarvox|albert|bahh|superstar|wobble|good news/i;
-function pickVoice(vs, pref, regional) {
+const BAD = /siri|novelty|bad news|bells|boing|bubbles|cellos|jester|organ|trinoids|whisper|zarvox|albert|bahh|superstar|wobble|good news/i;
+// Voces utilizables por la página (sin Siri ni voces de efectos)
+export function usableVoices(re) {
+  try { return speechSynthesis.getVoices().filter(v => re.test(v.lang) && !BAD.test(v.name + ' ' + v.voiceURI) && v.localService !== false); } catch (e) { return []; }
+}
+function pickVoice(vs, pref, regional, chosen) {
   vs = vs.filter(v => !BAD.test(v.name + ' ' + v.voiceURI) && v.localService !== false);
   if (!vs.length) return null;
+  // La voz elegida en Ajustes manda
+  if (chosen) { const c = vs.find(v => v.voiceURI === chosen || v.name === chosen); if (c) return c; }
   const hq = vs.filter(v => HQ.test(v.name));
   for (const pool of [hq, vs]) {
     for (const n of pref) { const v = pool.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
@@ -75,12 +81,12 @@ class Sfx {
   _voice() {
     const vs = speechSynthesis.getVoices().filter(v => /^en[-_](US|GB|AU)/i.test(v.lang));
     // Locutor de show: voces masculinas primero
-    return pickVoice(vs, ['Aaron', 'Arthur', 'Daniel', 'Gordon', 'Nathan', 'Alex', 'Fred', 'Google UK English Male', 'Rishi', 'Tom', 'Evan', 'Samantha', 'Google US English'], /^en[-_](US|GB)/i);
+    return pickVoice(vs, ['Aaron', 'Arthur', 'Daniel', 'Gordon', 'Nathan', 'Alex', 'Fred', 'Google UK English Male', 'Rishi', 'Tom', 'Evan', 'Reed', 'Rocko', 'Eddy', 'Grandpa', 'Samantha', 'Google US English'], /^en[-_](US|GB)/i, this.voiceEn);
   }
   // Varias frases seguidas, cada una con su tono: más agudo y rápido suena más entusiasta
   _voiceEs() {
     const vs = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
-    return pickVoice(vs, ['Jorge', 'Juan', 'Diego', 'Carlos', 'Enrique', 'Pablo', 'Google español de Estados Unidos', 'Paulina', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419|ES)/i);
+    return pickVoice(vs, ['Jorge', 'Juan', 'Diego', 'Carlos', 'Enrique', 'Pablo', 'Reed', 'Rocko', 'Eddy', 'Grandpa', 'Abuelo', 'Google español de Estados Unidos', 'Paulina', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419|ES)/i, this.voiceEs);
   }
   // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
   announce(lines, lang = 'en', o = {}) {
