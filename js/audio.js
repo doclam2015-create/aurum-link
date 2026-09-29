@@ -106,10 +106,12 @@ class Sfx {
     if (this._clipSrc) this._clipSrc.forEach(n => { try { n.stop(); } catch (e) { } });
     this._clipSrc = [];
     if (!this.voiceBus) {
-      this.voiceBus = ctx.createGain(); this.voiceBus.connect(this.master);
+      this.voiceBus = ctx.createGain();
+      const vc = ctx.createDynamicsCompressor(); vc.threshold.value = -18; vc.ratio.value = 6; vc.attack.value = 0.003; vc.release.value = 0.15; vc.knee.value = 6;
+      this.voiceBus.connect(vc); vc.connect(this.master);
       const v = ctx.createGain(); v.gain.value = 0.18; this.voiceBus.connect(v); v.connect(this.verbSend);
     }
-    this.voiceBus.gain.value = Math.min(1.6, 0.6 + this.sfxVol);
+    this.voiceBus.gain.value = Math.min(2.2, 1.1 + this.sfxVol);
     keys.forEach((k, i) => {
       const s = ctx.createBufferSource(); s.buffer = this.samples[k]; s.connect(this.voiceBus); s.start(at);
       this._clipSrc.push(s); at += s.buffer.duration + (i < keys.length - 1 ? 0.08 : 0);
@@ -173,9 +175,9 @@ class Sfx {
   _duck(n, sfxToo = true) {
     try {
       const lines = { length: n };
-      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.06, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2.4 + lines.length * 1.5, 0.4);
+      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.45, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2.4 + lines.length * 1.5, 0.4);
         // En los bonos baja menos para que la fanfarria siga sonando, pero la voz queda encima
-        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * (sfxToo ? 0.18 : 0.4), t + 0.1, 0.06); sb.setTargetAtTime(this.sfxVol, t + 1.4 + lines.length * 1.4, 0.3); }
+        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * (sfxToo ? 0.6 : 0.85), t + 0.1, 0.06); sb.setTargetAtTime(this.sfxVol, t + 1.4 + lines.length * 1.4, 0.3); }
     } catch (e) { }
   }
   // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
