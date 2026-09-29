@@ -23,6 +23,8 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 
 **Pago base al activar un bono** en todos los juegos con giros gratis: según los símbolos de bono en pantalla, el mínimo que lo activa paga 2× la apuesta, uno más 10×, dos más 50× y tres o más 100× (también al repetirse).
 
+**Montos que siguen a la apuesta**: al subir o bajar la apuesta, los valores de las bolas doradas (Xtension Link, Sueño Rojo, Reino de Nieve), las bolas de hielo de Avalancha y las monedas del Toro Dorado que están en pantalla se recalculan en la misma proporción.
+
 **Anuncios de premio** en todos los juegos: **BIG WIN** (5× la apuesta), **AWESOME** (15×) y **SUPER WIN** (40×), con lluvia de monedas, fanfarria y parafernalia (redoble, platillo, bocinas de estadio, silbatos y público que celebra) y un locutor entusiasta ("Big, big win!", "Totally awesome!", "Super win!"). El cartel parte en BIG WIN y sube a AWESOME y SUPER WIN mientras cuenta, con barrido, platillo y timbre de máquina. Toda ganancia enciende la marquesina de ampolletas alrededor de los rodillos y el medidor de PREMIO; desde 2× hay "NICE WIN!", reflectores y confeti, y en los grandes, fuegos artificiales con su silbido y estallido.
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
