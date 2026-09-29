@@ -3,8 +3,8 @@
 // todas las monedas visibles. Monedas MINI/MINOR/MAJOR/GRAND entregan su jackpot al ser recogidas.
 // 3 tréboles (rodillos 1, 3 y 5) = ESTAMPIDA: 10 giros gratis donde cada toro sube el
 // multiplicador de recolección (x1 → x2 → x3 …) y el toro aparece más seguido.
-import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=42';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
+import { S, sym, ball, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, ROWS = 3;
 export const PAY = {
@@ -248,6 +248,7 @@ export default class Bull {
     if (!this.inFree && clovers >= 3) {
       await app.wait(wins.length ? 1100 : 400);
       this.wins = null;
+      total += await app.bonusPay(clovers, bet, 'tréboles');
       await this.startFree(10);
     }
     if (wins.length && !this.inFree) await app.wait(Math.min(1800, 700 + wins.length * 300));

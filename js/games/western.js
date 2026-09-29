@@ -3,8 +3,8 @@
 // avanza un rodillo a la izquierda hasta salir del tablero. Mientras quede alguno en pantalla
 // se sigue re-girando. 3/4/5/6+ forajidos a la vez = MINI/MINOR/MAJOR/GRAND.
 // 3+ estrellas de sheriff = 10 giros gratis donde cada forajido en una línea la multiplica x2.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=42';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
+import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, ROWS = 3;
 export const PAY = {
@@ -327,6 +327,7 @@ export default class Western {
     if (stars >= 3) {
       await app.wait(600);
       this.wins = null;
+      { const v = await app.bonusPay(stars, bet, 'estrellas de sheriff'); total += v; if (this.inFree) this.fsTotal += v; }
       if (this.inFree) {
         this.freeLeft += 5; sfx.featureStart();
         await app.banner('+5 GIROS', 'Llega la caballería', { color: '#ffb03a', ms: 1500 });

@@ -3,8 +3,8 @@
 // (hasta 7^6 = 117.649). La LLAMARADA (wild, rodillos 2-5) trae multiplicador x2/x3/x5
 // que se multiplica en cada forma. 4+ perlas = giros gratis con TODOS los rodillos al
 // máximo (117.649 formas) y llamaradas más frecuentes.
-import { S, sym, ball, glow, goldText, roundRect, FONT } from '../gfx.js?v=42';
-import { ReelSet, weighted } from '../reels.js?v=42';
+import { S, sym, ball, glow, goldText, roundRect, FONT } from '../gfx.js?v=44';
+import { ReelSet, weighted } from '../reels.js?v=44';
 
 const COLS = 6, MAXH = 7;
 export const PAY = {
@@ -235,13 +235,14 @@ export default class Dragon {
     if (!this.inFree && pearls >= 4) {
       await app.wait(wins.length ? 1200 : 400);
       this.wins = null;
+      total += await app.bonusPay(pearls, bet, 'perlas del dragón', 4);
       // 5 perlas = MINOR · 6 = MAJOR · 7+ = GRAND (además de los giros gratis)
       const jp = pearls >= 7 ? 'grand' : pearls === 6 ? 'major' : pearls === 5 ? 'minor' : null;
       if (jp) total += await app.awardJackpot(jp);
       await this.startFree(10 + (pearls - 4) * 2);
     } else if (this.inFree && pearls >= 3) {
       // 3 perlas en giros gratis = MINI + 5 giros
-      const v = await app.awardJackpot('mini'); total += v; this.fsTotal += v;
+      const v = await app.awardJackpot('mini') + await app.bonusPay(pearls, bet, 'perlas del dragón'); total += v; this.fsTotal += v;
       this.freeLeft += 5; sfx.featureStart();
       await app.banner('+5 GIROS', 'Las perlas del dragón', { color: '#ff6a4a', ms: 1500 });
     }

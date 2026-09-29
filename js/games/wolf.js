@@ -3,8 +3,8 @@
 // Los símbolos altos también caen apilados. Atrapasueños BONUS solo en los rodillos 2, 3 y 4:
 // 3 = 5 giros gratis con WILDS APILADOS REFORZADOS (se repiten: +5).
 // Progresivos: rodillos llenos de WILD a la vez → 2 MINI · 3 MINOR · 4 MAJOR · 5 GRAND.
-import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=42';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
+import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, ROWS = 4;
 // 40 líneas: los 20 patrones de 3 filas en las bandas de arriba y de abajo, sin repetir, más zigzags
@@ -337,6 +337,7 @@ export default class Wolf {
     const bonus = final.flat().filter(s => s.k === 'bonus').length;
     if (bonus >= 3) {
       await app.wait(500); this.wins = null;
+      { const v = await app.bonusPay(bonus, bet, 'atrapasueños'); total += v; if (this.inFree) this.fsTotal += v; }
       sfx.featureStart(); app.flash('#ffd27a', 0.5); app.shake(true);
       if (this.inFree) { this.freeLeft += 5; this.freeTotal += 5; await app.banner('+5 GIROS', 'Los atrapasueños vuelven a girar', { color: '#ffb03a', ms: 1800 }); }
       else await this.startFree();

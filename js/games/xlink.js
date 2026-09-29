@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=42';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -348,6 +348,7 @@ export default class XLink {
   update(dt) {
     this.time += dt;
     this.base.update(dt); this.upper.update(dt);
+    if (this.bonus) this.bonus.cells.forEach(row => row.forEach(s => { if (s && s.fall < 1) s.fall = Math.min(1, s.fall + dt * this.app.speed / s.fallDur); }));
     for (let i = this.bolts.length - 1; i >= 0; i--) { this.bolts[i].t += dt; if (this.bolts[i].t > this.bolts[i].life) this.bolts.splice(i, 1); }
     if (this.wins) this.winT += dt;
     // Vidrio de filas superiores
@@ -374,6 +375,7 @@ export default class XLink {
       this.base.draw(x, (c, r) => this.cellFx(c, r, false));
     }
     this.drawGlass(x);
+    if (this.bonus) this.drawFalling(x);
     // Marco de área activa
     const act = this.bonus ? this.bonus.rows : BASE_R + this.expand;
     const ay = by + (MAXR - act) * ch;
@@ -444,7 +446,7 @@ export default class XLink {
       const a = this.glass[i];
       if (a < 0.02) continue;
       if (!this.glassImg) this.glassImg = this.renderGlass();
-      x.globalAlpha = a;
+      x.globalAlpha = a * (this.bonus ? 0.4 : 1); // semitransparente en Golden Spins: se ven caer las bolas
       x.drawImage(this.glassImg, bx, by + i * ch, cw * COLS, ch);
       x.globalAlpha = 1;
     }
@@ -487,7 +489,7 @@ export default class XLink {
         const px = bx + c * cw + 3, py = by + i * ch;
         const g = x.createLinearGradient(px, 0, px + cw - 6, 0);
         g.addColorStop(0, P.col[1]); g.addColorStop(0.5, P.col[0]); g.addColorStop(1, P.col[1]);
-        x.globalAlpha = a * (L ? 0.8 : 0.86); x.fillStyle = g; x.fillRect(px, py, cw - 6, ch);
+        x.globalAlpha = a * (L ? 0.8 : 0.86) * (this.bonus ? 0.42 : 1); x.fillStyle = g; x.fillRect(px, py, cw - 6, ch);
       }
     }
     x.globalAlpha = 1;
@@ -731,17 +733,9 @@ export default class XLink {
     const scat = T.scatter ? grid.flat().filter(s => s.k === 'scat').length : 0;
     if (scat >= 3) {
       this.wins = null;
-      // 4 o 5 dispersores pagan un premio antes de los giros
-      const mult = scat >= 5 ? T.scatter.pay[1] : scat === 4 ? T.scatter.pay[0] : 0;
-      if (mult) {
-        const v = mult * bet;
-        total += v; if (free) this.fsTotal += v;
-        app.addWin(v); sfx.win(2);
-        app.popText(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), scat + ' ' + T.scatter.name + ' · ' + app.fmt(v), 24);
-        app.flyCoins(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), 12);
-        app.message('<b>' + scat + ' ' + T.scatter.name + '</b> pagan <b>' + app.fmt(v) + '</b>');
-        await app.wait(1200);
-      }
+      // Pago base según la cantidad de dispersores en pantalla (3+ pagan antes de los giros)
+      app.flyCoins(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), 12);
+      { const v = await app.bonusPay(scat, bet, T.scatter.name); total += v; if (free) this.fsTotal += v; }
       grid.forEach((col, c) => col.forEach((s, r) => { if (s.k === 'scat') { const [px, py] = this.cellCenter(c, r + MAXR - col.length); app.burst(px, py, 1, { type: 'ring', color: T.scatter.color, size: 10, grow: this.cw * 1.2, width: 6, life: 0.7, speed: 0 }); } }));
       sfx.featureStart(); app.flash(T.scatter.color, 0.5); app.shake(true);
       await app.wait(700);
@@ -829,8 +823,12 @@ export default class XLink {
             const f = app._forceSpecial; app._forceSpecial = null;
             s = typeof f === 'number' ? { ball: true, extra: f, mult: 0, value: 0 } : { ball: true, special: f, mult: 0, value: 0 };
           }
-          const cell = cells[r][c] = Object.assign({ t: 0 }, s);
+          // La bola cae desde arriba del tablero (a través de las cortinas) hasta su casilla
+          const cell = cells[r][c] = Object.assign({ t: 0, fall: 0, fallDur: 0.28 + 0.035 * r }, s);
           const special = !!(s.extra || s.special);
+          sfx.noise(0.25, { vol: 0.08, type: 'bandpass', freq: 2400, freqEnd: 600, q: 2 });
+          await app.wait(cell.fallDur * 1000);
+          cell.fall = 1; cell.t = 0;
           got++;
           if (!special) b.count++;
           sfx.ballLand(b.count);
@@ -976,6 +974,7 @@ export default class XLink {
     const dpr = this.app.dpr;
     for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
       const px = bx + c * cw, py = by + r * ch, s = b.cells[r][c], active = r >= MAXR - b.rows;
+      if (s && s.fall < 1) continue; // en caída: se dibuja encima de las cortinas (drawFalling)
       if (s) {
         s.t += 1 / 60;
         if (s.vanish) s.vanish = Math.min(1, s.vanish + 1 / 18);
@@ -1010,6 +1009,21 @@ export default class XLink {
     }
   }
 
+  // Bolas de Golden Spins cayendo desde arriba del tablero, con estela
+  drawFalling(x) {
+    const b = this.bonus, { bx, by, cw, ch } = this, dpr = this.app.dpr, size = Math.min(cw, ch) * 1.02;
+    for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
+      const s = b.cells[r][c]; if (!s || !(s.fall < 1)) continue;
+      const e = s.fall * s.fall, y0 = by - ch * 0.9, y1 = by + r * ch + ch / 2, cy = y0 + (y1 - y0) * e, cx = bx + c * cw + cw / 2;
+      x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.55;
+      const tr = Math.min(ch * 2.2, (y1 - y0) * e);
+      const g = x.createLinearGradient(0, cy - tr, 0, cy); g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(1, s.jp ? 'rgba(255,230,120,0.8)' : s.extra || s.special ? 'rgba(140,220,255,0.8)' : 'rgba(255,210,90,0.75)');
+      x.fillStyle = g; x.fillRect(cx - size * 0.28, cy - tr, size * 0.56, tr);
+      x.restore();
+      x.drawImage(this.ballImg(s, size * dpr), cx - size / 2, cy - size / 2, size, size);
+    }
+  }
+
   slam() { this.base.slam(); this.upper.slam(); }
 
   info(bet, fmt) {
@@ -1031,7 +1045,7 @@ export default class XLink {
             ? '<li><b>Reina de 2 filas</b>: cada Reina sube la cortina de hielo <b>1 fila</b>. Si en las filas que se abren aparece otra Reina, la cortina sigue subiendo (en cadena), hasta 5 filas y una Reina por columna, solo para ese giro. Hasta <b>100 líneas</b>.</li>'
             : '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>')) +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
-      (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. <b>4</b> pagan antes ' + fmt(this.T.scatter.pay[0] * bet) + ' y <b>5</b> pagan ' + fmt(this.T.scatter.pay[1] * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
+      (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. Antes pagan un premio base: <b>3</b> = ' + fmt(2 * bet) + ' · <b>4</b> = ' + fmt(10 * bet) + ' · <b>5</b> = ' + fmt(50 * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
       '<li>En Golden Spins las bolas quedan fijas, tienes <b>3 giros</b> y cada bola nueva los reinicia a 3. Las bolas azules <b>+1 · +2 · +3 · +4 · +5 GIROS</b> suman esos giros encima del reinicio.</li>' +
       '<li>Las bolas especiales (<b>+GIROS</b>, <b>Multiplicador</b> y <b>Upgrade</b>) entregan su efecto y <b>desaparecen</b>: la casilla queda libre para que caiga otra bola.</li>' +
       '<li>Al acumular <b>8 · 12 · 17 · 23 · 30</b> bolas un rayo desbloquea una fila más (hasta 8 filas, 40 posiciones).</li>' +
