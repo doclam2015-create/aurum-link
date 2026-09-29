@@ -63,13 +63,20 @@ class Sfx {
     return vs.find(v => /^en[-_]US/i.test(v.lang)) || vs[0];
   }
   // Varias frases seguidas, cada una con su tono: más agudo y rápido suena más entusiasta
-  announce(lines) {
+  _voiceEs() {
+    const vs = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
+    const pref = ['Paulina', 'Google español de Estados Unidos', 'Jorge', 'Juan', 'Monica', 'Mónica', 'Google español'];
+    for (const n of pref) { const v = vs.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
+    return vs.find(v => /^es[-_](MX|US|CL|419)/i.test(v.lang)) || vs[0];
+  }
+  // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
+  announce(lines, lang = 'en') {
     try {
       if (!this.enabled || !window.speechSynthesis) return;
       speechSynthesis.cancel();
-      const v = this._voice();
+      const v = lang === 'es' ? this._voiceEs() : this._voice();
       lines.forEach(([text, pitch, rate]) => {
-        const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.pitch = pitch; u.rate = rate; u.volume = 1;
+        const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'es' ? (v ? v.lang : 'es-MX') : 'en-US'; u.pitch = pitch; u.rate = rate; u.volume = 1;
         if (v) u.voice = v;
         speechSynthesis.speak(u);
       });
@@ -112,6 +119,21 @@ class Sfx {
     this.noise(0.9, { at: b, vol: vol * 1.4, buf: this.brownBuf, type: 'lowpass', freq: 700, freqEnd: 90, q: 0.6, verb: 0.7 });
     this.noise(0.08, { at: b, vol: vol, type: 'highpass', freq: 1200, q: 0.5 });
     this.noise(0.9, { at: b + 0.12, vol: vol * 0.35, buf: this.crackleBuf, type: 'highpass', freq: 3000, q: 0.6, verb: 0.4 });
+  }
+  // Entrada a un bono: sirena corta, redoble, platillo, fanfarria ascendente, timbre y público
+  bonusFanfare(big = true) {
+    if (!this.ok) return;
+    if (big) this.siren(0.9);
+    const n = big ? 18 : 10;
+    for (let i = 0; i < n; i++) { const at = i * 0.035; this.noise(0.05, { at, vol: 0.08 + 0.18 * i / n, type: 'bandpass', freq: 1800, q: 0.8 }); }
+    const h = n * 0.035;
+    this.noise(2, { at: h, vol: 0.3, type: 'highpass', freq: 5000, q: 0.4, verb: 0.6 });
+    this.tone(55, 0.8, { vol: 0.6, at: h, slide: 0.5 });
+    const ch = big ? [[392, 493.9, 587.3], [440, 554.4, 659.3], [523.3, 659.3, 784, 1046.5]] : [[523.3, 659.3, 784, 1046.5]];
+    ch.forEach((c, i) => this.brass(c, h + i * 0.22, i === ch.length - 1 ? 1.2 : 0.25));
+    this.bellRing(big ? 1.6 : 0.8, 0.05, h);
+    if (big) [0, 1].forEach(w => this.tone(1900 + w * 300, 0.35, { vol: 0.06, at: h + 0.5 + w * 0.45, slide: 1.35 }));
+    if (big) [[700, 3], [1150, 4], [2400, 5]].forEach(([f, q], i) => this.crowd(2.4, 0.09, h + 0.1, f, q, i));
   }
   // Parafernalia de gran premio: redoble, platillo, bocinas, silbatos y público que celebra
   hype(level = 1) {

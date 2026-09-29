@@ -3,11 +3,11 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=48';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=48';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=49';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=49';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
-const TEASE = 0.07, TEASE_EDGE = 0.18; // bolas extra detrás de la cortina (efecto "casi")
+const TEASE = 0.07, TEASE_EDGE = 0.18, GHOST_P = 0.4; // bolas extra detrás de la cortina (efecto "casi")
 const THRESH = [8, 12, 17, 23, 30];
 // Pago por línea (en apuestas por línea = apuesta/20)
 export const PAY = {
@@ -353,6 +353,7 @@ export default class XLink {
     this.time += dt;
     this.base.update(dt); this.upper.update(dt);
     if (this.bonus) this.bonus.cells.forEach(row => row.forEach(s => { if (s && s.fall < 1) s.fall = Math.min(1, s.fall + dt * this.app.speed / s.fallDur); }));
+    if (this.bonus && this.bonus.ghosts) this.bonus.ghosts.forEach(g => { if (g.fall < 1) g.fall = Math.min(1, g.fall + dt * this.app.speed / g.fallDur); g.t += dt; });
     for (let i = this.bolts.length - 1; i >= 0; i--) { this.bolts[i].t += dt; if (this.bolts[i].t > this.bolts[i].life) this.bolts.splice(i, 1); }
     if (this.wins) this.winT += dt;
     // Vidrio de filas superiores
@@ -413,8 +414,8 @@ export default class XLink {
       this.upper.draw(x, (c, r) => this.cellFx(c, r + 5 - 5, true));
       this.base.draw(x, (c, r) => this.cellFx(c, r, false));
     }
+    if (this.bonus) this.drawFalling(x); // las bolas caen por detrás de las cortinas semitransparentes
     this.drawGlass(x);
-    if (this.bonus) this.drawFalling(x);
     // Marco de área activa
     const act = this.bonus ? this.bonus.rows : BASE_R + this.expand;
     const ay = by + (MAXR - act) * ch;
@@ -924,6 +925,7 @@ export default class XLink {
       for (let r = MAXR - b.rows; r < MAXR; r++) for (let c = 0; c < COLS; c++) if (!cells[r][c]) empties.push([c, r]);
       if (!empties.length) break;
       empties.forEach(([c, r]) => b.spinning.set(r * COLS + c, { t: 0 }));
+      b.ghosts = []; b.upSpin = true;
       sfx.spinStart(app.speed >= 2);
       await app.wait(600);
       empties.sort((a, z) => a[0] - z[0] || z[1] - a[1]);
@@ -970,6 +972,22 @@ export default class XLink {
           await app.wait(step * 0.6);
         }
       }
+      // Casi premio: alguna bola cae por detrás de la cortina y queda en una fila todavía bloqueada
+      b.upSpin = false;
+      const locked = MAXR - b.rows;
+      if (locked > 0) {
+        const nG = Math.random() < GHOST_P ? 1 + (Math.random() < 0.35 ? 1 : 0) : 0;
+        for (let g = 0; g < nG; g++) {
+          const c = Math.random() * COLS | 0, r = Math.max(0, locked - 1 - (Math.random() < 0.6 ? 0 : Math.random() * locked | 0));
+          if (b.ghosts.some(o => o.c === c && o.r === r)) continue;
+          const gh = { c, r, s: makeBall(bet, true), fall: 0, fallDur: 0.28 + 0.035 * r, t: 0 };
+          b.ghosts.push(gh);
+          sfx.noise(0.25, { vol: 0.06, type: 'bandpass', freq: 1600, freqEnd: 400, q: 2 });
+          await app.wait(gh.fallDur * 1000);
+          sfx.tone(180, 0.18, { vol: 0.14, slide: 0.6 }); // golpe apagado, detrás del vidrio
+          await app.wait(step * 2);
+        }
+      }
       sfx.stopLoop('reels');
       // Cada bola nueva reinicia a 3 y los giros extra se suman encima del reinicio
       if (got) { b.spins = Math.max(b.spins - plus, 3) + plus; b.spinsFlash = 1; sfx.tone(1200, 0.2, { type: 'triangle', vol: 0.1 }); }
@@ -984,13 +1002,14 @@ export default class XLink {
         app.flash('#bff4ff', 0.55); app.shake(true);
         for (let c = 0; c < COLS; c++) { const [px, py] = this.cellCenter(c, newRow); app.burst(px, py, 10, { type: 'shard', color: '#cfeeff', speed: 320, size: 8, g: 700 }); }
         b.rows++;
+        if (b.ghosts) b.ghosts = b.ghosts.filter(g => g.r < MAXR - b.rows); // la fila se abre: el "casi" se esfuma
         app.popText(this.bx + this.cw * 2.5, my, '¡FILA ' + b.rows + ' ACTIVA!', 26, ['#fff', '#aef', '#39f', '#dff']);
         app.message('¡Rayo! Fila <b>' + b.rows + '</b> desbloqueada · ' + (b.rows * COLS) + ' posiciones');
         await app.wait(900);
       }
       await app.wait(250);
     }
-    b.spinning.clear();
+    b.spinning.clear(); b.upSpin = false; b.ghosts = [];
     // Cobro de bolas
     app.message('Cobrando bolas…');
     await app.wait(500);
@@ -1092,7 +1111,7 @@ export default class XLink {
     const dpr = this.app.dpr;
     for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
       const px = bx + c * cw, py = by + r * ch, s = b.cells[r][c], active = r >= MAXR - b.rows;
-      if (s && s.fall < 1) continue; // en caída: se dibuja encima de las cortinas (drawFalling)
+      if (s && s.fall < 1) continue; // en caída: se dibuja aparte (drawFalling)
       if (s) {
         s.t += 1 / 60;
         if (s.vanish) s.vanish = Math.min(1, s.vanish + 1 / 18);
@@ -1106,8 +1125,9 @@ export default class XLink {
         if (s.vanish) continue;
         if (!s.done && Math.random() < 0.45) electricRing(x, px + cw / 2, py + ch / 2, size * 0.47, 1.2, s.jp ? '#ffe36a' : '#7fe0ff', 0.8);
         if (s.special || s.charge) { electricRing(x, px + cw / 2, py + ch / 2, size * 0.52, 1.8, s.special === 'upgrade' ? '#ffd76a' : '#bff4ff', 1); if (s.charge) electricRing(x, px + cw / 2, py + ch / 2, size * 0.7, 2.4, '#ffffff', 1); }
-      } else if (active) {
-        const spin = b.spinning.get(r * COLS + c);
+      } else {
+        // Filas bloqueadas: detrás de la cortina los rodillos también giran y muestran sus símbolos
+        const spin = active ? b.spinning.get(r * COLS + c) : b.upSpin;
         if (spin) {
           x.save(); x.beginPath(); x.rect(px, py, cw, ch); x.clip();
           const k = Math.floor(time * 22 + c * 3 + r * 7);
@@ -1130,6 +1150,14 @@ export default class XLink {
   // Bolas de Golden Spins cayendo desde arriba del tablero, con estela
   drawFalling(x) {
     const b = this.bonus, { bx, by, cw, ch } = this, dpr = this.app.dpr, size = Math.min(cw, ch) * 1.02;
+    // Bolas de "casi": caen y quedan detrás de la cortina en filas aún bloqueadas (no cuentan)
+    (b.ghosts || []).forEach(g => {
+      const e = g.fall * g.fall, y0 = by - ch * 0.9, y1 = by + g.r * ch + ch / 2, cy = y0 + (y1 - y0) * e, cx = bx + g.c * cw + cw / 2;
+      const out = g.out ? Math.max(0, 1 - g.out) : 1;
+      x.globalAlpha = out * (g.fall < 1 ? 1 : 0.9);
+      x.drawImage(this.ballImg(g.s, size * dpr), cx - size / 2, cy - size / 2, size, size);
+      x.globalAlpha = 1;
+    });
     for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
       const s = b.cells[r][c]; if (!s || !(s.fall < 1)) continue;
       const e = s.fall * s.fall, y0 = by - ch * 0.9, y1 = by + r * ch + ch / 2, cy = y0 + (y1 - y0) * e, cx = bx + c * cw + cw / 2;
