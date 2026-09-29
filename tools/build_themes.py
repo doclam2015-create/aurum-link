@@ -1,5 +1,5 @@
 # Genera assets/themes.webp (símbolos de Sueño Rojo y Reino de Nieve) desde assets/src/themes/.
-# Hoja de 1000×400: 10 casillas de 200×200 (5 columnas × 2 filas).
+# Hoja de 1000×600: casillas de 200×200 (5 columnas × 3 filas).
 # Figuras con fondo liso (noble, tetera, papiro, loto) → fondo recortado (transparente).
 # Retratos (Reino de Nieve y la noble de azul) → recorte cuadrado con su fondo (el marco de hielo se dibuja en el juego).
 from PIL import Image, ImageFilter, ImageChops
@@ -55,9 +55,10 @@ if __name__ == '__main__':
     lady = Image.open(SRC + 'lady.jpg')
     # Noble de azul (Sueño Rojo): retrato con su fondo (el marco lacado se dibuja en el juego)
     tiles['lady'] = square(lady, (0, 0, 189, 189))
+    tiles['ingot'] = fit(flood_key(Image.open(SRC + 'ingot.jpg').convert('RGB'), lambda p: min(p) > 232), pad=4)
     tiles['snowflake'] = fit(flood_key(Image.open(SRC + 'snowflake.png').convert('RGB'), lambda p: min(p) > 238), pad=4)
-    ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'lady', 'snowflake']
-    A = Image.new('RGBA', (1000, 400), (0, 0, 0, 0))
+    ORDER = ['noble', 'tea', 'scroll', 'lotus', 'wolf', 'leopard', 'falcon', 'antelope', 'lady', 'snowflake', 'ingot']
+    A = Image.new('RGBA', (1000, 600), (0, 0, 0, 0))
     for n, k in enumerate(ORDER): A.alpha_composite(tiles[k], ((n % 5) * T, (n // 5) * T))
     A.save('assets/themes.webp', 'WEBP', quality=82, method=6)
     print(ORDER, A.size)

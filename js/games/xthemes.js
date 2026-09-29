@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=44';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=44';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=45';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=45';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
@@ -171,9 +171,9 @@ export class SnowKingdom extends XLink {
 }
 
 // ---------- Hoja de imágenes de los temas (assets/themes.webp, ver tools/build_themes.py) ----------
-// 10 casillas de 200×200 en 5 columnas × 2 filas
+// casillas de 200×200 en 5 columnas × 3 filas
 let SHEET = null;
-const SHEET_POS = { noble: 0, tea: 1, scroll: 2, lotus: 3, wolf: 4, leopard: 5, falcon: 6, antelope: 7, lady: 8, snowflake: 9 };
+const SHEET_POS = { noble: 0, tea: 1, scroll: 2, lotus: 3, wolf: 4, leopard: 5, falcon: 6, antelope: 7, lady: 8, snowflake: 9, ingot: 10 };
 export function loadThemeArt(src = 'assets/themes.webp') {
   return new Promise((res, rej) => { const img = new Image(); img.decoding = 'async'; img.onload = () => { SHEET = img; res(img); }; img.onerror = rej; img.src = src; });
 }
@@ -182,7 +182,7 @@ function sheetDraw(x, k, dx, dy, dw, dh) {
   x.drawImage(SHEET, (n % 5) * 200, Math.floor(n / 5) * 200, 200, 200, dx, dy, dw, dh);
 }
 // Ícono del lobby desde la hoja de temas (estilo CSS)
-export function sheetIconStyle(k) { const n = SHEET_POS[k]; return 'background-image:url(assets/themes.webp);background-size:500% 200%;background-position:' + (n % 5) * 25 + '% ' + Math.floor(n / 5) * 100 + '%'; }
+export function sheetIconStyle(k) { const n = SHEET_POS[k]; return 'background-image:url(assets/themes.webp);background-size:500% 300%;background-position:' + (n % 5) * 25 + '% ' + Math.floor(n / 5) * 50 + '%'; }
 
 // ---------- Símbolos dibujados para Sueño Rojo ----------
 const art = new Map();
@@ -527,6 +527,21 @@ const lacquer = k => drawn('lacq-' + k, (x, s) => {
 // Sueño Rojo: noble china > noble de azul (símbolo propio del tema) > noble chino > taza > papiro…
 RED.draw = Object.assign({}, RED.draw, { lady: lacquer('lady'), s7b: figure('noble'), bar: figure('tea'), bell: figure('scroll'), scat: figure('lotus') });
 RED.names = Object.assign({}, RED.names, { lady: 'Noble de azul', bar: 'Taza de porcelana' });
+// WILD de Sueño Rojo: lingote de oro chino (yuanbao) con monedas y cinta roja con WILD
+RED.draw.wild = drawn('wild-ingot', (x, s) => {
+  x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.4; x.drawImage(glow('rgba(255,200,60,1)', 64), 0, 0, s, s); x.restore();
+  x.save(); x.shadowColor = 'rgba(0,0,0,0.5)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+  sheetDraw(x, 'ingot', s * 0.04, s * 0.0, s * 0.92, s * 0.8); x.restore();
+  const h = s * 0.22, y = s * 0.74;
+  const g = x.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#e8281a'); g.addColorStop(1, '#8a0606');
+  x.fillStyle = g; x.beginPath(); x.moveTo(s * 0.06, y); x.lineTo(s * 0.94, y); x.lineTo(s * 0.88, y + h / 2); x.lineTo(s * 0.94, y + h); x.lineTo(s * 0.06, y + h); x.lineTo(s * 0.12, y + h / 2); x.closePath(); x.fill();
+  x.strokeStyle = '#ffd06a'; x.lineWidth = s * 0.018; x.stroke();
+  const fs = h * 0.78; x.font = '900 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.lineWidth = fs * 0.26; x.strokeStyle = '#4a0000'; x.strokeText('WILD', s / 2, y + h * 0.54);
+  const tg = x.createLinearGradient(0, y, 0, y + h); tg.addColorStop(0, '#fff6c0'); tg.addColorStop(1, '#f0b020');
+  x.fillStyle = tg; x.fillText('WILD', s / 2, y + h * 0.54);
+}, true);
+RED.names = Object.assign({}, RED.names, { wild: 'Lingote de oro (WILD)' });
 // Sin campanas (grapes): así la noble de azul no diluye los premios
 { const { s7r, grapes, ...rest } = RED.pay; RED.pay = Object.assign({ s7r, lady: [0, 0, 0, 40, 150, 700] }, rest); }
 RED.extraW = { lady: 3.5, grapes: 0 };
