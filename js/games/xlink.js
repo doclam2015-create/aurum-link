@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=45';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=45';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=46';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=46';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -160,6 +160,9 @@ export default class XLink {
     this.expand = 0; this.expandCols = null;         // filas superiores activas en el juego base
     this.glass = [1, 1, 1, 1, 1]; // opacidad del vidrio por fila superior (0 = arriba)
     this.glassC = [0, 1, 2, 3, 4].map(() => [1, 1, 1, 1, 1]); // lo mismo por rodillo (apertura por rodillo)
+    // Cortinas físicas: filas cubiertas (continuo, desde arriba) por rodillo, con su animación de subida/bajada
+    this.cov = [5, 5, 5, 5, 5]; this.covV = [0, 0, 0, 0, 0];
+    this.covTw = [0, 1, 2, 3, 4].map(() => ({ from: 5, to: 5, t: 1, dur: 1 }));
     this.bonus = null;
     this.wins = null; this.winT = 0;
     this.time = 0;
@@ -361,6 +364,41 @@ export default class XLink {
         this.glassC[c][i] += ((oc ? 0 : 1) - this.glassC[c][i]) * Math.min(1, dt * 5);
       }
     }
+    this.updateCurtains(dt);
+  }
+
+  // Filas que debe cubrir la cortina de cada rodillo
+  curtainTarget(c) {
+    if (this.bonus) return Math.max(0, Math.min(5, MAXR - this.bonus.rows));
+    return 5 - (this.T.panels ? this.colOpen(c) : this.expand);
+  }
+  // Duración de la subida (en segundos, a velocidad normal) según cuántas filas recorre
+  curtainDur(rows, up = true) { return up ? 0.32 + 0.13 * rows : 0.22 + 0.06 * rows; }
+  updateCurtains(dt) {
+    const sp = this.app.speed || 1;
+    let rise = 0, drop = 0;
+    for (let c = 0; c < COLS; c++) {
+      const tw = this.covTw[c], tgt = this.curtainTarget(c);
+      if (tgt !== tw.to) {
+        const d = Math.abs(tgt - this.cov[c]), up = tgt < this.cov[c];
+        Object.assign(tw, { from: this.cov[c], to: tgt, t: 0, dur: this.curtainDur(d, up), up });
+        if (up) rise = Math.max(rise, d); else drop = Math.max(drop, d);
+      }
+      const prev = this.cov[c];
+      if (tw.t < 1) {
+        tw.t = Math.min(1, tw.t + dt * sp / tw.dur);
+        const p = tw.t;
+        // Subida: arranque con tirón, frenado suave y un pequeño rebote al enrollarse; bajada: cae y asienta
+        const e = tw.up ? 1 - Math.pow(1 - p, 3) + Math.sin(p * Math.PI) * 0.06 * (1 - p)
+          : p < 1 ? p * p * (3 - 2 * p) + Math.sin(p * Math.PI * 2) * 0.04 * p : 1;
+        this.cov[c] = tw.from + (tw.to - tw.from) * e;
+      } else this.cov[c] = tw.to;
+      this.covV[c] = dt > 0 ? (this.cov[c] - prev) / dt : 0;
+    }
+    const kind = this.T.panels ? 'fabric' : this.T.frost ? 'ice' : 'glass';
+    const sfx = this.app.sfx;
+    if (rise > 0.3) sfx.curtain(rise, kind, true, this.curtainDur(rise) / sp);
+    else if (drop > 0.3 && !this.bonus) sfx.curtain(drop, kind, false, this.curtainDur(drop, false) / sp);
   }
 
   draw(x) {
@@ -441,31 +479,43 @@ export default class XLink {
 
   drawGlass(x) {
     if (this.T.panels) return this.drawPanels(x);
-    const { bx, by, cw, ch, time } = this;
-    for (let i = 0; i < 5; i++) {
-      const a = this.glass[i];
-      if (a < 0.02) continue;
-      if (!this.glassImg) this.glassImg = this.renderGlass();
-      x.globalAlpha = a * (this.bonus ? 0.4 : 1); // semitransparente en Golden Spins: se ven caer las bolas
-      x.drawImage(this.glassImg, bx, by + i * ch, cw * COLS, ch);
-      x.globalAlpha = 1;
-    }
+    const { bx, by, cw, ch, time } = this, bw = cw * COLS;
+    const cov = this.cov[0];
+    if (cov < 0.01) return;
+    const h = cov * ch, fade = this.bonus ? 0.4 : 1; // semitransparente en Golden Spins: se ven caer las bolas
+    if (!this.glassImg) this.glassImg = this.renderGlass();
+    // Sombra que proyecta el borde inferior sobre lo descubierto
+    x.save();
+    const sg = x.createLinearGradient(0, by + h, 0, by + h + ch * 0.35);
+    sg.addColorStop(0, 'rgba(0,0,0,' + 0.35 * fade + ')'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = sg; x.fillRect(bx, by + h, bw, ch * 0.35);
+    // La hoja entera se desliza hacia arriba: el contenido sube con ella (no se borra por casillas)
+    x.beginPath(); x.rect(bx, by, bw, h); x.clip();
+    x.globalAlpha = fade;
+    const off = h - Math.ceil(cov) * ch;
+    for (let i = 0; i < Math.ceil(cov); i++) x.drawImage(this.glassImg, bx, by + off + i * ch, bw, ch);
+    x.restore();
     // Reflejo que recorre el vidrio
-    const locked = this.glass.filter(v => v > 0.5).length;
-    if (this.T.frost && locked) this.drawFrost(x, locked);
-    if (locked) {
-      x.save(); x.beginPath(); x.rect(bx, by, cw * COLS, ch * locked); x.clip();
-      const sx = bx + ((time * 90) % (cw * COLS * 2.2)) - cw * 1.2;
-      x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18;
-      x.fillStyle = '#b8c8ff';
-      x.beginPath(); x.moveTo(sx, by); x.lineTo(sx + cw * 0.6, by); x.lineTo(sx - cw * 0.8, by + ch * locked); x.lineTo(sx - cw * 1.4, by + ch * locked); x.fill();
-      x.restore();
+    if (this.T.frost) this.drawFrost(x, cov);
+    x.save(); x.beginPath(); x.rect(bx, by, bw, h); x.clip();
+    const sx = bx + ((time * 90) % (bw * 2.2)) - cw * 1.2;
+    x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18 * fade;
+    x.fillStyle = '#b8c8ff';
+    x.beginPath(); x.moveTo(sx, by); x.lineTo(sx + cw * 0.6, by); x.lineTo(sx - cw * 0.8, by + h); x.lineTo(sx - cw * 1.4, by + h); x.fill();
+    x.restore();
+    // Riel inferior de la barrera (canto metálico / borde de hielo) que sube con ella
+    if (!this.T.frost) {
+      x.globalAlpha = fade;
+      const rg = x.createLinearGradient(0, by + h - 6, 0, by + h + 2);
+      rg.addColorStop(0, '#fff6c8'); rg.addColorStop(0.5, '#c89a3a'); rg.addColorStop(1, '#5a3b0c');
+      x.fillStyle = rg; x.fillRect(bx, by + h - 6, bw, 7);
+      x.globalAlpha = 1;
     }
   }
 
   // Escarcha: destellos sobre el hielo y borde escarchado abajo (tema tipo Snow Kingdom)
   drawFrost(x, locked) {
-    const { bx, by, cw, ch, time } = this, bw = cw * COLS, h = locked * ch;
+    const { bx, by, cw, ch, time } = this, bw = cw * COLS, h = locked * ch, fade = this.bonus ? 0.4 : 1;
     if (!this._spark) { this._spark = []; for (let i = 0; i < 46; i++) this._spark.push({ u: Math.random(), v: Math.random(), p: Math.random() * 6, s: rand(1.5, 3.5) }); }
     x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = '#ffffff'; x.lineWidth = 1;
     this._spark.forEach(k => {
@@ -475,34 +525,90 @@ export default class XLink {
     });
     x.restore();
     // Borde de escarcha
+    x.globalAlpha = fade;
     x.fillStyle = this.app.light ? 'rgba(235,248,255,0.95)' : 'rgba(225,244,255,0.85)';
-    for (let i = 0; i <= 40; i++) { const px = bx + i * bw / 40; x.beginPath(); x.arc(px, by + h, 3 + (i % 3), Math.PI, 0); x.fill(); }
-    x.fillRect(bx, by + h - 2, bw, 3);
+    // Carámbanos en el borde, que se balancean mientras la placa de hielo se mueve
+    const v = Math.min(1, Math.abs(this.covV[0]) / 4);
+    for (let i = 0; i <= 40; i++) {
+      const px = bx + i * bw / 40, L = (3 + (i % 3) + (i % 7 === 3 ? 5 : 0)) * (1 + v * 0.5), sw = Math.sin(time * 14 + i) * v * 3;
+      x.beginPath(); x.moveTo(px - 3, by + h); x.lineTo(px + 3, by + h); x.lineTo(px + sw, by + h + L); x.closePath(); x.fill();
+    }
+    x.fillRect(bx, by + h - 3, bw, 4);
+    x.globalAlpha = 1;
   }
 
-  // Paneles lacados por rodillo (temas tipo Red Dream) en lugar del vidrio
-  drawPanels(x) {
-    const { bx, by, cw, ch } = this, P = this.T.panels, L = this.app.light;
-    for (let i = 0; i < 5; i++) {
-      for (let c = 0; c < COLS; c++) {
-        const a = this.glassC[c][i]; if (a < 0.02) continue;
-        const px = bx + c * cw + 3, py = by + i * ch;
-        const g = x.createLinearGradient(px, 0, px + cw - 6, 0);
-        g.addColorStop(0, P.col[1]); g.addColorStop(0.5, P.col[0]); g.addColorStop(1, P.col[1]);
-        x.globalAlpha = a * (L ? 0.8 : 0.86) * (this.bonus ? 0.42 : 1); x.fillStyle = g; x.fillRect(px, py, cw - 6, ch);
-      }
+  // Cortinas lacadas por rodillo (temas tipo Red Dream): tela plisada que sube y se enrolla arriba
+  pleatImg(w, h) {
+    const key = w + 'x' + h + (this.app.light ? 'L' : '');
+    if (this._pleat && this._pleat.key === key) return this._pleat.c;
+    const P = this.T.panels, dpr = this.app.dpr, c = makeCanvas(w * dpr, h * dpr), x = c.getContext('2d');
+    x.scale(dpr, dpr);
+    const g = x.createLinearGradient(0, 0, w, 0);
+    g.addColorStop(0, P.col[1]); g.addColorStop(0.5, P.col[0]); g.addColorStop(1, P.col[1]);
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // Pliegues verticales de la tela
+    const n = 4;
+    for (let i = 0; i < n; i++) {
+      const px = i * w / n, pg = x.createLinearGradient(px, 0, px + w / n, 0);
+      pg.addColorStop(0, 'rgba(0,0,0,0.28)'); pg.addColorStop(0.35, 'rgba(255,190,170,0.16)'); pg.addColorStop(0.6, 'rgba(0,0,0,0)'); pg.addColorStop(1, 'rgba(0,0,0,0.3)');
+      x.fillStyle = pg; x.fillRect(px, 0, w / n, h);
     }
-    x.globalAlpha = 1;
-    x.strokeStyle = P.border; x.lineWidth = 2;
+    // Brocado dorado tenue
+    x.strokeStyle = 'rgba(255,208,106,0.22)'; x.lineWidth = 1;
+    for (let y = 10; y < h; y += 22) for (let i = 0; i < 2; i++) { x.beginPath(); x.arc(w * (0.28 + i * 0.44), y, 4, 0, Math.PI * 2); x.stroke(); }
+    this._pleat = { key, c };
+    return c;
+  }
+  drawPanels(x) {
+    const { bx, by, cw, ch, time } = this, P = this.T.panels, L = this.app.light;
+    const fade = (L ? 0.9 : 0.95) * (this.bonus ? 0.42 : 1);
+    const pw = cw - 6, img = this.pleatImg(pw, ch * 5);
     for (let c = 0; c < COLS; c++) {
-      const locked = this.glassC[c].filter(v => v > 0.5).length;
-      if (!locked) continue;
-      const h = locked * ch, px = bx + c * cw + 3;
-      x.strokeRect(px + 0.5, by + 2, cw - 7, h - 4);
-      x.strokeRect(px + 5, by + 7, cw - 16, h - 14);
-      if (P.tassel) {
-        x.fillStyle = P.tassel;
-        [px + 4, px + cw - 10].forEach(tx => { x.fillRect(tx, by + h - 2, 3, 8); x.beginPath(); x.arc(tx + 1.5, by + h - 2, 3, 0, 7); x.fill(); });
+      const cov = this.cov[c], px = bx + c * cw + 3;
+      const opened = 5 - cov; // tela enrollada arriba
+      const rollH = Math.min(ch * 0.2, 3 + opened * ch * 0.035);
+      if (cov > 0.01) {
+        const h = cov * ch, v = Math.max(-1, Math.min(1, this.covV[c] / 5));
+        // Sombra sobre lo descubierto
+        const sg = x.createLinearGradient(0, by + h, 0, by + h + ch * 0.3);
+        sg.addColorStop(0, 'rgba(0,0,0,' + 0.4 * fade + ')'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = sg; x.fillRect(px, by + h, pw, ch * 0.3);
+        // Tela: el dibujo sube con ella; el borde inferior ondula mientras se mueve
+        x.save(); x.globalAlpha = fade;
+        x.beginPath(); x.moveTo(px, by);
+        x.lineTo(px + pw, by);
+        const wav = Math.abs(v) * 5;
+        for (let i = 8; i >= 0; i--) { const tx = px + pw * i / 8; x.lineTo(tx, by + h + Math.sin(i * 1.3 + time * 18) * wav + (i % 2 ? -1.5 : 1.5)); }
+        x.closePath(); x.clip();
+        x.drawImage(img, px, by + h - ch * 5 - 6, pw, ch * 5 + 12);
+        x.restore();
+        // Bastilla dorada que sube con la tela
+        x.globalAlpha = this.bonus ? 0.5 : 1;
+        const hg = x.createLinearGradient(0, by + h - 7, 0, by + h);
+        hg.addColorStop(0, '#fff0b0'); hg.addColorStop(0.5, P.border); hg.addColorStop(1, '#7a4a08');
+        x.fillStyle = hg; x.fillRect(px, by + h - 7, pw, 7);
+        x.strokeStyle = P.border; x.lineWidth = 1.5;
+        x.strokeRect(px + 0.5, by + 2 + rollH, pw - 1, Math.max(0, h - 9 - rollH));
+        if (P.tassel) {
+          // Borlas que cuelgan y se balancean con el movimiento
+          x.fillStyle = P.tassel; x.strokeStyle = P.border; x.lineWidth = 1;
+          [px + 6, px + pw - 6].forEach((tx, j) => {
+            const sw = Math.sin(time * 9 + c + j) * (1.5 + Math.abs(v) * 6), ty = by + h;
+            x.beginPath(); x.moveTo(tx, ty); x.lineTo(tx + sw, ty + 7); x.stroke();
+            x.beginPath(); x.arc(tx + sw, ty + 8, 3, 0, 7); x.fill();
+            x.fillRect(tx + sw - 2, ty + 9, 4, 6);
+          });
+        }
+        x.globalAlpha = 1;
+      }
+      // Rollo de tela enrollada arriba (crece a medida que la cortina sube)
+      if (opened > 0.02) {
+        x.globalAlpha = this.bonus ? 0.55 : 1;
+        const rg = x.createLinearGradient(0, by, 0, by + rollH);
+        rg.addColorStop(0, P.col[1]); rg.addColorStop(0.45, P.col[0]); rg.addColorStop(1, '#3a0204');
+        roundRect(x, px - 1, by, pw + 2, rollH, rollH / 2); x.fillStyle = rg; x.fill();
+        x.strokeStyle = P.border; x.lineWidth = 1; x.stroke();
+        x.globalAlpha = 1;
       }
     }
   }
@@ -650,8 +756,8 @@ export default class XLink {
       const why = mode === 'random' ? '¡Se abren los velos!' : mode === 'princess' ? '¡La princesa derrite el hielo!' : '¡Estrellas!';
       app.message(why + (this.T.perReel ? ' <b>+' + opened + ' posiciones</b> · ' : ' <b>+' + k + ' fila' + (k > 1 ? 's' : '') + '</b> · ') + cnt);
       for (let i = 0; i < k; i++) { const [px, py] = this.cellCenter(2, 4 - i); app.burst(px, py, 18, { type: 'shard', color: '#bfe6ff', speed: 300, size: 7, g: 500 }); }
-      // Lo que ya venía girando detrás de la cortina queda a la vista
-      await app.wait(350);
+      // Lo que ya venía girando detrás de la cortina queda a la vista cuando la cortina termina de subir
+      await app.wait(this.curtainDur(k) * 1000 * 0.85);
       up.forEach((col, c) => col.forEach((s, r) => { if (s.ball && r >= 5 - kc[c]) { sfx.ballLand(landed++); const [px, py] = this.cellCenter(c, r); app.burst(px, py, 10, { color: '#ffd76a', speed: 220, size: 8 }); } }));
       await app.wait(300);
       // La cadena: cada Reina que aparece en las filas abiertas sube la cortina otra fila

@@ -23,7 +23,7 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 
 **Pago base al activar un bono** en todos los juegos con giros gratis: según los símbolos de bono en pantalla, el mínimo que lo activa paga 2× la apuesta, uno más 10×, dos más 50× y tres o más 100× (también al repetirse).
 
-**Anuncios de premio** en todos los juegos: **BIG WIN** (5× la apuesta), **AWESOME** (15×) y **SUPER WIN** (40×), con lluvia de monedas, fanfarria y voz.
+**Anuncios de premio** en todos los juegos: **BIG WIN** (5× la apuesta), **AWESOME** (15×) y **SUPER WIN** (40×), con lluvia de monedas, fanfarria y parafernalia (redoble, platillo, bocinas de estadio, silbatos y público que celebra) y un locutor entusiasta ("Big, big win!", "Totally awesome!", "Super win!").
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 
@@ -34,7 +34,7 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 
 > Si no hay sonido, desactiva el interruptor de silencio del iPhone.
 
-En Xtension Link, Sueño Rojo y Reino de Nieve las 8 filas giran juntas: las de arriba giran detrás de la cortina y, al abrirse, muestran lo que ya traía el giro.
+En Xtension Link, Sueño Rojo y Reino de Nieve las 8 filas giran juntas: las de arriba giran detrás de la cortina y, al abrirse, muestran lo que ya traía el giro. Las cortinas suben de verdad (no se desvanecen): la hoja entera se desliza hacia arriba con arranque, frenado y un pequeño rebote; la tela roja de Sueño Rojo es plisada, ondula, balancea sus borlas y se enrolla arriba; el hielo de Reino de Nieve sube con sus carámbanos; el vidrio de Xtension Link sube con su riel dorado. Cada una tiene su sonido (roce de tela y polea, placa de hielo deslizando, riel metálico). La versión instalada aparece destacada al final de Ajustes.
 
 ## Técnica
 - Render en `<canvas>` con sprites pre-escalados (sin reescalado por cuadro), fondos cacheados, DPR limitado a 2 y 30 fps en reposo → fluido en iOS.

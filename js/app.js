@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=45';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=45';
-import { sleep } from './reels.js?v=45';
-import XLink from './games/xlink.js?v=45';
-import Avalanche from './games/avalanche.js?v=45';
-import FireWheel from './games/firewheel.js?v=45';
-import Legion from './games/legion.js?v=45';
-import Bull from './games/bull.js?v=45';
-import Dragon from './games/dragon.js?v=45';
-import Codex from './games/codex.js?v=45';
-import Reef from './games/reef.js?v=45';
-import Western from './games/western.js?v=45';
-import Galaxy from './games/galaxy.js?v=45';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=45';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=45';
+import { sfx } from './audio.js?v=46';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=46';
+import { sleep } from './reels.js?v=46';
+import XLink from './games/xlink.js?v=46';
+import Avalanche from './games/avalanche.js?v=46';
+import FireWheel from './games/firewheel.js?v=46';
+import Legion from './games/legion.js?v=46';
+import Bull from './games/bull.js?v=46';
+import Dragon from './games/dragon.js?v=46';
+import Codex from './games/codex.js?v=46';
+import Reef from './games/reef.js?v=46';
+import Western from './games/western.js?v=46';
+import Galaxy from './games/galaxy.js?v=46';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=46';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=46';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -134,7 +134,7 @@ const app = {
   // Anuncio de premio: BIG WIN (5×) · AWESOME (15×) · SUPER WIN (40×), con monedas, fanfarria y voz
   celebrate(amount, bet, label) {
     const ratio = amount / bet, ti = TIERS.findIndex(tt => ratio >= tt[0]), tier = TIERS[ti < 0 ? TIERS.length - 1 : ti], lvl = TIERS.length - 1 - (ti < 0 ? TIERS.length - 1 : ti);
-    sfx.bigWin(lvl + 1); sfx.say(tier[3]);
+    sfx.bigWin(lvl + 1); setTimeout(() => sfx.announce(tier[3]), 550);
     return showOverlay({ kind: 'big', amount, bet, label, tier, t: 0, dur: label ? Math.max(4.5, tier[4]) : tier[4] });
   },
   setSpinLabel(t, sub) { $('spinLabel').textContent = t; $('spinSub').textContent = sub || ''; },
@@ -163,8 +163,8 @@ function showOverlay(o) {
   if (overlay && overlay.done) overlay.done();
   return new Promise(res => { o.done = res; overlay = o; skipReq = false; });
 }
-// [desde × apuesta, palabra, colores, voz, duración en s]
-const TIERS = [[40, 'SUPER WIN', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff'], 'Super win!', 5], [15, 'AWESOME!', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff'], 'Awesome!', 4], [5, 'BIG WIN', null, 'Big win!', 3]];
+// [desde × apuesta, palabra, colores, frases del locutor [texto, tono, velocidad], duración en s]
+const TIERS = [[40, 'SUPER WIN', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff'], [['Super!', 1.5, 1.05], ['Super win!', 1.75, 0.95], ['Wooow!', 1.9, 0.85]], 5], [15, 'AWESOME!', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff'], [['Awesome!', 1.55, 1.0], ['Totally awesome!', 1.8, 1.05]], 4], [5, 'BIG WIN', null, [['Big win!', 1.45, 1.0], ['Big, big win!', 1.7, 1.1]], 3]];
 const WIN_MIN = 5; // premio mínimo (× apuesta) que se anuncia
 function drawOverlay(x, dt) {
   const o = overlay; if (!o) return;
@@ -409,7 +409,8 @@ function openSettings() {
     '<div class="set"><label>Volumen de música</label><input id="setMusic" type="range" min="0" max="100" value="' + Math.round(state.musicVol * 100) + '"></div>' +
     '<label class="set switch"><span>Música de fondo</span><input id="setMusicOn" type="checkbox"' + (state.music ? ' checked' : '') + '><i></i></label>' +
     '<label class="set switch"><span>Rodillos en modo claro</span><input id="setLight" type="checkbox"' + (state.light ? ' checked' : '') + '><i></i></label>' +
-    '<p class="fine ver">Versión ' + VERSION + '</p><p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>');
+    '<p class="fine">También puedes cambiar la velocidad con el botón ⚡ y el modo claro/oscuro con ☀︎/☾ en la parte superior.</p>' +
+    '<div class="ver"><small>Aurum Link</small><b>Versión ' + VERSION + '</b></div>');
 }
 
 // ---------- Lobby ----------

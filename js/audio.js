@@ -51,9 +51,67 @@ class Sfx {
     try {
       if (!this.enabled || !window.speechSynthesis || !text) return;
       const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.92; u.pitch = 0.75; u.volume = Math.min(1, this.sfxVol * 1.1);
-      const v = speechSynthesis.getVoices().find(v => /^en[-_]US/i.test(v.lang)); if (v) u.voice = v;
+      const v = this._voice(); if (v) u.voice = v;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     } catch (e) { }
+  }
+  // Voz de locutor de casino para las grandes ganancias
+  _voice() {
+    const vs = speechSynthesis.getVoices().filter(v => /^en[-_](US|GB|AU)/i.test(v.lang));
+    const pref = ['Google US English', 'Samantha', 'Aaron', 'Nathan', 'Daniel', 'Fred', 'Alex'];
+    for (const n of pref) { const v = vs.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
+    return vs.find(v => /^en[-_]US/i.test(v.lang)) || vs[0];
+  }
+  // Varias frases seguidas, cada una con su tono: más agudo y rápido suena más entusiasta
+  announce(lines) {
+    try {
+      if (!this.enabled || !window.speechSynthesis) return;
+      speechSynthesis.cancel();
+      const v = this._voice();
+      lines.forEach(([text, pitch, rate]) => {
+        const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.pitch = pitch; u.rate = rate; u.volume = 1;
+        if (v) u.voice = v;
+        speechSynthesis.speak(u);
+      });
+      // Baja la música mientras habla el locutor
+      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.3, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 1.6 + lines.length * 0.9, 0.4); }
+    } catch (e) { }
+  }
+  // Parafernalia de gran premio: redoble, platillo, bocinas, silbatos y público que celebra
+  hype(level = 1) {
+    if (!this.ok) return;
+    const k = level; // 1 BIG · 2 AWESOME · 3 SUPER
+    // Redoble de tambor en crescendo que remata con platillo
+    const n = 10 + k * 4;
+    for (let i = 0; i < n; i++) { const at = i * (0.6 / n); this.noise(0.05, { at, vol: 0.06 + 0.2 * i / n, type: 'bandpass', freq: 1800, q: 0.8 }); this.tone(190, 0.04, { vol: 0.05 + 0.1 * i / n, at, slide: 0.7 }); }
+    const hit = 0.62;
+    this.noise(2.2, { at: hit, vol: 0.32, type: 'highpass', freq: 5500, q: 0.4, verb: 0.6 });   // platillo
+    this.tone(55, 0.8, { vol: 0.6, at: hit, slide: 0.5 });                                    // bombo
+    // Bocina de estadio (acorde de sierras con vibrato)
+    const blasts = k + 1;
+    for (let b = 0; b < blasts; b++) {
+      const at = hit + 0.05 + b * 0.42, len = b === blasts - 1 ? 0.75 : 0.3;
+      [466.2, 587.3, 698.5].forEach(f => { this.tone(f, len, { type: 'sawtooth', vol: 0.05, at, attack: 0.02 }); this.tone(f * 1.006, len, { type: 'square', vol: 0.02, at, attack: 0.02 }); });
+    }
+    // Silbatos que suben
+    for (let w = 0; w < k + 1; w++) this.tone(1900 + w * 250, 0.35, { type: 'sine', vol: 0.06, at: hit + 0.3 + w * 0.5, slide: 1.35 });
+    // Público: murmullo que crece en un vítor (bandas de "vocales" moduladas) y aplausos
+    const cr = 1.6 + k * 0.7;
+    [[700, 3], [1150, 4], [2400, 5]].forEach(([f, q], i) => this.crowd(cr, 0.07 + k * 0.025, hit + 0.1, f, q, i));
+    for (let i = 0; i < 26 + k * 18; i++) this.noise(0.03, { at: hit + 0.2 + Math.random() * cr, vol: 0.03 + Math.random() * 0.05, type: 'bandpass', freq: 1500 + Math.random() * 2500, q: 1.2 });
+  }
+  crowd(dur, vol, at, freq, q, seed) {
+    const ctx = this.ctx, t0 = ctx.currentTime + at, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = this.noiseBuf; s.loop = true; f.type = 'bandpass'; f.Q.value = q;
+    f.frequency.setValueAtTime(freq * 0.8, t0); f.frequency.linearRampToValueAtTime(freq * 1.15, t0 + dur * 0.3); f.frequency.linearRampToValueAtTime(freq, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.25);
+    g.gain.setValueAtTime(vol, t0 + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    // Oscilación lenta: las voces de la multitud suben y bajan
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 3 + seed * 1.7; lg.gain.value = freq * 0.12;
+    lfo.connect(lg); lg.connect(f.frequency); lfo.start(t0); lfo.stop(t0 + dur + 0.1);
+    s.connect(f); f.connect(g); g.connect(this.sfxBus);
+    const v = ctx.createGain(); v.gain.value = 0.4; g.connect(v); v.connect(this.verbSend);
+    s.start(t0, Math.random()); s.stop(t0 + dur + 0.1);
   }
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
@@ -328,6 +386,56 @@ class Sfx {
     this.rumble(big ? 4 : 2.6 + Math.random() * 0.8, (big ? 1.2 : 0.8) * k, 0.03 + Math.random() * 0.05, big ? 260 : 320);
     this.noise(big ? 1.4 : 0.9, { at: 0.05, vol: 0.35 * k, type: 'bandpass', freq: 450, freqEnd: 140, q: 0.8, verb: 0.5 });
   }
+  // Cortina / barrera que sube (o baja): roce de tela, poleas y tope al enrollarse
+  // kind: 'fabric' (tela lacada), 'ice' (placa de hielo), 'glass' (barrera de vidrio con riel)
+  curtain(rows = 1, kind = 'fabric', up = true, dur = 0.6) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime, d = Math.max(0.2, dur), k = Math.min(1, 0.45 + rows * 0.13);
+    // Barrido con envolvente (sube y se apaga), no un golpe de ruido
+    const sweep = (buf, type, f0, f1, q, vol, at = 0, len = d) => {
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), t = t0 + at;
+      s.buffer = buf; s.loop = true; f.type = type; f.Q.value = q;
+      f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + len);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + len * 0.25);
+      g.gain.setValueAtTime(vol, t + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.08);
+      s.connect(f); f.connect(g); g.connect(this.sfxBus);
+      const v = ctx.createGain(); v.gain.value = 0.25; g.connect(v); v.connect(this.verbSend);
+      s.start(t, Math.random()); s.stop(t + len + 0.15);
+    };
+    const vol = (up ? 1 : 0.55) * k;
+    const lo = up ? 1 : 1.6, hi = up ? 1.6 : 1; // al subir el roce se vuelve más agudo; al bajar, más grave
+    if (kind === 'ice') {
+      sweep(this.noiseBuf, 'bandpass', 2600 * lo, 2600 * hi * 1.6, 3, 0.1 * vol);        // placa deslizando
+      sweep(this.crackleBuf, 'highpass', 3500, 5000, 0.7, 0.08 * vol);                   // crujido del hielo
+      sweep(this.brownBuf, 'lowpass', 300, 180, 0.7, 0.2 * vol); // arrastre grave
+      if (up) { [0, 1, 2].forEach(i => this.celesta(this._scale(9 + i * 2), d * 0.85 + i * 0.05, 0.04)); this.noise(0.25, { at: d, vol: 0.06, type: 'highpass', freq: 7000, verb: 0.5 }); }
+      else this.tone(160, 0.2, { vol: 0.12 * vol, at: d, slide: 0.6 });
+      return;
+    }
+    if (kind === 'glass') {
+      sweep(this.noiseBuf, 'bandpass', 900 * lo, 900 * hi * 1.8, 2, 0.12 * vol);          // aire
+      sweep(this.brownBuf, 'lowpass', 260, 160, 0.8, 0.22 * vol); // motor del riel
+      this.tone(up ? 70 : 90, d, { type: 'sawtooth', vol: 0.025 * vol, slide: up ? 1.5 : 0.7 });
+      // Traqueteo del riel metálico
+      const n = Math.round(4 + rows * 3);
+      for (let i = 0; i < n; i++) { const at = d * (i / n) * (0.7 + 0.3 * i / n); this.noise(0.025, { at, vol: 0.05 * vol, freq: 3800 + Math.random() * 900, q: 8 }); }
+      this.tone(up ? 180 : 130, 0.18, { vol: 0.2 * vol, at: d, slide: 0.5 }); this.noise(0.06, { at: d, vol: 0.1 * vol, freq: 2400, q: 3 });
+      return;
+    }
+    // Tela: roce + frufrú + cuerda en la polea + tope del rollo
+    sweep(this.noiseBuf, 'bandpass', 500 * lo, 500 * hi * 2.2, 0.9, 0.2 * vol);
+    sweep(this.crackleBuf, 'bandpass', 2200, 3400, 1.2, 0.1 * vol, 0.03);
+    sweep(this.noiseBuf, 'highpass', 4500, 6500, 0.6, 0.05 * vol, 0.05, d * 0.9);
+    const n = Math.round(3 + rows * 2.5);
+    for (let i = 0; i < n; i++) {
+      const at = d * 0.08 + d * 0.8 * Math.pow(i / n, up ? 0.8 : 1.2);
+      this.tone(1150 + (up ? i * 25 : -i * 20), 0.03, { type: 'triangle', vol: 0.03 * vol, at, attack: 0.002 });
+      this.noise(0.02, { at, vol: 0.035 * vol, freq: 2600, q: 6 });
+    }
+    this.tone(up ? 150 : 110, 0.22, { vol: 0.18 * vol, at: d, slide: 0.55 });        // el rollo llega al tope
+    this.noise(0.12, { at: d, vol: 0.08 * vol, type: 'lowpass', freq: 900, q: 0.6 });
+    if (up && this.theme === 'china') this.bell(1760, 0.6, 0.04, d + 0.03);             // borlas / cascabel
+  }
   rowUnlock(level = 0) {
     if (this.theme === 'china') { this.gong(98 * Math.pow(2, level / 12), 2.2, 0.35); [0, 1, 2, 3].forEach(i => this.pluck(this._scale(5 + level + i), 0.2 + i * 0.07, 0.1)); return; }
     if (this.theme === 'snow') { this.shatter(level); this.wind(1, 0.12); [0, 1, 2, 3].forEach(i => this.celesta(this._scale(5 + level + i), 0.15 + i * 0.07, 0.08)); return; }
@@ -377,6 +485,7 @@ class Sfx {
     this.tone(f * 2, 0.3, { vol: 0.07, at: 0.04, verb: 0.4 });
   }
   bigWin(level = 1) {
+    this.hype(level);
     if (this.theme === 'china') { this.gong(98, 3, 0.4); this.firecrackers(10 + level * 6, 0.2, 0.22); }
     if (this.theme === 'snow') { for (let i = 0; i < 10 + level * 4; i++) this.jingle(i * 0.11, 0.07); this.wind(1.5, 0.12); }
     const chords = [[261.6, 329.6, 392], [349.2, 440, 523.3], [392, 493.9, 587.3], [523.3, 659.3, 784, 1046.5]];
