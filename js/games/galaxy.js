@@ -3,8 +3,8 @@
 // llega hasta el ÚLTIMO rodillo aparece uno nuevo a la derecha y gira solo, hasta 15 rodillos.
 // Llegar a 8 / 10 / 12 / 15 rodillos = MINI / MINOR / MAJOR / GRAND.
 // 3+ portales = 8 giros gratis con multiplicador que sube +1 por cada rodillo nuevo y no se reinicia.
-import { S, sym, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=43';
-import { ReelSet, weighted } from '../reels.js?v=43';
+import { S, sym, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=44';
+import { ReelSet, weighted } from '../reels.js?v=44';
 
 const ROWS = 3, START = 3, MAXC = 15;
 export const P = { sun: 1, diamond: 0.8, rstar: 0.6, bstar: 0.5, gstar: 0.4, snow: 0.4, K: 0.2, Q: 0.2, J: 0.15, ten: 0.15 };
@@ -320,6 +320,7 @@ export default class Galaxy {
     if (portals >= 3) {
       await app.wait(wins.length ? 1100 : 400);
       this.wins = null;
+      { const v = await app.bonusPay(portals, bet, 'portales'); total += v; if (this.inFree) this.fsTotal += v; }
       if (this.inFree) {
         this.freeLeft += 4; sfx.featureStart();
         await app.banner('+4 GIROS', 'Otro portal se abre', { color: '#9a7aff', ms: 1500 });

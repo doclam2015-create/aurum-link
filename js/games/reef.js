@@ -3,8 +3,8 @@
 // estalla un grupo queda MARCADA; si vuelve a estallar ahí se enciende un multiplicador x2 que
 // se duplica cada vez (x4, x8 … x128). Un grupo sobre casillas encendidas se multiplica por la
 // suma de sus multiplicadores. 3+ perlas = giros gratis donde las marcas NO se borran.
-import { S, sym, ball, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=43';
-import { weighted } from '../reels.js?v=43';
+import { S, sym, ball, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=44';
+import { weighted } from '../reels.js?v=44';
 
 const COLS = 7, ROWS = 7;
 // Pago (× apuesta) según tamaño del grupo: 5, 6, 7, 8, 9-10, 11-12, 13-14, 15+
@@ -334,6 +334,7 @@ export default class Reef {
       this.grid.forEach(col => col.forEach(s => { if (s.k === 'pearl') s.hl = 1; }));
       sfx.featureStart();
       await app.wait(600);
+      { const v = await app.bonusPay(pearls, bet, 'perlas'); total += v; if (this.inFree) this.fsTotal += v; }
       // 5 perlas = MINOR · 6 = MAJOR · 7+ = GRAND
       const jp = pearls >= 7 ? 'grand' : pearls === 6 ? 'major' : pearls === 5 ? 'minor' : null;
       if (jp) { const v = await app.awardJackpot(jp); total += v; if (this.inFree) this.fsTotal += v; }

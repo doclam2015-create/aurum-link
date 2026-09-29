@@ -2,8 +2,8 @@
 // El CÓDICE es wild y dispersor a la vez: 3+ en cualquier lugar = 10 giros gratis. Antes de
 // empezar se elige al azar un SÍMBOLO ESPECIAL; en los giros gratis, si aparece en suficientes
 // rodillos se EXPANDE a todo el rodillo y paga en las 10 líneas aunque no esté contiguo.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=43';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=43';
+import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, ROWS = 3, NL = 10;
 const LINES = LINES_5x3.slice(0, NL);
@@ -356,6 +356,7 @@ export default class Codex {
     if (codices >= 3) {
       await app.wait(wins.length ? 1100 : 400);
       this.wins = null; this.expanded = null;
+      { const v = await app.bonusPay(codices, bet, 'códices'); total += v; if (this.inFree) this.fsTotal += v; }
       // 4 códices = MINOR · 5 = MAJOR
       if (codices >= 4) { const v = await app.awardJackpot(codices >= 5 ? 'major' : 'minor'); total += v; if (this.inFree) this.fsTotal += v; }
       if (this.inFree) {

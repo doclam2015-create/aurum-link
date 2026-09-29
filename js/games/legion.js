@@ -1,8 +1,8 @@
 // LEGIÓN DORADA · 5x4, 1024 formas de ganar.
 // Wild (corona) en rodillos 2-4. 3+ fénix = giros gratis (8/12/20). En giros gratis cada wild
 // queda PEGADO con un multiplicador x2/x3 que se multiplica en cada forma ganadora.
-import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=43';
-import { ReelSet, weighted } from '../reels.js?v=43';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=44';
+import { ReelSet, weighted } from '../reels.js?v=44';
 
 const COLS = 5, ROWS = 4;
 export const PAY = {
@@ -211,12 +211,14 @@ export default class Legion {
       await app.wait(wins.length ? 1200 : 400);
       const n = phoenix >= 5 ? 20 : phoenix === 4 ? 12 : 8;
       this.wins = null;
+      total += await app.bonusPay(phoenix, bet, 'fénix');
       sfx.featureStart(); app.flash('#ffcf70', 0.6); app.shake(true);
       this.inFree = true; this.freeLeft = n; this.fsTotal = 0; this.sticky = {};
       sfx.stopMusic();
       await app.banner(n + ' GIROS GRATIS', 'Cada corona queda pegada con multiplicador', { color: '#ff9a2e', ms: 2600 });
       sfx.music('bonus');
     } else if (this.inFree && phoenix >= 2) {
+      { const v = await app.bonusPay(phoenix, bet, 'fénix', 2); total += v; this.fsTotal += v; }
       this.freeLeft += 3; sfx.featureStart();
       await app.banner('+3 GIROS', 'La legión avanza', { color: '#ff9a2e', ms: 1500 });
     }

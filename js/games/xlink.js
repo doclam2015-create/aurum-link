@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=43';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=43';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=44';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=44';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -733,17 +733,9 @@ export default class XLink {
     const scat = T.scatter ? grid.flat().filter(s => s.k === 'scat').length : 0;
     if (scat >= 3) {
       this.wins = null;
-      // 4 o 5 dispersores pagan un premio antes de los giros
-      const mult = scat >= 5 ? T.scatter.pay[1] : scat === 4 ? T.scatter.pay[0] : 0;
-      if (mult) {
-        const v = mult * bet;
-        total += v; if (free) this.fsTotal += v;
-        app.addWin(v); sfx.win(2);
-        app.popText(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), scat + ' ' + T.scatter.name + ' · ' + app.fmt(v), 24);
-        app.flyCoins(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), 12);
-        app.message('<b>' + scat + ' ' + T.scatter.name + '</b> pagan <b>' + app.fmt(v) + '</b>');
-        await app.wait(1200);
-      }
+      // Pago base según la cantidad de dispersores en pantalla (3+ pagan antes de los giros)
+      app.flyCoins(this.bx + this.cw * 2.5, this.by + this.ch * (MAXR - 1.5), 12);
+      { const v = await app.bonusPay(scat, bet, T.scatter.name); total += v; if (free) this.fsTotal += v; }
       grid.forEach((col, c) => col.forEach((s, r) => { if (s.k === 'scat') { const [px, py] = this.cellCenter(c, r + MAXR - col.length); app.burst(px, py, 1, { type: 'ring', color: T.scatter.color, size: 10, grow: this.cw * 1.2, width: 6, life: 0.7, speed: 0 }); } }));
       sfx.featureStart(); app.flash(T.scatter.color, 0.5); app.shake(true);
       await app.wait(700);
@@ -1053,7 +1045,7 @@ export default class XLink {
             ? '<li><b>Reina de 2 filas</b>: cada Reina sube la cortina de hielo <b>1 fila</b>. Si en las filas que se abren aparece otra Reina, la cortina sigue subiendo (en cadena), hasta 5 filas y una Reina por columna, solo para ese giro. Hasta <b>100 líneas</b>.</li>'
             : '<li><b>Estrellas ★</b>: verde abre 1 fila, azul 2, roja 3 (se suman, máx. 5) solo para ese giro. Hasta <b>100 líneas</b>.</li>')) +
       '<li><b>6+ bolas doradas</b> en el área activa activan <b>GOLDEN SPINS</b>.</li>' +
-      (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. <b>4</b> pagan antes ' + fmt(this.T.scatter.pay[0] * bet) + ' y <b>5</b> pagan ' + fmt(this.T.scatter.pay[1] * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
+      (this.T.scatter ? '<li><b>3 o más ' + this.T.scatter.name + '</b> en cualquier posición activa = <b>10 giros gratis</b>. Antes pagan un premio base: <b>3</b> = ' + fmt(2 * bet) + ' · <b>4</b> = ' + fmt(10 * bet) + ' · <b>5</b> = ' + fmt(50 * bet) + '. Si caen 3 o más durante los giros gratis se suman <b>+10</b>. En los giros gratis siguen las filas extra y los Golden Spins.</li>' : '') +
       '<li>En Golden Spins las bolas quedan fijas, tienes <b>3 giros</b> y cada bola nueva los reinicia a 3. Las bolas azules <b>+1 · +2 · +3 · +4 · +5 GIROS</b> suman esos giros encima del reinicio.</li>' +
       '<li>Las bolas especiales (<b>+GIROS</b>, <b>Multiplicador</b> y <b>Upgrade</b>) entregan su efecto y <b>desaparecen</b>: la casilla queda libre para que caiga otra bola.</li>' +
       '<li>Al acumular <b>8 · 12 · 17 · 23 · 30</b> bolas un rayo desbloquea una fila más (hasta 8 filas, 40 posiciones).</li>' +

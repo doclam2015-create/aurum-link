@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=43';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=43';
-import { sleep } from './reels.js?v=43';
-import XLink from './games/xlink.js?v=43';
-import Avalanche from './games/avalanche.js?v=43';
-import FireWheel from './games/firewheel.js?v=43';
-import Legion from './games/legion.js?v=43';
-import Bull from './games/bull.js?v=43';
-import Dragon from './games/dragon.js?v=43';
-import Codex from './games/codex.js?v=43';
-import Reef from './games/reef.js?v=43';
-import Western from './games/western.js?v=43';
-import Galaxy from './games/galaxy.js?v=43';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=43';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=43';
+import { sfx } from './audio.js?v=44';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=44';
+import { sleep } from './reels.js?v=44';
+import XLink from './games/xlink.js?v=44';
+import Avalanche from './games/avalanche.js?v=44';
+import FireWheel from './games/firewheel.js?v=44';
+import Legion from './games/legion.js?v=44';
+import Bull from './games/bull.js?v=44';
+import Dragon from './games/dragon.js?v=44';
+import Codex from './games/codex.js?v=44';
+import Reef from './games/reef.js?v=44';
+import Western from './games/western.js?v=44';
+import Galaxy from './games/galaxy.js?v=44';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=44';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=44';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -120,6 +120,17 @@ const app = {
   resetJackpot(key) { if (state.jp[game.id]) state.jp[game.id][key] = 0; renderPots(true); },
   highlightPot(key) { const el = document.querySelector('.pot[data-k="' + key + '"]'); if (el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } },
   banner(title, sub, opts = {}) { return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 }); },
+  // Pago base al activar un bono o giros gratis, según cuántos símbolos de bono hay en pantalla:
+  // el mínimo que lo activa paga 2×, uno más 10×, dos más 50×, tres o más 100× la apuesta
+  async bonusPay(n, bet, name, min = 3) {
+    const k = n - min; if (k < 0) return 0;
+    const v = [2, 10, 50, 100][Math.min(3, k)] * bet;
+    app.addWin(v); sfx.win(2);
+    app.popText(W / 2, H * 0.45, n + ' ' + name + ' · ' + fmt(v), 26);
+    app.message('<b>' + n + ' ' + name + '</b> pagan <b>' + fmt(v) + '</b>');
+    await app.wait(1200);
+    return v;
+  },
   // Anuncio de premio: BIG WIN (5×) · AWESOME (15×) · SUPER WIN (40×), con monedas, fanfarria y voz
   celebrate(amount, bet, label) {
     const ratio = amount / bet, ti = TIERS.findIndex(tt => ratio >= tt[0]), tier = TIERS[ti < 0 ? TIERS.length - 1 : ti], lvl = TIERS.length - 1 - (ti < 0 ? TIERS.length - 1 : ti);
