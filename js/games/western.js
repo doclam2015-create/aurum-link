@@ -3,8 +3,8 @@
 // avanza un rodillo a la izquierda hasta salir del tablero. Mientras quede alguno en pantalla
 // se sigue re-girando. 3/4/5/6+ forajidos a la vez = MINI/MINOR/MAJOR/GRAND.
 // 3+ estrellas de sheriff = 10 giros gratis donde cada forajido en una línea la multiplica x2.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=42';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=42';
+import { S, sym, glow, goldText, roundRect, ease, rand, FONT, makeCanvas } from '../gfx.js?v=43';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=43';
 
 const COLS = 5, ROWS = 3;
 export const PAY = {
