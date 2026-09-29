@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=51';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=51';
-import { sleep } from './reels.js?v=51';
-import XLink from './games/xlink.js?v=51';
-import Avalanche from './games/avalanche.js?v=51';
-import FireWheel from './games/firewheel.js?v=51';
-import Legion from './games/legion.js?v=51';
-import Bull from './games/bull.js?v=51';
-import Dragon from './games/dragon.js?v=51';
-import Codex from './games/codex.js?v=51';
-import Reef from './games/reef.js?v=51';
-import Western from './games/western.js?v=51';
-import Galaxy from './games/galaxy.js?v=51';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=51';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=51';
+import { sfx } from './audio.js?v=52';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=52';
+import { sleep } from './reels.js?v=52';
+import XLink from './games/xlink.js?v=52';
+import Avalanche from './games/avalanche.js?v=52';
+import FireWheel from './games/firewheel.js?v=52';
+import Legion from './games/legion.js?v=52';
+import Bull from './games/bull.js?v=52';
+import Dragon from './games/dragon.js?v=52';
+import Codex from './games/codex.js?v=52';
+import Reef from './games/reef.js?v=52';
+import Western from './games/western.js?v=52';
+import Galaxy from './games/galaxy.js?v=52';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=52';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=52';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -136,7 +136,7 @@ const app = {
       app.party(more ? 1 : 3, (opts.ms || 2200) / 1000 + (more ? 0.4 : 1.2));
       const lines = more ? [[speakable(title) + '!', 1.2, 0.9]] : [['¡Bono!', 1.2, 0.8], ['¡Bono!', 1.3, 0.85], [speakable(title) + '!', 1.15, 0.9]];
       if (sub) lines.push([speakable(sub), 1.05, 0.95]);
-      setTimeout(() => sfx.announce(lines, 'es'), more ? 250 : 700);
+      setTimeout(() => sfx.announce(lines, 'es'), more ? 250 : 1300);
     }
     return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 });
   },

@@ -2,6 +2,17 @@
 // Pensado para Safari iOS: se desbloquea con el primer toque y se suspende en segundo plano.
 const AC = window.AudioContext || window.webkitAudioContext;
 
+// Elige la voz más clara: primero las versiones de alta calidad (iOS "Mejorada"/"Premium"), luego por nombre
+const HQ = /enhanced|premium|mejorada|siri|natural|neural/i;
+function pickVoice(vs, pref, regional) {
+  const hq = vs.filter(v => HQ.test(v.name));
+  for (const pool of [hq, vs]) {
+    for (const n of pref) { const v = pool.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
+    const r = pool.find(v => regional.test(v.lang)); if (r) return r;
+  }
+  return vs[0];
+}
+
 class Sfx {
   constructor() {
     this.ctx = null;
@@ -58,16 +69,12 @@ class Sfx {
   // Voz de locutor de casino para las grandes ganancias
   _voice() {
     const vs = speechSynthesis.getVoices().filter(v => /^en[-_](US|GB|AU)/i.test(v.lang));
-    const pref = ['Google US English', 'Samantha', 'Aaron', 'Nathan', 'Daniel', 'Fred', 'Alex'];
-    for (const n of pref) { const v = vs.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
-    return vs.find(v => /^en[-_]US/i.test(v.lang)) || vs[0];
+    return pickVoice(vs, ['Google US English', 'Samantha', 'Aaron', 'Nathan', 'Daniel', 'Fred', 'Alex'], /^en[-_]US/i);
   }
   // Varias frases seguidas, cada una con su tono: más agudo y rápido suena más entusiasta
   _voiceEs() {
     const vs = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
-    const pref = ['Paulina', 'Google español de Estados Unidos', 'Jorge', 'Juan', 'Monica', 'Mónica', 'Google español'];
-    for (const n of pref) { const v = vs.find(v => v.name.indexOf(n) >= 0); if (v) return v; }
-    return vs.find(v => /^es[-_](MX|US|CL|419)/i.test(v.lang)) || vs[0];
+    return pickVoice(vs, ['Paulina', 'Google español de Estados Unidos', 'Jorge', 'Juan', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419)/i);
   }
   // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
   announce(lines, lang = 'en') {
@@ -76,13 +83,15 @@ class Sfx {
       speechSynthesis.cancel();
       const v = lang === 'es' ? this._voiceEs() : this._voice();
       lines.forEach(([text, pitch, rate]) => {
-        const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'es' ? (v ? v.lang : 'es-MX') : 'en-US'; u.pitch = pitch; u.rate = rate; u.volume = 1;
+        // Tono casi natural y ritmo pausado: los tonos muy agudos o rápidos deforman las palabras
+        const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'es' ? (v ? v.lang : 'es-MX') : 'en-US';
+        u.pitch = Math.min(1.08, Math.max(0.95, 1 + (pitch - 1) * 0.35)); u.rate = Math.min(0.82, rate * 0.95); u.volume = 1;
         if (v) u.voice = v;
         speechSynthesis.speak(u);
       });
       // Baja la música mientras habla el locutor
-      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.3, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 1.6 + lines.length * 0.9, 0.4);
-        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.55, t + 0.2, 0.08); sb.setTargetAtTime(this.sfxVol, t + 0.9 + lines.length * 0.85, 0.3); }
+      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.15, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2 + lines.length * 1.1, 0.4);
+        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.35, t + 0.15, 0.08); sb.setTargetAtTime(this.sfxVol, t + 1.2 + lines.length * 1.05, 0.3); }
     } catch (e) { }
   }
   // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
@@ -130,8 +139,7 @@ class Sfx {
     const h = n * 0.035;
     this.noise(2, { at: h, vol: 0.3, type: 'highpass', freq: 5000, q: 0.4, verb: 0.6 });
     this.tone(55, 0.8, { vol: 0.6, at: h, slide: 0.5 });
-    const ch = big ? [[392, 493.9, 587.3], [440, 554.4, 659.3], [523.3, 659.3, 784, 1046.5]] : [[523.3, 659.3, 784, 1046.5]];
-    ch.forEach((c, i) => this.brass(c, h + i * 0.22, i === ch.length - 1 ? 1.2 : 0.25));
+    this.tataam(h, big ? 1 : 0.7, big ? 1.9 : 1.1);
     this.bellRing(big ? 1.6 : 0.8, 0.05, h);
     if (big) [0, 1].forEach(w => this.tone(1900 + w * 300, 0.35, { vol: 0.06, at: h + 0.5 + w * 0.45, slide: 1.35 }));
     if (big) [[700, 3], [1150, 4], [2400, 5]].forEach(([f, q], i) => this.crowd(2.4, 0.09, h + 0.1, f, q, i));
@@ -510,6 +518,36 @@ class Sfx {
     const seq = [392, 523, 659, 784, 1047, 1319];
     seq.forEach((f, i) => { this.tone(f, 0.5, { type: 'sawtooth', vol: 0.06, at: 0.3 + i * 0.09, verb: 0.4 }); this.bell(f, 0.8, 0.07, 0.3 + i * 0.09); });
     this.brass([261.6, 329.6, 392, 523.3], 0.95, 1.2);
+  }
+  // Fanfarria de trompetas "ta-taaaam": golpe corto y acorde largo sostenido con vibrato y timbal
+  tataam(at = 0, vol = 1, hold = 1.9) {
+    if (!this.ok) return;
+    const ctx = this.ctx;
+    const horn = (chord, t, dur, peak, vib) => {
+      const t0 = ctx.currentTime + t, f = ctx.createBiquadFilter(), g = ctx.createGain();
+      f.type = 'lowpass'; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(700, t0); f.frequency.exponentialRampToValueAtTime(4200, t0 + 0.07); f.frequency.exponentialRampToValueAtTime(2600, t0 + Math.min(0.5, dur));
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + 0.03);
+      g.gain.setTargetAtTime(peak * 0.75, t0 + 0.06, 0.08);
+      g.gain.setValueAtTime(peak * 0.75, t0 + dur * 0.72); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      f.connect(g); g.connect(this.sfxBus);
+      const v = ctx.createGain(); v.gain.value = 0.6; g.connect(v); v.connect(this.verbSend);
+      let lfo = null;
+      if (vib) { lfo = ctx.createOscillator(); const lg = ctx.createGain(); lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t0); lg.gain.linearRampToValueAtTime(14, t0 + 0.5); lfo.connect(lg); lfo.start(t0); lfo.stop(t0 + dur + 0.05); lfo._g = lg; }
+      chord.forEach(fr => [-6, 0, 7].forEach(dt => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = dt;
+        if (lfo) lfo._g.connect(o.detune);
+        o.connect(f); o.start(t0); o.stop(t0 + dur + 0.05);
+      }));
+    };
+    // "ta" (sol mayor, corto)  →  "taaaam" (do mayor brillante, sostenido)
+    horn([392, 493.9, 587.3, 784], at, 0.2, 0.1 * vol, false);
+    horn([523.3, 659.3, 784, 1046.5], at + 0.24, hold, 0.13 * vol, true);
+    horn([130.8, 261.6], at + 0.24, hold, 0.09 * vol, false);
+    // Timbales y platillo en cada golpe
+    this.tone(98, 0.35, { vol: 0.5 * vol, at, slide: 0.7 });
+    this.tone(65.4, hold * 0.6, { vol: 0.65 * vol, at: at + 0.24, slide: 0.8, verb: 0.4 });
+    this.noise(hold, { at: at + 0.24, vol: 0.22 * vol, type: 'highpass', freq: 6000, q: 0.4, verb: 0.6 });
   }
   brass(chord, at = 0, dur = 1) {
     if (!this.ok) return;

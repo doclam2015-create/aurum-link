@@ -1,5 +1,5 @@
 // Motor de rodillos genérico con giro continuo, frenado escalonado, rebote y anticipación.
-import { ease } from './gfx.js?v=51';
+import { ease } from './gfx.js?v=52';
 
 export class ReelSet {
   constructor({ cols, rows, pick, drawSym }) {
