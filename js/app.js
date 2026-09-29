@@ -1,18 +1,18 @@
-import { sfx, usableVoices } from './audio.js?v=57';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=57';
-import { sleep } from './reels.js?v=57';
-import XLink from './games/xlink.js?v=57';
-import Avalanche from './games/avalanche.js?v=57';
-import FireWheel from './games/firewheel.js?v=57';
-import Legion from './games/legion.js?v=57';
-import Bull from './games/bull.js?v=57';
-import Dragon from './games/dragon.js?v=57';
-import Codex from './games/codex.js?v=57';
-import Reef from './games/reef.js?v=57';
-import Western from './games/western.js?v=57';
-import Galaxy from './games/galaxy.js?v=57';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=57';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=57';
+import { sfx, usableVoices } from './audio.js?v=58';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=58';
+import { sleep } from './reels.js?v=58';
+import XLink from './games/xlink.js?v=58';
+import Avalanche from './games/avalanche.js?v=58';
+import FireWheel from './games/firewheel.js?v=58';
+import Legion from './games/legion.js?v=58';
+import Bull from './games/bull.js?v=58';
+import Dragon from './games/dragon.js?v=58';
+import Codex from './games/codex.js?v=58';
+import Reef from './games/reef.js?v=58';
+import Western from './games/western.js?v=58';
+import Galaxy from './games/galaxy.js?v=58';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=58';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=58';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -120,7 +120,7 @@ const app = {
     const v = app.jackpot(key);
     app.highlightPot(key); sfx.jackpot(d.level); app.flash(d.color, 0.6); app.shake(d.level >= 2);
     app.party(2 + d.level * 0.7 | 0, 2.5 + d.level * 0.7);
-    setTimeout(() => sfx.announce([[d.label.charAt(0) + d.label.slice(1).toLowerCase() + ' jackpot!', 1.2, 0.8], ['Jackpot!', 1.3, 0.8]]), 500);
+    setTimeout(() => sfx.announce([[d.label.charAt(0) + d.label.slice(1).toLowerCase() + ' jackpot!', 1.2, 0.8]]), 500);
     await showOverlay({ kind: 'banner', title: d.label, sub: '¡JACKPOT! ' + fmt(v), color: d.color, dur: 1800 + d.level * 700, t: 0, jp: true });
     app.resetJackpot(key);
     app.addWin(v);
@@ -134,8 +134,8 @@ const app = {
     if (opts.voice !== false) {
       sfx.bonusFanfare(!more);
       app.party(more ? 1 : 3, (opts.ms || 2200) / 1000 + (more ? 0.4 : 1.2));
-      const lines = more ? [['¡Bono!', 1.2, 0.8], [speakable(title) + '!', 1.2, 0.9]] : [['¡Bono!', 1.2, 0.8], ['¡Bono!', 1.3, 0.85], [speakable(title) + '!', 1.15, 0.9]];
-      if (sub) lines.push([speakable(sub), 1.05, 0.95]);
+      // Una sola palabra, alargada, sobre la fanfarria
+      const lines = [['¡Bono!', 1.2, 0.8]];
       setTimeout(() => sfx.announce(lines, 'es', { sfx: false }), more ? 250 : 1100);
     }
     return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 });
@@ -177,7 +177,7 @@ const app = {
     app.flash('#d8f6ff', 0.85); app.shake(true);
     for (let i = 0; i < 5; i++) fx.add({ type: 'bolt', x1: rand(0, FW), y1: -10, x2: rand(0, FW), y2: rand(FH * 0.3, FH * 0.8), life: 0.6 + i * 0.1, w: 3, color: '#bff0ff' });
     sfx.bonusFanfare(true); app.party(3, 3);
-    setTimeout(() => sfx.announce([['¡Bono sorpresa!', 1.2, 0.8], [speakable(sub || 'Los rayos activan el bono'), 1.05, 0.95]], 'es', { sfx: false }), 1100);
+    setTimeout(() => sfx.announce([['¡Bono sorpresa!', 1.2, 0.8]], 'es', { sfx: false }), 1100);
     await showOverlay({ kind: 'banner', title: '¡BONO SORPRESA!', sub: sub || 'Los rayos activan el bono', color: '#7fe0ff', dur: 2000, t: 0, jp: true });
   },
   pulseMeter(id) { const el = $(id); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
@@ -190,11 +190,8 @@ function showOverlay(o) {
   return new Promise(res => { o.done = res; overlay = o; skipReq = false; });
 }
 // Texto de cartel a frase hablada: "+5 GIROS" → "más 5 giros", sin símbolos
-function speakable(t) {
-  return String(t).replace(/<[^>]+>/g, '').replace(/\+\s*(\d)/g, 'más $1').replace(/[·•]/g, ',').replace(/×/g, ' por ').replace(/[¡!]/g, '').trim().toLowerCase();
-}
 // [desde × apuesta, palabra, colores, frases del locutor [texto, tono, velocidad], duración en s]
-const TIERS = [[40, 'SUPER WIN', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff'], [['Super!', 1.2, 0.8], ['Super win!', 1.3, 0.8]], 5], [15, 'AWESOME!', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff'], [['Awesome!', 1.2, 0.8], ['Awesome win!', 1.3, 0.85]], 4], [5, 'BIG WIN', null, [['Big win!', 1.15, 0.8], ['Big win!', 1.3, 0.85]], 3]];
+const TIERS = [[40, 'SUPER WIN', ['#fff', '#ff9bf5', '#b13cff', '#ffe0ff'], [['Super win!', 1.3, 0.8]], 5], [15, 'AWESOME!', ['#fff', '#8ff0ff', '#1b8cff', '#d9f8ff'], [['Awesome!', 1.2, 0.8]], 4], [5, 'BIG WIN', null, [['Big win!', 1.15, 0.8]], 3]];
 const WIN_MIN = 5; // premio mínimo (× apuesta) que se anuncia
 function drawOverlay(x, dt) {
   const o = overlay; if (!o) return;
@@ -619,7 +616,7 @@ function bind() {
     if (e.target.id !== 'setVoiceTest') return;
     // Dentro del toque: habilita la voz en iOS y la prueba
     sfx.unlock();
-    if (sfx.recVoice !== false && sfx._clipKey('bono')) { sfx.announce([['¡Bono!', 1.2, 0.8], ['10 giros gratis', 1, 0.9], ['Big win!', 1.2, 0.8]], 'es'); return; }
+    if (sfx.recVoice !== false && sfx._clipKey('bono')) { sfx.announce([['¡Bono!', 1.2, 0.8]], 'es'); return; }
     const ss = window.speechSynthesis;
     if (!ss) { e.target.textContent = 'Este navegador no tiene voz'; return; }
     ss.cancel(); const u = new SpeechSynthesisUtterance('¡Bono! Big win!'); u.lang = 'es-ES'; u.volume = 1; u.rate = 0.85;
