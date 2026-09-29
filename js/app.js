@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=52';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=52';
-import { sleep } from './reels.js?v=52';
-import XLink from './games/xlink.js?v=52';
-import Avalanche from './games/avalanche.js?v=52';
-import FireWheel from './games/firewheel.js?v=52';
-import Legion from './games/legion.js?v=52';
-import Bull from './games/bull.js?v=52';
-import Dragon from './games/dragon.js?v=52';
-import Codex from './games/codex.js?v=52';
-import Reef from './games/reef.js?v=52';
-import Western from './games/western.js?v=52';
-import Galaxy from './games/galaxy.js?v=52';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=52';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=52';
+import { sfx } from './audio.js?v=53';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=53';
+import { sleep } from './reels.js?v=53';
+import XLink from './games/xlink.js?v=53';
+import Avalanche from './games/avalanche.js?v=53';
+import FireWheel from './games/firewheel.js?v=53';
+import Legion from './games/legion.js?v=53';
+import Bull from './games/bull.js?v=53';
+import Dragon from './games/dragon.js?v=53';
+import Codex from './games/codex.js?v=53';
+import Reef from './games/reef.js?v=53';
+import Western from './games/western.js?v=53';
+import Galaxy from './games/galaxy.js?v=53';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=53';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=53';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -134,9 +134,9 @@ const app = {
     if (opts.voice !== false) {
       sfx.bonusFanfare(!more);
       app.party(more ? 1 : 3, (opts.ms || 2200) / 1000 + (more ? 0.4 : 1.2));
-      const lines = more ? [[speakable(title) + '!', 1.2, 0.9]] : [['¡Bono!', 1.2, 0.8], ['¡Bono!', 1.3, 0.85], [speakable(title) + '!', 1.15, 0.9]];
+      const lines = more ? [['¡Bono!', 1.2, 0.8], [speakable(title) + '!', 1.2, 0.9]] : [['¡Bono!', 1.2, 0.8], ['¡Bono!', 1.3, 0.85], [speakable(title) + '!', 1.15, 0.9]];
       if (sub) lines.push([speakable(sub), 1.05, 0.95]);
-      setTimeout(() => sfx.announce(lines, 'es'), more ? 250 : 1300);
+      setTimeout(() => sfx.announce(lines, 'es', { sfx: false }), more ? 250 : 1100);
     }
     return showOverlay({ kind: 'banner', title, sub, color: opts.color || '#ffd35a', dur: opts.ms || 2200, t: 0 });
   },
@@ -177,7 +177,7 @@ const app = {
     app.flash('#d8f6ff', 0.85); app.shake(true);
     for (let i = 0; i < 5; i++) fx.add({ type: 'bolt', x1: rand(0, FW), y1: -10, x2: rand(0, FW), y2: rand(FH * 0.3, FH * 0.8), life: 0.6 + i * 0.1, w: 3, color: '#bff0ff' });
     sfx.bonusFanfare(true); app.party(3, 3);
-    setTimeout(() => sfx.announce([['¡Bono sorpresa!', 1.2, 0.8], [speakable(sub || 'Los rayos activan el bono'), 1.05, 0.95]], 'es'), 700);
+    setTimeout(() => sfx.announce([['¡Bono sorpresa!', 1.2, 0.8], [speakable(sub || 'Los rayos activan el bono'), 1.05, 0.95]], 'es', { sfx: false }), 1100);
     await showOverlay({ kind: 'banner', title: '¡BONO SORPRESA!', sub: sub || 'Los rayos activan el bono', color: '#7fe0ff', dur: 2000, t: 0, jp: true });
   },
   pulseMeter(id) { const el = $(id); el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
