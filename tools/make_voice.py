@@ -22,7 +22,7 @@ NUM = {3: 'tres', 4: 'cuatro', 5: 'cinco', 6: 'seis', 7: 'siete', 8: 'ocho', 9: 
 
 # clave, idioma, texto que dice, textos (normalizados) que reemplaza, estilo ('hype' = muy estirado)
 PHRASES = [
-    ('bono', 'es', '¡Booono!', ['bono'], 'hype'),
+    ('bono', 'es', '¡Boooonooo!', ['bono'], 'hype'),
     ('bono_sorpresa', 'es', '¡Booono sorpresa!', ['bono sorpresa'], 'hype'),
     ('multiplicador', 'es', '¡Multiplicadooor!', ['multiplicador'], 'hype'),
     ('por_dos', 'es', '¡Todas las bolas, por dos!', ['todas las bolas por dos'], 'show'),
@@ -42,7 +42,7 @@ PHRASES = [
 
 MODEL = {'es': 'es-carlfm-x-low.onnx', 'en': 'en-us-ryan-high.onnx'}
 # length_scale (más alto = más lento/estirado), tono (1 = igual) por estilo e idioma
-STYLE = {'hype': (1.9, 0.9), 'show': (1.25, 0.93)}
+STYLE = {'hype': (2.4, 0.9), 'show': (1.25, 0.93)}
 
 def render(models, key, lang, text, style, out):
     ls, pitch = STYLE[style]
@@ -57,7 +57,7 @@ def render(models, key, lang, text, style, out):
               'highpass=f=75,asetrate=%d,aresample=24000,atempo=%.4f,'
               'equalizer=f=180:t=q:w=1:g=4,equalizer=f=3000:t=q:w=1.2:g=3,'
               'acompressor=threshold=-22dB:ratio=5:attack=4:release=90:makeup=4,'
-              'aecho=0.85:0.55:70|140:0.22|0.12,apad=pad_dur=0.25,loudnorm=I=-11:TP=-1:LRA=7') % (int(sr * pitch), 1 / pitch * (0.97 if style == 'hype' else 1))
+              'aecho=0.85:0.55:70|140:0.22|0.12,apad=pad_dur=0.25,loudnorm=I=-11:TP=-1:LRA=7') % (int(sr * pitch), 1 / pitch * (0.78 if style == 'hype' else 1))
         subprocess.run([FF, '-y', '-loglevel', 'error', '-i', wav, '-af', af, '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', out], check=True)
 
 def main():

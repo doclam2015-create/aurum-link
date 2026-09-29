@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=57';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=57';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=58';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=58';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const TEASE = 0.07, TEASE_EDGE = 0.18, GHOST_P = 0.4; // bolas extra detrás de la cortina (efecto "casi")
@@ -1079,7 +1079,7 @@ export default class XLink {
     await app.wait(250);
     const [ox, oy] = this.cellCenter(c0, r0);
     sfx.featureStart(); app.flash('#ffe8a0', 0.5); app.shake(true);
-    sfx.announce([['¡Multiplicador!', 1.2, 0.85], ['¡Todas las bolas por dos!', 1.15, 0.9]], 'es');
+    sfx.announce([['¡Multiplicador!', 1.2, 0.85]], 'es');
     app.message('¡<b>UPGRADE</b>! Todas las bolas duplican su valor');
     app.burst(ox, oy, 1, { type: 'ring', color: '#ffd76a', size: 10, grow: this.cw * 3, width: 10, life: 0.8, speed: 0 });
     await app.wait(900);
