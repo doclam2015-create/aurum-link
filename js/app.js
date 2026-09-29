@@ -1,18 +1,18 @@
-import { sfx, usableVoices } from './audio.js?v=56';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=56';
-import { sleep } from './reels.js?v=56';
-import XLink from './games/xlink.js?v=56';
-import Avalanche from './games/avalanche.js?v=56';
-import FireWheel from './games/firewheel.js?v=56';
-import Legion from './games/legion.js?v=56';
-import Bull from './games/bull.js?v=56';
-import Dragon from './games/dragon.js?v=56';
-import Codex from './games/codex.js?v=56';
-import Reef from './games/reef.js?v=56';
-import Western from './games/western.js?v=56';
-import Galaxy from './games/galaxy.js?v=56';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=56';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=56';
+import { sfx, usableVoices } from './audio.js?v=57';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=57';
+import { sleep } from './reels.js?v=57';
+import XLink from './games/xlink.js?v=57';
+import Avalanche from './games/avalanche.js?v=57';
+import FireWheel from './games/firewheel.js?v=57';
+import Legion from './games/legion.js?v=57';
+import Bull from './games/bull.js?v=57';
+import Dragon from './games/dragon.js?v=57';
+import Codex from './games/codex.js?v=57';
+import Reef from './games/reef.js?v=57';
+import Western from './games/western.js?v=57';
+import Galaxy from './games/galaxy.js?v=57';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=57';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=57';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -528,8 +528,9 @@ function openSettings() {
     '<div class="set"><label>Volumen de música</label><input id="setMusic" type="range" min="0" max="100" value="' + Math.round(state.musicVol * 100) + '"></div>' +
     '<label class="set switch"><span>Música de fondo</span><input id="setMusicOn" type="checkbox"' + (state.music ? ' checked' : '') + '><i></i></label>' +
     '<label class="set switch"><span>Rodillos en modo claro</span><input id="setLight" type="checkbox"' + (state.light ? ' checked' : '') + '><i></i></label>' +
-    '<div class="set voice"><label>Voz del locutor (español)</label>' + voiceSelect('setVoiceEs', /^es/i, sfx.voiceName('es')) +
-    '<label>Voz del locutor (inglés: Big win…)</label>' + voiceSelect('setVoiceEn', /^en/i, sfx.voiceName('en')) +
+    '<label class="set switch"><span>Locutor grabado (voz de hombre)</span><input id="setRecVoice" type="checkbox"' + (state.recVoice !== false ? ' checked' : '') + '><i></i></label>' +
+    '<div class="set voice"><label>Voz del iPhone (si el locutor grabado está apagado) · español</label>' + voiceSelect('setVoiceEs', /^es/i, sfx.voiceName('es')) +
+    '<label>Voz del iPhone · inglés (Big win…)</label>' + voiceSelect('setVoiceEn', /^en/i, sfx.voiceName('en')) +
     '<button id="setVoiceTest" class="vtest" type="button">🔊 Probar voz</button>' +
     '<p class="fine">Para voz de hombre descarga <b>Jorge</b>, <b>Juan</b> o <b>Diego</b> (español) y <b>Aaron</b> o <b>Arthur</b> (inglés) en Ajustes del iPhone → Accesibilidad → Contenido leído → Voces; luego vuelve a abrir la app y elígelas aquí.</p>' +
     '<p class="fine">Si no se oye: sube el volumen, quita el modo silencio y revisa Ajustes del iPhone → Accesibilidad → Contenido leído → Voces.</p></div>' +
@@ -617,7 +618,9 @@ function bind() {
   $('sheet').addEventListener('click', e => {
     if (e.target.id !== 'setVoiceTest') return;
     // Dentro del toque: habilita la voz en iOS y la prueba
-    sfx.unlock(); const ss = window.speechSynthesis;
+    sfx.unlock();
+    if (sfx.recVoice !== false && sfx._clipKey('bono')) { sfx.announce([['¡Bono!', 1.2, 0.8], ['10 giros gratis', 1, 0.9], ['Big win!', 1.2, 0.8]], 'es'); return; }
+    const ss = window.speechSynthesis;
     if (!ss) { e.target.textContent = 'Este navegador no tiene voz'; return; }
     ss.cancel(); const u = new SpeechSynthesisUtterance('¡Bono! Big win!'); u.lang = 'es-ES'; u.volume = 1; u.rate = 0.85;
     u.onstart = () => { sfx._speechOk = true; e.target.textContent = '🔊 Sonando…'; };
@@ -629,6 +632,7 @@ function bind() {
     const t = e.target;
     if (t.id === 'setMusicOn') { state.music = t.checked; sfx.musicOn = state.music; if (state.music) sfx.music(game.constructor.music); else sfx.stopMusic(); save(); }
     if (t.id === 'setLight') setLight(t.checked);
+    if (t.id === 'setRecVoice') { state.recVoice = sfx.recVoice = t.checked; save(); sfx.unlock(); sfx.announce([['¡Bono!', 1.2, 0.8], ['Big win!', 1.2, 0.8]], 'es'); }
     if (t.id === 'setVoiceEs' || t.id === 'setVoiceEn') {
       if (t.id === 'setVoiceEs') state.voiceEs = sfx.voiceEs = t.value; else state.voiceEn = sfx.voiceEn = t.value;
       save(); sfx.unlock(); sfx.announce(t.id === 'setVoiceEs' ? [['¡Bono!', 1.2, 0.8], ['Diez giros gratis', 1, 0.9]] : [['Big win!', 1.2, 0.8]], t.id === 'setVoiceEs' ? 'es' : 'en');
@@ -689,13 +693,14 @@ async function keepAwake() {
 async function boot() {
   sfx.enabled = state.sound; sfx.musicOn = state.music;
   sfx.setVolumes(state.sfxVol, state.musicVol);
-  sfx.voiceEs = state.voiceEs || null; sfx.voiceEn = state.voiceEn || null;
+  sfx.voiceEs = state.voiceEs || null; sfx.voiceEn = state.voiceEn || null; sfx.recVoice = state.recVoice !== false;
   document.body.classList.toggle('light', state.light);
   applyLayout();
   buildLobby();
   $('verLabel').textContent = 'v' + VERSION;
   bind();
   sfx.preload('howl', 'assets/sfx/howl.wav');
+  sfx.loadVoice('assets/voice/');
   await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e)), loadWolfArt().catch(e => console.warn('lobo', e))]);
   $('loader').classList.add('gone');
   selectGame(state.game || GAMES[0].id);

@@ -89,9 +89,45 @@ class Sfx {
     return pickVoice(vs, ['Jorge', 'Juan', 'Diego', 'Carlos', 'Enrique', 'Pablo', 'Reed', 'Rocko', 'Eddy', 'Grandpa', 'Abuelo', 'Google español de Estados Unidos', 'Paulina', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419|ES)/i, this.voiceEs);
   }
   // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
+  // Locutor grabado (assets/voice, voz de hombre generada con tools/make_voice.py)
+  loadVoice(base) {
+    fetch(base + 'index.json').then(r => r.ok ? r.json() : null).then(ix => {
+      if (!ix) return; this.voiceIx = ix;
+      [...new Set(Object.values(ix))].forEach(k => this.preload('v_' + k, base + k + '.mp3'));
+    }).catch(() => { });
+  }
+  _clipKey(text) {
+    const t = String(text).toLowerCase().replace(/\+/g, 'más ').replace(/[¡!¿?.,]/g, ' ').replace(/\s+/g, ' ').trim();
+    const k = this.voiceIx && this.voiceIx[t]; return k && this.samples && this.samples['v_' + k] ? 'v_' + k : null;
+  }
+  // Reproduce las frases grabadas una tras otra, por encima de todo (va directo al master)
+  _playClips(keys) {
+    const ctx = this.ctx; let at = ctx.currentTime + 0.05;
+    if (this._clipSrc) this._clipSrc.forEach(n => { try { n.stop(); } catch (e) { } });
+    this._clipSrc = [];
+    if (!this.voiceBus) {
+      this.voiceBus = ctx.createGain(); this.voiceBus.connect(this.master);
+      const v = ctx.createGain(); v.gain.value = 0.18; this.voiceBus.connect(v); v.connect(this.verbSend);
+    }
+    this.voiceBus.gain.value = Math.min(1.6, 0.6 + this.sfxVol);
+    keys.forEach((k, i) => {
+      const s = ctx.createBufferSource(); s.buffer = this.samples[k]; s.connect(this.voiceBus); s.start(at);
+      this._clipSrc.push(s); at += s.buffer.duration + (i < keys.length - 1 ? 0.08 : 0);
+    });
+    return at - ctx.currentTime;
+  }
   announce(lines, lang = 'en', o = {}) {
     try {
-      if (!this.enabled || !window.speechSynthesis) return;
+      if (!this.enabled) return;
+      // Preferido: locutor grabado; las frases sin grabación (detalles del cartel) se omiten
+      if (this.recVoice !== false && this.ok && lines.length) {
+        const keys = lines.map(l => this._clipKey(l[0])).filter(Boolean);
+        if (keys.length && this._clipKey(lines[0][0])) {
+          if (window.speechSynthesis) speechSynthesis.cancel();
+          const d = this._playClips(keys); this._duck(Math.ceil(d / 1.4), o.sfx !== false); return;
+        }
+      }
+      if (!window.speechSynthesis) return;
       // Safari iOS ignora lo que se habla justo después de cancel(): solo se corta si hay algo sonando y se espera un poco
       const ss = speechSynthesis;
       ss.cancel();
