@@ -3,8 +3,8 @@
 // Los símbolos altos también caen apilados. Atrapasueños BONUS solo en los rodillos 2, 3 y 4:
 // 3 = 5 giros gratis con WILDS APILADOS REFORZADOS (se repiten: +5).
 // Progresivos: rodillos llenos de WILD a la vez → 2 MINI · 3 MINOR · 4 MAJOR · 5 GRAND.
-import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=48';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=48';
+import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=49';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=49';
 
 const COLS = 5, ROWS = 4;
 // 40 líneas: los 20 patrones de 3 filas en las bandas de arriba y de abajo, sin repetir, más zigzags
@@ -80,7 +80,10 @@ export function wolfIconStyle(k) { return 'background-image:url(assets/wolf.webp
 function sheet(x, k, dx, dy, dw, dh, sx = 0, sy = 0, sw = 200, sh = 200) {
   if (!SHEET) return;
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
-  x.drawImage(SHEET, POS[k] * 200 + sx, sy, sw, sh, dx, dy, dw, dh);
+  // Recorte con 3 px de margen para que no se cuele el borde de la imagen vecina de la hoja
+  const i = 3, cx0 = Math.max(sx, i), cx1 = Math.min(sx + sw, 200 - i), cy0 = Math.max(sy, i), cy1 = Math.min(sy + sh, 200 - i);
+  const fx = dw / sw, fy = dh / sh;
+  x.drawImage(SHEET, POS[k] * 200 + cx0, cy0, cx1 - cx0, cy1 - cy0, dx + (cx0 - sx) * fx, dy + (cy0 - sy) * fy, (cx1 - cx0) * fx, (cy1 - cy0) * fy);
 }
 const cache = new Map();
 function cached(key, size, fn) {
@@ -90,17 +93,38 @@ function cached(key, size, fn) {
   if (SHEET) cache.set(kk, c);
   return c;
 }
-// Retrato de lobo con marco fino y esquinas de color (como en la máquina)
-const FRAME = { gray: '#3a78c8', white: '#3a78c8', black: '#c83a3a' };
+// Retrato de lobo en marco biselado de madera y oro, con esquinas redondeadas y vidrio con reflejo
+const FRAME = { gray: ['#dfe9f5', '#6f8fb3', '#2b4262'], white: ['#ffffff', '#b9cde0', '#5d7897'], black: ['#ffd9a0', '#b8742a', '#4a2408'] };
 function portrait(k, size) {
   return cached('p' + k, size, (x, s) => {
-    const m = s * 0.05;
-    x.save(); x.shadowColor = 'rgba(40,20,0,0.45)'; x.shadowBlur = s * 0.04; x.shadowOffsetY = s * 0.015;
-    x.fillStyle = '#fff'; x.fillRect(m, m, s - 2 * m, s - 2 * m); x.restore();
-    sheet(x, k, m + s * 0.02, m + s * 0.02, s - 2 * m - s * 0.04, s - 2 * m - s * 0.04);
-    const col = FRAME[k]; x.strokeStyle = col; x.lineWidth = s * 0.022; x.strokeRect(m + s * 0.012, m + s * 0.012, s - 2 * m - s * 0.024, s - 2 * m - s * 0.024);
-    x.fillStyle = col; [[m, m], [s - m, m], [m, s - m], [s - m, s - m]].forEach(([px, py]) => x.fillRect(px - s * 0.035, py - s * 0.035, s * 0.07, s * 0.07));
-    x.fillStyle = '#fff'; [[m, m], [s - m, m], [m, s - m], [s - m, s - m]].forEach(([px, py]) => x.fillRect(px - s * 0.015, py - s * 0.015, s * 0.03, s * 0.03));
+    const m = s * 0.045, w = s - 2 * m, fw = s * 0.07, rr = s * 0.09, [c0, c1, c2] = FRAME[k];
+    // Sombra sobre el tablero
+    x.save(); x.shadowColor = 'rgba(40,20,0,0.5)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+    roundRect(x, m, m, w, w, rr); x.fillStyle = c2; x.fill(); x.restore();
+    // Moldura: degradado metálico en diagonal (luz arriba a la izquierda)
+    const g = x.createLinearGradient(m, m, m + w, m + w);
+    g.addColorStop(0, c0); g.addColorStop(0.35, c1); g.addColorStop(0.55, c0); g.addColorStop(1, c2);
+    roundRect(x, m, m, w, w, rr); x.fillStyle = g; x.fill();
+    // Bisel: borde claro exterior y oscuro interior
+    x.lineWidth = s * 0.012; x.strokeStyle = 'rgba(255,255,255,0.7)'; roundRect(x, m + s * 0.006, m + s * 0.006, w - s * 0.012, w - s * 0.012, rr); x.stroke();
+    const ix = m + fw, iw = w - 2 * fw, ir = rr * 0.55;
+    x.lineWidth = s * 0.014; x.strokeStyle = c2; roundRect(x, ix - s * 0.008, ix - s * 0.008, iw + s * 0.016, iw + s * 0.016, ir + s * 0.008); x.stroke();
+    // Foto recortada con esquinas redondeadas
+    x.save(); roundRect(x, ix, ix, iw, iw, ir); x.clip();
+    sheet(x, k, ix, ix, iw, iw);
+    // Sombra interior (profundidad) y reflejo de vidrio
+    const sh = x.createLinearGradient(0, ix, 0, ix + iw);
+    sh.addColorStop(0, 'rgba(0,0,0,0.35)'); sh.addColorStop(0.12, 'rgba(0,0,0,0)'); sh.addColorStop(0.88, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.3)');
+    x.fillStyle = sh; x.fillRect(ix, ix, iw, iw);
+    x.globalAlpha = 0.18; x.fillStyle = '#fff';
+    x.beginPath(); x.moveTo(ix, ix); x.lineTo(ix + iw * 0.55, ix); x.lineTo(ix, ix + iw * 0.55); x.closePath(); x.fill();
+    x.restore();
+    // Remaches en las esquinas de la moldura
+    [[m + fw / 2, m + fw / 2], [s - m - fw / 2, m + fw / 2], [m + fw / 2, s - m - fw / 2], [s - m - fw / 2, s - m - fw / 2]].forEach(([px, py]) => {
+      const rg = x.createRadialGradient(px - s * 0.006, py - s * 0.006, 0, px, py, s * 0.02);
+      rg.addColorStop(0, '#fff'); rg.addColorStop(0.5, c1); rg.addColorStop(1, c2);
+      x.fillStyle = rg; x.beginPath(); x.arc(px, py, s * 0.018, 0, 7); x.fill();
+    });
   });
 }
 // Tótem o atrapasueños sobre un disco con rayos (como en la máquina)
