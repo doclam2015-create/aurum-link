@@ -4,6 +4,8 @@ const AC = window.AudioContext || window.webkitAudioContext;
 
 // Elige la voz más clara: primero las versiones de alta calidad (iOS "Mejorada"/"Premium"), luego por nombre
 const HQ = /enhanced|premium|mejorada/i;
+const MALE = /aaron|arthur|daniel|gordon|nathan|alex|fred|male|rishi|tom|evan|jorge|juan|diego|carlos|enrique|pablo/i;
+const HYPE = /^¡?\s*(bono|big|awesome|super|súper|mega|epic|jackpot|mini|minor|major|grand|multiplicador|estampida)/i;
 const BAD = /siri|novelty|eloquence|bad news|bells|boing|bubbles|cellos|jester|organ|trinoids|whisper|zarvox|albert|bahh|superstar|wobble|good news/i;
 function pickVoice(vs, pref, regional) {
   vs = vs.filter(v => !BAD.test(v.name + ' ' + v.voiceURI) && v.localService !== false);
@@ -72,12 +74,13 @@ class Sfx {
   // Voz de locutor de casino para las grandes ganancias
   _voice() {
     const vs = speechSynthesis.getVoices().filter(v => /^en[-_](US|GB|AU)/i.test(v.lang));
-    return pickVoice(vs, ['Google US English', 'Samantha', 'Aaron', 'Nathan', 'Daniel', 'Fred', 'Alex'], /^en[-_]US/i);
+    // Locutor de show: voces masculinas primero
+    return pickVoice(vs, ['Aaron', 'Arthur', 'Daniel', 'Gordon', 'Nathan', 'Alex', 'Fred', 'Google UK English Male', 'Rishi', 'Tom', 'Evan', 'Samantha', 'Google US English'], /^en[-_](US|GB)/i);
   }
   // Varias frases seguidas, cada una con su tono: más agudo y rápido suena más entusiasta
   _voiceEs() {
     const vs = speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
-    return pickVoice(vs, ['Paulina', 'Google español de Estados Unidos', 'Jorge', 'Juan', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419)/i);
+    return pickVoice(vs, ['Jorge', 'Juan', 'Diego', 'Carlos', 'Enrique', 'Pablo', 'Google español de Estados Unidos', 'Paulina', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419|ES)/i);
   }
   // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
   announce(lines, lang = 'en', o = {}) {
@@ -110,7 +113,10 @@ class Sfx {
       lines.forEach(([text, pitch, rate]) => {
         // Tono casi natural y ritmo pausado: los tonos muy agudos o rápidos deforman las palabras
         const u = new SpeechSynthesisUtterance(text); u.lang = v ? v.lang : (lang === 'es' ? 'es-ES' : 'en-US');
-        u.pitch = Math.min(1.08, Math.max(0.95, 1 + (pitch - 1) * 0.35)); u.rate = Math.min(0.82, rate * 0.95); u.volume = 1;
+        // Voz grave de presentador; las palabras de premio se alargan (¡Booono!, Biiig win!) hablando muy lento
+        const male = !v || MALE.test(v.name), hype = HYPE.test(text) && text.length <= 22;
+        u.pitch = (male ? 0.88 : 0.72) + Math.max(-0.04, Math.min(0.06, (pitch - 1) * 0.2));
+        u.rate = hype ? 0.5 : Math.min(0.8, rate * 0.92); u.volume = 1;
         if (v) u.voice = v;
         u.onstart = () => { started = true; this._speechOk = true; };
         ss.speak(u);
@@ -125,8 +131,9 @@ class Sfx {
   _duck(n, sfxToo = true) {
     try {
       const lines = { length: n };
-      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.15, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2 + lines.length * 1.1, 0.4);
-        if (!sfxToo) return; const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.35, t + 0.15, 0.08); sb.setTargetAtTime(this.sfxVol, t + 1.2 + lines.length * 1.05, 0.3); }
+      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.06, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2.4 + lines.length * 1.5, 0.4);
+        // En los bonos baja menos para que la fanfarria siga sonando, pero la voz queda encima
+        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * (sfxToo ? 0.18 : 0.4), t + 0.1, 0.06); sb.setTargetAtTime(this.sfxVol, t + 1.4 + lines.length * 1.4, 0.3); }
     } catch (e) { }
   }
   // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
