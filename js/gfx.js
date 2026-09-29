@@ -122,6 +122,30 @@ const BALL_COLORS = {
   ice: ['#ffffff', '#dff6ff', '#8fd3ff', '#3a7fc8', '#0f2a5a', '#e8fbff']
 };
 
+// Moneda de oro con canto acuñado y "$" en relieve (partículas de premio)
+export function coinSprite(size = 64) {
+  size = Math.round(size);
+  const key = 'coin|' + size; let c = cache.get(key); if (c) return c;
+  c = makeCanvas(size, size); const x = c.getContext('2d'), cx = size / 2, cy = size / 2, r = size * 0.46;
+  let g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.1, cx, cy, r);
+  g.addColorStop(0, '#fff6c0'); g.addColorStop(0.45, '#f7c533'); g.addColorStop(1, '#9a5c08');
+  x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  // canto acuñado
+  x.strokeStyle = 'rgba(120,70,0,0.8)'; x.lineWidth = size * 0.02;
+  for (let i = 0; i < 36; i++) { const a = i * Math.PI / 18; x.beginPath(); x.moveTo(cx + Math.cos(a) * r * 0.86, cy + Math.sin(a) * r * 0.86); x.lineTo(cx + Math.cos(a) * r * 0.98, cy + Math.sin(a) * r * 0.98); x.stroke(); }
+  x.strokeStyle = '#ffe9a0'; x.lineWidth = size * 0.03; x.beginPath(); x.arc(cx, cy, r * 0.8, 0, 7); x.stroke();
+  g = x.createLinearGradient(0, cy - r * 0.6, 0, cy + r * 0.6); g.addColorStop(0, '#ffe07a'); g.addColorStop(1, '#b87408');
+  x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r * 0.74, 0, 7); x.fill();
+  x.font = '900 ' + size * 0.62 + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = 'rgba(90,50,0,0.55)'; x.fillText('$', cx + size * 0.02, cy + size * 0.04);
+  x.fillStyle = '#fff3b0'; x.fillText('$', cx, cy + size * 0.02);
+  // brillo
+  g = x.createRadialGradient(cx - r * 0.35, cy - r * 0.45, 0, cx - r * 0.35, cy - r * 0.45, r * 0.6);
+  g.addColorStop(0, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  cache.set(key, c); return c;
+}
+
 // Bola metálica brillante con etiqueta (valor o jackpot)
 export function ball(kind, label, size, sub) {
   size = Math.round(size);
@@ -312,8 +336,13 @@ export class Particles {
       } else if (p.type === 'coin') {
         x.globalCompositeOperation = 'source-over';
         const sx = Math.abs(Math.cos(p.rot)) + 0.08, s = p.size;
-        const img = ball('gold', '', 48);
-        x.drawImage(img, p.x - s * sx, p.y - s, s * 2 * sx, s * 2);
+        x.drawImage(coinSprite(48), p.x - s * sx, p.y - s, s * 2 * sx, s * 2);
+      } else if (p.type === 'zoom') {
+        // Moneda que viene hacia la pantalla: crece y se desvanece al final
+        x.globalCompositeOperation = 'source-over';
+        const sx = Math.abs(Math.cos(p.rot)) + 0.08, s = p.size * (1 + p.grow * ease.inCubic(t) + t * 1.5);
+        x.globalAlpha = p.alpha * (t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3);
+        x.drawImage(coinSprite(128), p.x - s * sx, p.y - s, s * 2 * sx, s * 2);
       } else if (p.type === 'shard') {
         x.globalCompositeOperation = 'lighter';
         x.save(); x.translate(p.x, p.y); x.rotate(p.rot);

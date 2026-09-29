@@ -3,8 +3,8 @@
 // Los símbolos altos también caen apilados. Atrapasueños BONUS solo en los rodillos 2, 3 y 4:
 // 3 = 5 giros gratis con WILDS APILADOS REFORZADOS (se repiten: +5).
 // Progresivos: rodillos llenos de WILD a la vez → 2 MINI · 3 MINOR · 4 MAJOR · 5 GRAND.
-import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=40';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=40';
+import { S, glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=41';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=41';
 
 const COLS = 5, ROWS = 4;
 // 40 líneas: los 20 patrones de 3 filas en las bandas de arriba y de abajo, sin repetir, más zigzags
