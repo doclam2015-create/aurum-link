@@ -1,8 +1,8 @@
 // RUEDA DE FUEGO · clásico 3x3, 5 líneas.
 // El WILD de fuego solo cae en el rodillo central: se expande a todo el rodillo y duplica
 // las líneas donde participa. 3 soles = RUEDA DE FUEGO con multiplicadores y 4 jackpots.
-import { S, sym, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=53';
-import { ReelSet, LINES_3x3, weighted, weightedIdx } from '../reels.js?v=53';
+import { S, sym, glow, goldText, roundRect, ease, rand, FONT } from '../gfx.js?v=54';
+import { ReelSet, LINES_3x3, weighted, weightedIdx } from '../reels.js?v=54';
 
 export const PAY = { seven: 60, bell: 24, melon: 18, grapes: 18, plum: 9, orange: 9, cherry: 6 };
 const W_REEL = [

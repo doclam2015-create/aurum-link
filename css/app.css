@@ -287,3 +287,5 @@ body.light .ver b{color:#9a6200;text-shadow:none}
 .meter.hot{animation:hotm .32s ease-in-out infinite alternate;border-color:var(--hot,#ffd76a)!important}
 .meter.hot #win{text-shadow:0 0 10px var(--hot,#ffd76a),0 0 22px var(--hot,#ffd76a)}
 @keyframes hotm{from{box-shadow:0 0 4px var(--hot,#ffd76a),inset 0 0 4px var(--hot,#ffd76a)}to{box-shadow:0 0 22px var(--hot,#ffd76a),inset 0 0 12px var(--hot,#ffd76a);transform:scale(1.04)}}
+.vtest{margin-top:8px;width:100%;padding:11px;border-radius:12px;border:1.5px solid #e9b949;background:linear-gradient(180deg,#ffd76a,#c98a1c);color:#3a2400;font-weight:800;font-size:15px}
+.set.voice output{font-size:12px;opacity:.8}
