@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=49';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=49';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=50';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=50';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const TEASE = 0.07, TEASE_EDGE = 0.18, GHOST_P = 0.4; // bolas extra detrás de la cortina (efecto "casi")
@@ -1078,20 +1078,27 @@ export default class XLink {
     const app = this.app, sfx = app.sfx, cells = this.bonus.cells;
     await app.wait(250);
     const [ox, oy] = this.cellCenter(c0, r0);
-    sfx.featureStart(); app.flash('#ffe8a0', 0.4);
+    sfx.featureStart(); app.flash('#ffe8a0', 0.5); app.shake(true);
+    sfx.announce([['¡Multiplicador!', 1.2, 0.85], ['¡Todas las bolas por dos!', 1.15, 0.9]], 'es');
     app.message('¡<b>UPGRADE</b>! Todas las bolas duplican su valor');
     app.burst(ox, oy, 1, { type: 'ring', color: '#ffd76a', size: 10, grow: this.cw * 3, width: 10, life: 0.8, speed: 0 });
-    await app.wait(400);
+    await app.wait(900);
     let k = 0;
     for (let r = 0; r < MAXR; r++) for (let c = 0; c < COLS; c++) {
       const s = cells[r][c];
       if (!s || s.special || !s.value || (r === r0 && c === c0)) continue;
-      s.value *= 2; s.t = 0;
+      // Un rayo grueso con trueno por cada bola; el valor se duplica en el impacto
       const [px, py] = this.cellCenter(c, r);
-      this.bolts.push({ x1: ox, y1: oy, x2: px, y2: py, t: 0, life: 0.3, w: 1.4, color: '#ffd76a' });
-      app.popText(px, py - 14, 'x2', 18);
+      this.bolts.push({ x1: ox, y1: oy, x2: px, y2: py, t: 0, life: 0.5, w: 5, color: '#ffe68a' });
+      this.bolts.push({ x1: ox, y1: oy, x2: px + rand(-10, 10), y2: py + rand(-10, 10), t: 0, life: 0.35, w: 2, color: '#ffffff' });
+      sfx.lightning(k, k === 0);
+      app.flash('#fff6d0', 0.3); app.shake(k % 2 === 0);
+      s.value *= 2; s.t = 0;
+      app.burst(px, py, 18, { type: 'spark', color: '#ffe68a', speed: 320, size: 12 });
+      app.burst(px, py, 1, { type: 'ring', color: '#fff2b0', size: 8, grow: this.cw * 0.9, width: 6, life: 0.45, speed: 0 });
+      app.popText(px, py - 14, 'x2', 24);
       sfx.collect(k++);
-      await app.wait(70);
+      await app.wait(520);
     }
   }
   // Retira una bola especial del tablero con una pequeña animación; la casilla queda libre
