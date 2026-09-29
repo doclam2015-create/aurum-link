@@ -3,8 +3,8 @@
 // hasta 8 filas y 100 líneas. 6+ bolas doradas activan GOLDEN SPINS: las bolas quedan fijas,
 // 3 giros que se reinician con cada bola nueva y filas que se desbloquean con rayos al
 // acumular 8 · 12 · 17 · 23 · 30 bolas. Tablero lleno (40) = GRAND.
-import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=46';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=46';
+import { S, sym, ball, jackpotRibbonBall, cashBall, spinsBall, specialIcon, spriteURL, bolt, electricRing, glow, goldText, roundRect, ease, rand, makeCanvas, FONT } from '../gfx.js?v=47';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=47';
 
 const COLS = 5, MAXR = 8, BASE_R = 3;
 const THRESH = [8, 12, 17, 23, 30];
@@ -561,7 +561,7 @@ export default class XLink {
   }
   drawPanels(x) {
     const { bx, by, cw, ch, time } = this, P = this.T.panels, L = this.app.light;
-    const fade = (L ? 0.9 : 0.95) * (this.bonus ? 0.42 : 1);
+    const fade = (L ? 0.58 : 0.64) * (this.bonus ? 0.6 : 1); // tela translúcida: se ve lo que gira detrás
     const pw = cw - 6, img = this.pleatImg(pw, ch * 5);
     for (let c = 0; c < COLS; c++) {
       const cov = this.cov[c], px = bx + c * cw + 3;
