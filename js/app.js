@@ -1,18 +1,18 @@
-import { sfx } from './audio.js?v=50';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=50';
-import { sleep } from './reels.js?v=50';
-import XLink from './games/xlink.js?v=50';
-import Avalanche from './games/avalanche.js?v=50';
-import FireWheel from './games/firewheel.js?v=50';
-import Legion from './games/legion.js?v=50';
-import Bull from './games/bull.js?v=50';
-import Dragon from './games/dragon.js?v=50';
-import Codex from './games/codex.js?v=50';
-import Reef from './games/reef.js?v=50';
-import Western from './games/western.js?v=50';
-import Galaxy from './games/galaxy.js?v=50';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=50';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=50';
+import { sfx } from './audio.js?v=51';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=51';
+import { sleep } from './reels.js?v=51';
+import XLink from './games/xlink.js?v=51';
+import Avalanche from './games/avalanche.js?v=51';
+import FireWheel from './games/firewheel.js?v=51';
+import Legion from './games/legion.js?v=51';
+import Bull from './games/bull.js?v=51';
+import Dragon from './games/dragon.js?v=51';
+import Codex from './games/codex.js?v=51';
+import Reef from './games/reef.js?v=51';
+import Western from './games/western.js?v=51';
+import Galaxy from './games/galaxy.js?v=51';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=51';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=51';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -553,12 +553,35 @@ function selectGame(id) {
   if (state.music) sfx.music(G.music);
 }
 
+// Al cambiar la apuesta, los montos visibles de bolas/monedas/orbes se ajustan en proporción
+function rescaleValues(g, ratio) {
+  if (!g || !isFinite(ratio) || ratio === 1) return;
+  const seen = new Set();
+  const fix = s => {
+    if (!s || typeof s !== 'object' || seen.has(s)) return;
+    seen.add(s);
+    if (typeof s.value === 'number' && s.value > 0) { s.value = Math.round(s.value * ratio * 100) / 100; }
+  };
+  const walk = (v, d) => {
+    if (!v || typeof v !== 'object' || d > 3) return;
+    if (Array.isArray(v)) { v.forEach(e => Array.isArray(e) ? walk(e, d + 1) : fix(e)); return; }
+    if (Array.isArray(v.columns) && Array.isArray(v.grid)) { v.columns.forEach(col => col.syms.forEach(fix)); walk(v.grid, d + 1); }
+  };
+  Object.keys(g).forEach(k => { if (k !== 'app') walk(g[k], 0); });
+}
+
 // ---------- Eventos ----------
 function bind() {
   const tap = (id, fn) => $(id).addEventListener('click', e => { sfx.unlock(); fn(e); });
   $('btnSpin').addEventListener('pointerdown', e => { e.preventDefault(); if (autoLeft > 0 && !busy) { autoLeft = 0; renderHud(); } spin(); });
-  tap('betDown', () => { if (busy) return; state.betIdx = Math.max(0, state.betIdx - 1); sfx.click(); renderHud(); save(); });
-  tap('betUp', () => { if (busy) return; state.betIdx = Math.min(BETS.length - 1, state.betIdx + 1); sfx.click(); renderHud(); save(); });
+  const setBet = i => {
+    if (busy || (game && game.locked)) return;
+    const old = app.bet; state.betIdx = clamp(i, 0, BETS.length - 1);
+    if (app.bet !== old) rescaleValues(game, app.bet / old);
+    sfx.click(); renderHud(); save();
+  };
+  tap('betDown', () => setBet(state.betIdx - 1));
+  tap('betUp', () => setBet(state.betIdx + 1));
   tap('btnTurbo', () => { state.speed = SPEEDS[(SPEEDS.indexOf(state.speed) + 1) % SPEEDS.length]; sfx.button(); renderHud(); save(); });
   tap('btnTheme', () => { setLight(!state.light); sfx.button(); });
   tap('btnSettings', openSettings);
