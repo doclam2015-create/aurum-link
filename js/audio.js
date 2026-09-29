@@ -81,7 +81,8 @@ class Sfx {
         speechSynthesis.speak(u);
       });
       // Baja la música mientras habla el locutor
-      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.3, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 1.6 + lines.length * 0.9, 0.4); }
+      if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.3, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 1.6 + lines.length * 0.9, 0.4);
+        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.55, t + 0.2, 0.08); sb.setTargetAtTime(this.sfxVol, t + 0.9 + lines.length * 0.85, 0.3); }
     } catch (e) { }
   }
   // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
