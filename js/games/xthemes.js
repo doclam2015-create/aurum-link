@@ -4,8 +4,8 @@
 // las filas cerradas son paneles rojos. Reino de Nieve paga por líneas y el hielo es una lámina escarchada.
 //  · SUEÑO ROJO: pagoda roja, paneles lacados con borlas, rodillos de jade, cerezos en flor.
 //  · REINO DE NIEVE: castillo de hielo, paneles escarchados, aurora, carámbanos y nevada.
-import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=41';
-import XLink, { THEME, PAY, linesFor } from './xlink.js?v=41';
+import { S, glow, goldText, rand, FONT, makeCanvas } from '../gfx.js?v=42';
+import XLink, { THEME, PAY, linesFor } from './xlink.js?v=42';
 
 const MAXR = 8, BASE_R = 3;
 // Filas activas → formas de ganar
@@ -24,7 +24,7 @@ function waysBadge(x, cx, cy, w, text, col, txt, l1 = 'FORMAS', l2 = 'DE GANAR')
 
 // ---------- SUEÑO ROJO ----------
 const RED = Object.assign({}, THEME, {
-  ways: true, wild: 2.5, top: 34, bottom: 14, expand: 'random', perReel: true, ball: 1.12,
+  ways: true, wild: 2.5, top: 34, bottom: 14, expand: 'random', perReel: true, ball: 1.12, freeOpen: true,
   // Por formas no se paga con solo 2 "10" (daba premios de centavos)
   pay: Object.assign({}, PAY, { cherry: [0, 0, 0, 5, 20, 80] }),
   icon: Object.assign({}, THEME.icon, { s7r: S.GEISHA, s7b: S.DRAGON, bar: S.PHOENIX, bell: S.BELL, melon: S.CLOVER, grapes: S.K, plum: S.Q, orange: S.J, cherry: S.TEN, wild: S.WILD }),
