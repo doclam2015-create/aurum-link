@@ -77,21 +77,36 @@ class Sfx {
     return pickVoice(vs, ['Paulina', 'Google español de Estados Unidos', 'Jorge', 'Juan', 'Monica', 'Mónica', 'Google español'], /^es[-_](MX|US|CL|419)/i);
   }
   // lang 'es' usa una voz en español (anuncios de bonos y giros); por defecto inglés como en los casinos
-  announce(lines, lang = 'en') {
+  announce(lines, lang = 'en', o = {}) {
     try {
       if (!this.enabled || !window.speechSynthesis) return;
-      speechSynthesis.cancel();
+      // Safari iOS ignora lo que se habla justo después de cancel(): solo se corta si hay algo sonando y se espera un poco
+      const ss = speechSynthesis, busy = ss.speaking || ss.pending;
+      if (busy) ss.cancel();
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => this._speakLines(lines, lang), busy ? 160 : 0);
+      this._duck(lines.length, o.sfx !== false);
+    } catch (e) { }
+  }
+  _speakLines(lines, lang) {
+    try {
+      const ss = speechSynthesis; if (ss.paused) ss.resume();
       const v = lang === 'es' ? this._voiceEs() : this._voice();
       lines.forEach(([text, pitch, rate]) => {
         // Tono casi natural y ritmo pausado: los tonos muy agudos o rápidos deforman las palabras
         const u = new SpeechSynthesisUtterance(text); u.lang = lang === 'es' ? (v ? v.lang : 'es-MX') : 'en-US';
         u.pitch = Math.min(1.08, Math.max(0.95, 1 + (pitch - 1) * 0.35)); u.rate = Math.min(0.82, rate * 0.95); u.volume = 1;
         if (v) u.voice = v;
-        speechSynthesis.speak(u);
+        ss.speak(u);
       });
-      // Baja la música mientras habla el locutor
+    } catch (e) { }
+  }
+  // Baja la música y los efectos mientras habla el locutor
+  _duck(n, sfxToo = true) {
+    try {
+      const lines = { length: n };
       if (this.ctx) { const t = this.ctx.currentTime; this.musicBus.gain.cancelScheduledValues(t); this.musicBus.gain.setTargetAtTime(this.musicVol * 0.15, t, 0.05); this.musicBus.gain.setTargetAtTime(this.musicVol, t + 2 + lines.length * 1.1, 0.4);
-        const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.35, t + 0.15, 0.08); sb.setTargetAtTime(this.sfxVol, t + 1.2 + lines.length * 1.05, 0.3); }
+        if (!sfxToo) return; const sb = this.sfxBus.gain; sb.cancelScheduledValues(t); sb.setTargetAtTime(this.sfxVol * 0.35, t + 0.15, 0.08); sb.setTargetAtTime(this.sfxVol, t + 1.2 + lines.length * 1.05, 0.3); }
     } catch (e) { }
   }
   // Campana clásica de tragamonedas (timbre metálico que repica mientras cuenta el premio)
@@ -133,13 +148,14 @@ class Sfx {
   // Entrada a un bono: sirena corta, redoble, platillo, fanfarria ascendente, timbre y público
   bonusFanfare(big = true) {
     if (!this.ok) return;
+    this._fanfareT = performance.now();
     if (big) this.siren(0.9);
     const n = big ? 18 : 10;
     for (let i = 0; i < n; i++) { const at = i * 0.035; this.noise(0.05, { at, vol: 0.08 + 0.18 * i / n, type: 'bandpass', freq: 1800, q: 0.8 }); }
     const h = n * 0.035;
     this.noise(2, { at: h, vol: 0.3, type: 'highpass', freq: 5000, q: 0.4, verb: 0.6 });
     this.tone(55, 0.8, { vol: 0.6, at: h, slide: 0.5 });
-    this.tataam(h, big ? 1 : 0.7, big ? 1.9 : 1.1);
+    this.tataam(h, big ? 1.35 : 0.9, big ? 1.9 : 1.1);
     this.bellRing(big ? 1.6 : 0.8, 0.05, h);
     if (big) [0, 1].forEach(w => this.tone(1900 + w * 300, 0.35, { vol: 0.06, at: h + 0.5 + w * 0.45, slide: 1.35 }));
     if (big) [[700, 3], [1150, 4], [2400, 5]].forEach(([f, q], i) => this.crowd(2.4, 0.09, h + 0.1, f, q, i));
@@ -510,14 +526,16 @@ class Sfx {
     const base = 392 * Math.pow(2, level / 6);
     [1, 1.25, 1.5, 2].forEach((m, i) => this.tone(base * m, 0.9, { type: 'triangle', vol: 0.12, at: 0.25 + i * 0.07, verb: 0.5 }));
   }
+  // Trompetas de la entrada: se omiten si enseguida suena la fanfarria del bono (no se tapan)
+  _fsBrass(chord, at, dur) { setTimeout(() => { if (performance.now() - (this._fanfareT || 0) < 600) return; this.brass(chord, Math.max(0, at - 0.04), dur); }, 40); }
   featureStart() {
-    if (this.theme === 'wolf') { this.howl(0, 0.3, 320); for (let i = 0; i < 10; i++) this.drum(0.2 + i * 0.16, 0.5, i % 2 ? 80 : 110); this.brass([220, 261.6, 329.6, 440], 1.6, 1.4); return; }
-    if (this.theme === 'china') { this.gong(82, 3.5, 0.5); this.firecrackers(18, 0.3); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => this.pluck(this._scale(i + 3), 0.9 + i * 0.06, 0.09)); this.brass([293.7, 370, 440, 587.3], 1.5, 1.4); return; }
-    if (this.theme === 'snow') { this.wind(2.4, 0.22); this.shatter(3); for (let i = 0; i < 12; i++) this.celesta(this._scale(14 - i), 0.3 + i * 0.07, 0.07); for (let i = 0; i < 8; i++) this.jingle(0.4 + i * 0.12, 0.08); this.brass([293.7, 349.2, 440, 587.3], 1.3, 1.6); return; }
+    if (this.theme === 'wolf') { this.howl(0, 0.3, 320); for (let i = 0; i < 10; i++) this.drum(0.2 + i * 0.16, 0.5, i % 2 ? 80 : 110); this._fsBrass([220, 261.6, 329.6, 440], 1.6, 1.4); return; }
+    if (this.theme === 'china') { this.gong(82, 3.5, 0.5); this.firecrackers(18, 0.3); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(i => this.pluck(this._scale(i + 3), 0.9 + i * 0.06, 0.09)); this._fsBrass([293.7, 370, 440, 587.3], 1.5, 1.4); return; }
+    if (this.theme === 'snow') { this.wind(2.4, 0.22); this.shatter(3); for (let i = 0; i < 12; i++) this.celesta(this._scale(14 - i), 0.3 + i * 0.07, 0.07); for (let i = 0; i < 8; i++) this.jingle(0.4 + i * 0.12, 0.08); this._fsBrass([293.7, 349.2, 440, 587.3], 1.3, 1.6); return; }
     this.thunder(0.8);
     const seq = [392, 523, 659, 784, 1047, 1319];
     seq.forEach((f, i) => { this.tone(f, 0.5, { type: 'sawtooth', vol: 0.06, at: 0.3 + i * 0.09, verb: 0.4 }); this.bell(f, 0.8, 0.07, 0.3 + i * 0.09); });
-    this.brass([261.6, 329.6, 392, 523.3], 0.95, 1.2);
+    this._fsBrass([261.6, 329.6, 392, 523.3], 0.95, 1.2);
   }
   // Fanfarria de trompetas "ta-taaaam": golpe corto y acorde largo sostenido con vibrato y timbal
   tataam(at = 0, vol = 1, hold = 1.9) {
