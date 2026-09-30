@@ -24,7 +24,7 @@ print(SQ + TALL, A.size)
 # Escenarios a partir de las portadas que compartió el usuario (solo zonas sin logo ni marca de agua):
 #   giant_hero.webp     gigante de cuerpo entero con cielo (personaje alto y escenario)
 #   giant_sky.webp      nubes con el castillo y el huevo de oro (fondo)
-#   giant_heroine.webp  la heroína en su marco rosado (de la captura del juego)
+#   giant_heroine.webp  la heroína trepando la habichuela (de la portada)
 #   sparta_hero.webp    Espartaco con escudo y espada (cuadro y MEGA WILD)
 #   sparta_heroine.webp la guerrera con dos espadas (cuando cae apilada)
 #   sparta_bg.webp      cielo, mar y rocas del centro; donde estaba el logo queda un degradado suave
@@ -32,10 +32,9 @@ from PIL import ImageFilter, ImageDraw
 ref = Image.open(SRC + 'ref_giant.jpg').convert('RGB')
 ref.crop((494, 60, 800, 599)).save('assets/giant_hero.webp', 'WEBP', quality=90, method=6)
 ref.crop((0, 292, 410, 599)).save('assets/giant_sky.webp', 'WEBP', quality=88, method=6)
-# heroína de Oro del Gigante en su marco rosado, tomada de la captura del juego (pequeña: se amplía 3× con filtro)
-hp = Image.open(SRC + 'ref_giant_play.jpg').convert('RGB').crop((152, 168, 223, 352))
-hp = hp.resize((hp.width * 3, hp.height * 3), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
-hp.save('assets/giant_heroine.webp', 'WEBP', quality=90, method=6)
+# heroína de Oro del Gigante, trepando la habichuela
+# (portada nítida de 500×500: solo la parte de arriba, antes del logo)
+Image.open(SRC + 'ref_giant2.png').convert('RGB').crop((140, 0, 340, 205)).save('assets/giant_heroine.webp', 'WEBP', quality=92, method=6)
 sp = Image.open(SRC + 'ref_sparta2.webp').convert('RGB')
 sp.crop((0, 40, 248, 541)).save('assets/sparta_hero.webp', 'WEBP', quality=90, method=6)
 sp.crop((735, 60, 960, 541)).save('assets/sparta_heroine.webp', 'WEBP', quality=90, method=6)
