@@ -20,3 +20,13 @@ for n, k in enumerate(TALL):
     A.alpha_composite(im, (len(SQ) * T + n * 100 + (100 - im.width) // 2, (T - im.height) // 2))
 A.save('assets/colossal.webp', 'WEBP', quality=86, method=6)
 print(SQ + TALL, A.size)
+
+# Escenarios a partir de las portadas que compartió el usuario (solo zonas sin logo ni marca de agua):
+#   giant_hero.webp  gigante de cuerpo entero con cielo (personaje alto y escenario)
+#   giant_sky.webp   nubes con el castillo y el huevo de oro (fondo)
+#   sparta_hero.webp Espartaco con escudo y espada
+ref = Image.open(SRC + 'ref_giant.jpg').convert('RGB')
+ref.crop((494, 60, 800, 599)).save('assets/giant_hero.webp', 'WEBP', quality=90, method=6)
+ref.crop((0, 292, 410, 599)).save('assets/giant_sky.webp', 'WEBP', quality=88, method=6)
+Image.open(SRC + 'ref_sparta.webp').convert('RGB').crop((0, 0, 132, 240)).save('assets/sparta_hero.webp', 'WEBP', quality=92, method=6)
+print('escenarios listos')

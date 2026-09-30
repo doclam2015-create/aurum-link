@@ -10,9 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=62';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=62';
-import { giantScene, spartaScene } from './scenes.js?v=62';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=63';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=63';
+import { spartaScene } from './scenes.js?v=63';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -41,31 +41,33 @@ export const GIANT = {
     cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60], ten: [0, 0, 0, 5, 10, 50]
   },
   weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 8, K: 8, Q: 9, J: 9, ten: 10, bean: 0.8, egg: 1.4 },
-  scale: 1.65,
+  scale: 1.7,
   fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35,
   colors: {
     giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
     A: ['#b02ad8', '#3a0a5a'], K: ['#f08a1a', '#6a2a04'], Q: ['#e0b010', '#6a4a04'], J: ['#2a7ae0', '#0a2a6a'], ten: ['#20a860', '#0a4a24']
   },
+  badge: { cow: ['#8ad0ff', '#0a4a9a'], goose: ['#ffc070', '#c8501a'] }, tall: ['giant', 'girl'],
   names: { bean: 'Habichuela mágica (WILD)', giant: 'Gigante', girl: 'Heroína', harp: 'Arpa dorada', sack: 'Saco de oro', cow: 'Vaca', goose: 'Ganso', egg: 'Huevo de oro (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J', ten: '10' }
 };
 export const SPARTA = {
   id: 'spartacus', name: 'Espartaco Coloso', music: 'arena', bonusMusic: 'arenaBonus',
   wild: 'sparta', super: 'super', multWild: 'mw', scatter: 'colis', scatName: 'coliseos',
-  high: ['warrior', 'lion', 'helm', 'chariot', 'sword'], low: ['A', 'K', 'Q', 'J'],
+  high: ['warrior', 'lion', 'helm', 'chariot', 'sword'], low: ['heart', 'spade', 'diamond', 'club'],
   pay: {
     sparta: [0, 0, 0, 50, 250, 1000], warrior: [0, 0, 0, 40, 150, 600], lion: [0, 0, 0, 30, 120, 400], helm: [0, 0, 0, 25, 100, 300],
-    chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
+    chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], heart: [0, 0, 0, 10, 30, 100], spade: [0, 0, 0, 10, 25, 100], diamond: [0, 0, 0, 5, 20, 75], club: [0, 0, 0, 5, 15, 60]
   },
-  weights: { warrior: 3, lion: 3.5, helm: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
+  weights: { warrior: 3, lion: 3.5, helm: 4, chariot: 5, sword: 5, heart: 8, spade: 8, diamond: 9, club: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
   scale: 0.85,
   fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
   colors: {
     warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#ffe0a0', '#a86a10'], helm: ['#ffd0a0', '#8a3a0a'], chariot: ['#ffe8a0', '#a8761a'], sword: ['#e0e8f0', '#5a6a80'],
-    A: ['#ffd24a', '#8a4a06'], K: ['#e8e8f0', '#5a5a70'], Q: ['#ff8a4a', '#7a1a04'], J: ['#d0a870', '#5a3a14']
+    heart: ['#ff6a6a', '#8a0a14'], spade: ['#7ab8ff', '#0a2a8a'], diamond: ['#ffc050', '#a84a04'], club: ['#6ae08a', '#0a5a24']
   },
-  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD, da re-giro al transferirse)', mw: 'WILD x2…x25 (solo rodillo 5 del colosal)', warrior: 'Guerrera', lion: 'León', helm: 'Gladiador del yelmo', chariot: 'Carro de guerra', sword: 'Gladius', colis: 'Coliseo (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J' }
+  badge: { lion: ['#c080ff', '#3a0a6a'], helm: ['#c8d0e0', '#2a3040'] }, tall: ['warrior'],
+  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD, da re-giro al transferirse)', mw: 'WILD x2…x25 (solo rodillo 5 del colosal)', warrior: 'Guerrera', lion: 'León', helm: 'Gladiador del yelmo', chariot: 'Carro de guerra', sword: 'Gladius', colis: 'Coliseo (BONUS)', heart: 'Corazón', spade: 'Pica', diamond: 'Diamante', club: 'Trébol' }
 };
 
 // ---------- Lógica pura (se puede simular sin pantalla) ----------
@@ -192,15 +194,23 @@ export const jackpotFor = n => ({ 2: 'mini', 3: 'minor', 4: 'major', 5: 'grand' 
 export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >= 5 ? 20 : sc.reels === 4 ? 15 : 10;
 
 // ---------- Arte (assets/colossal.webp, ver tools/build_colossal.py; escenarios en scenes.js) ----------
-let SHEET = null;
+let SHEET = null; const IMG = {};
 const POS = { giant: 0, girl: 1, harp: 2, cow: 3, goose: 4, sack: 5, egg: 6, lion: 7, warrior: 8, helm: 9, chariot: 10, sword: 11, colis: 12, shield: 13, bust: 14 };
 const TALL = { bean: 3000, sparta: 3100 };
 function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 export function loadColossalArt() {
-  return loadImg('assets/colossal.webp').then(i => { SHEET = i; cache.clear(); });
+  const one = (k, f) => loadImg('assets/' + f).then(i => { IMG[k] = i; }).catch(() => { });
+  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('shero', 'sparta_hero.webp')]).then(() => cache.clear());
 }
 // Recorte de la hoja: [sx, sy, sw, sh]
 function src(k) { if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
+// Imagen que cubre un rectángulo (recorta lo que sobra), anclada en (ax, ay)
+function cover(x, img, dx, dy, dw, dh, ax = 0.5, ay = 0.5) {
+  if (!img) return;
+  const s = Math.max(dw / img.width, dh / img.height), w = img.width * s, h = img.height * s;
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(img, dx + (dw - w) * ax, dy + (dh - h) * ay, w, h);
+}
 // Dibuja una figura de la hoja ajustada (sin deformar) dentro de un rectángulo
 function art(x, k, dx, dy, dw, dh, f = 1, ay = 0.5) {
   if (!SHEET) return;
@@ -240,28 +250,69 @@ function rankIcon(cfg, k, s, x) {
   gg.addColorStop(0, '#fff'); gg.addColorStop(0.4, giant ? c1 : '#ffd24a'); gg.addColorStop(1, giant ? c2 : '#6a3a04');
   x.fillStyle = gg; x.beginPath(); x.arc(gx, gy, gr, 0, 7); x.fill();
 }
+const SUITS = { heart: 1, spade: 1, diamond: 1, club: 1 };
+const isLow = (cfg, k) => cfg.low.includes(k);
+function suitPath(x, k, s) {
+  const c = s / 2; x.beginPath();
+  if (k === 'heart') { x.moveTo(c, s * 0.84); x.bezierCurveTo(s * 0.1, s * 0.5, s * 0.08, s * 0.16, c - s * 0.18, s * 0.16); x.bezierCurveTo(c - s * 0.06, s * 0.16, c, s * 0.26, c, s * 0.3); x.bezierCurveTo(c, s * 0.26, c + s * 0.06, s * 0.16, c + s * 0.18, s * 0.16); x.bezierCurveTo(s * 0.92, s * 0.16, s * 0.9, s * 0.5, c, s * 0.84); }
+  else if (k === 'spade') { x.moveTo(c, s * 0.12); x.bezierCurveTo(s * 0.9, s * 0.46, s * 0.9, s * 0.72, c + s * 0.16, s * 0.7); x.bezierCurveTo(c + s * 0.06, s * 0.7, c + s * 0.03, s * 0.64, c + s * 0.02, s * 0.62); x.lineTo(c + s * 0.12, s * 0.88); x.lineTo(c - s * 0.12, s * 0.88); x.lineTo(c - s * 0.02, s * 0.62); x.bezierCurveTo(c - s * 0.03, s * 0.64, c - s * 0.06, s * 0.7, c - s * 0.16, s * 0.7); x.bezierCurveTo(s * 0.1, s * 0.72, s * 0.1, s * 0.46, c, s * 0.12); }
+  else if (k === 'diamond') { x.moveTo(c, s * 0.1); x.quadraticCurveTo(c + s * 0.12, s * 0.35, s * 0.82, c); x.quadraticCurveTo(c + s * 0.12, s * 0.65, c, s * 0.9); x.quadraticCurveTo(c - s * 0.12, s * 0.65, s * 0.18, c); x.quadraticCurveTo(c - s * 0.12, s * 0.35, c, s * 0.1); }
+  else { [[c, s * 0.3], [c - s * 0.19, s * 0.55], [c + s * 0.19, s * 0.55]].forEach(([px, py]) => { x.moveTo(px + s * 0.17, py); x.arc(px, py, s * 0.17, 0, 7); }); x.moveTo(c - s * 0.04, s * 0.55); x.lineTo(c - s * 0.12, s * 0.88); x.lineTo(c + s * 0.12, s * 0.88); x.lineTo(c + s * 0.04, s * 0.55); }
+  x.closePath();
+}
+function suitIcon(cfg, k, s, x) {
+  const [c1, c2] = cfg.colors[k];
+  x.save(); x.shadowColor = 'rgba(0,0,0,0.55)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+  suitPath(x, k, s); x.lineJoin = 'round'; x.lineWidth = s * 0.07; x.strokeStyle = '#1a0804'; x.stroke(); x.restore();
+  suitPath(x, k, s); x.lineWidth = s * 0.03; x.strokeStyle = '#ffe8a0'; x.stroke();
+  const g = x.createLinearGradient(0, s * 0.1, 0, s * 0.9); g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, c1); g.addColorStop(1, c2);
+  x.fillStyle = g; x.fill();
+  // brillo
+  x.save(); suitPath(x, k, s); x.clip(); x.globalAlpha = 0.35; x.fillStyle = '#fff'; x.beginPath(); x.ellipse(s * 0.42, s * 0.3, s * 0.16, s * 0.08, -0.5, 0, 7); x.fill(); x.restore();
+}
+// Placa del WILD de Espartaco: logo "ESPARTACO · GLADIADOR DE ROMA" en bronce (dorada si es Super)
+function logoTile(x, s, sup) {
+  tile(x, s, s, sup ? '#ffe68a' : '#5a3418', sup ? '#9a5a08' : '#1e0c04', sup ? '#fff8d0' : '#d8a048', 0.06);
+  if (sup) x.drawImage(glow('rgba(255,240,170,1)', 64), -s * 0.1, -s * 0.1, s * 1.2, s * 1.2);
+  const fs = s * 0.21, y = s * 0.4;
+  x.font = '900 ' + fs + 'px Georgia, "Times New Roman", serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.lineWidth = fs * 0.3; x.strokeStyle = '#1a0800'; x.strokeText('ESPARTACO', s / 2, y, s * 0.9);
+  const g = x.createLinearGradient(0, y - fs / 2, 0, y + fs / 2); g.addColorStop(0, '#fff6d0'); g.addColorStop(0.45, '#e8a040'); g.addColorStop(0.55, '#b86a18'); g.addColorStop(1, '#fff0b0');
+  x.fillStyle = g; x.fillText('ESPARTACO', s / 2, y, s * 0.9);
+  // espada bajo el nombre
+  x.strokeStyle = '#e8ecf4'; x.lineWidth = s * 0.025; x.lineCap = 'round'; x.beginPath(); x.moveTo(s * 0.2, s * 0.56); x.lineTo(s * 0.86, s * 0.56); x.stroke();
+  x.fillStyle = '#f0c040'; x.fillRect(s * 0.16, s * 0.52, s * 0.035, s * 0.08); x.fillRect(s * 0.1, s * 0.545, s * 0.07, s * 0.03);
+  x.font = '800 ' + s * 0.085 + 'px ' + FONT; x.fillStyle = sup ? '#4a2004' : '#f0d8a0'; x.fillText('GLADIADOR DE ROMA', s / 2, s * 0.66, s * 0.84);
+  label(x, s / 2, sup ? 'SUPER WILD' : 'WILD', s * 0.84, s * 0.17, s * 0.9, sup ? ['#fff', '#ffb020'] : undefined);
+}
 // Icono cuadrado de cada símbolo (fondo transparente salvo WILD / BONUS)
 export function symIcon(cfg, k, size, mult) {
   return cached(cfg.id + k + (mult || ''), size, size, (x, s) => {
     if (RANKTXT[k]) return rankIcon(cfg, k, s, x);
+    if (SUITS[k]) return suitIcon(cfg, k, s, x);
+    if (k === 'sparta' || k === 'super') return logoTile(x, s, k === 'super');
     x.save(); x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
     if (k === 'egg') { tile(x, s, s, '#9a4ae0', '#2a0a5a'); x.restore(); x.drawImage(glow('rgba(255,210,80,1)', 64), 0, 0, s, s); art(x, 'egg', 0, s * 0.02, s, s * 0.8, 0.9); label(x, s / 2, 'BONUS', s * 0.84, s * 0.19, s * 0.9); return; }
     if (k === 'bean') { tile(x, s, s, '#9aeaa0', '#1a6a2a'); x.restore(); art(x, 'bean', 0, 0, s, s * 0.86, 1.05); label(x, s / 2, 'WILD', s * 0.8, s * 0.26, s * 0.92); return; }
-    if (k === 'sparta' || k === 'super') {
-      const sup = k === 'super'; tile(x, s, s, sup ? '#fff0a0' : '#e8503a', sup ? '#a8600a' : '#4a0806', sup ? '#fff' : '#f5d27a'); x.restore();
-      if (sup) x.drawImage(glow('rgba(255,240,160,1)', 64), 0, 0, s, s);
-      art(x, 'bust', 0, s * 0.04, s, s * 0.7, 1); label(x, s / 2, sup ? 'SUPER' : 'WILD', s * 0.8, s * (sup ? 0.22 : 0.26), s * 0.92, sup ? ['#fff', '#ffb020'] : undefined);
-      return;
-    }
     if (k === 'mw') { tile(x, s, s, '#ffd870', '#6a2a04'); x.restore(); art(x, 'shield', 0, s * 0.02, s, s * 0.66, 0.95); label(x, s / 2, 'x' + (mult || 2), s * 0.76, s * 0.3, s * 0.92, ['#fff', '#ff5a2a']); return; }
     if (k === 'colis') { tile(x, s, s, '#ffe0a0', '#8a3a0a'); x.restore(); x.drawImage(glow('rgba(255,210,80,1)', 64), 0, 0, s, s); art(x, 'colis', 0, s * 0.04, s, s * 0.72, 0.95); label(x, s / 2, 'BONUS', s * 0.84, s * 0.19, s * 0.9); return; }
+    if (cfg.badge && cfg.badge[k]) {
+      // óvalo de color detrás de la figura, como en la máquina
+      const [c1, c2] = cfg.badge[k], g = x.createRadialGradient(s * 0.45, s * 0.38, 1, s / 2, s / 2, s * 0.5);
+      g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.beginPath(); x.ellipse(s / 2, s / 2, s * 0.46, s * 0.4, 0, 0, 7); x.fill();
+      x.shadowColor = 'transparent'; x.lineWidth = s * 0.03; x.strokeStyle = '#fff4c8'; x.stroke();
+      x.restore(); x.save(); x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = s * 0.05;
+      art(x, k, 0, 0, s, s, 0.9); x.restore(); return;
+    }
     art(x, k, 0, 0, s, s, 0.94); x.restore();
   });
 }
 export function colossalIconStyle(k) {
-  const p = POS[k] != null ? POS[k] : 0;
+  const p = POS[k] != null ? POS[k] : POS.bust;
   return 'background-image:url(assets/colossal.webp);background-size:1600% 100%;background-position:' + (p * 100 / 15).toFixed(3) + '% 0';
 }
+
+function grad2(x, y0, y1, c0, c1) { const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); return g; }
 
 // ---------- Juego ----------
 class Colossal {
@@ -291,9 +342,10 @@ class Colossal {
     this.side = W / H >= 0.78;
     if (this.side) {
       const b = (W - 2 * pad - gap) / 12.5, cw = b * 1.5;
-      let bch = Math.min((H - 2 * pad) / BIG_ROWS, b * 1.15), bcw = b;
+      const tabs = this.cfg.id === 'giant' ? 0 : 14;
+      let bch = Math.min((H - 2 * pad - tabs) / BIG_ROWS, b * 1.15), bcw = b;
       const tot = bch * BIG_ROWS, ch = Math.min(cw * 0.86, (tot - gap - 40) / ROWS);
-      const tw = cw * COLS + gap + bcw * COLS, x0 = (W - tw) / 2, y0 = (H - tot) / 2;
+      const tw = cw * COLS + gap + bcw * COLS, x0 = (W - tw) / 2, y0 = (H - tot + tabs) / 2;
       Object.assign(this, { cw, ch, bcw, bch, mx: x0, my: y0 + tot - ch * ROWS, bx: x0 + cw * COLS + gap, by: y0 });
       this.banner = [x0, y0, cw * COLS, this.my - gap - y0];
     } else {
@@ -317,7 +369,8 @@ class Colossal {
     x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 14; x.shadowOffsetY = 4;
     roundRect(x, px - f, py - f, w + 2 * f, h + 2 * f, 9);
     const g = x.createLinearGradient(0, py - f, 0, py + h + f);
-    if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(0.5, '#6a3e14'); g.addColorStop(1, '#3a1e06'); }
+    if (giant && big) { g.addColorStop(0, '#fff0a0'); g.addColorStop(0.4, '#f0a020'); g.addColorStop(1, '#8a4a06'); }
+    else if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(0.5, '#6a3e14'); g.addColorStop(1, '#3a1e06'); }
     else { g.addColorStop(0, '#fff0b0'); g.addColorStop(0.45, '#c8901e'); g.addColorStop(1, '#6a3a06'); }
     x.fillStyle = g; x.fill(); x.restore();
     x.strokeStyle = giant ? '#e8c070' : '#fff4c0'; x.lineWidth = 1.5; roundRect(x, px - 2, py - 2, w + 4, h + 4, 4); x.stroke();
@@ -330,6 +383,13 @@ class Colossal {
       if (c) { x.fillStyle = giant ? 'rgba(120,80,30,0.35)' : 'rgba(245,200,100,0.35)'; x.fillRect(cx - 0.75, py, 1.5, h); }
     }
     if (giant) this.vines(x, px - f, py - f, w + 2 * f, h + 2 * f, big);
+    else {
+      // pestaña dorada "TABLERO PRINCIPAL" / "TABLERO COLOSAL", como en la máquina
+      const t = big ? 'TABLERO COLOSAL' : 'TABLERO PRINCIPAL', fs = Math.max(8, Math.min(11, w * 0.035));
+      x.font = '900 ' + fs + 'px ' + FONT; const tw = x.measureText(t).width + fs * 2.4, th = fs * 1.6, tx = px + w / 2 - tw / 2, ty = py - f - th * 0.72;
+      x.fillStyle = grad2(x, ty, ty + th, '#fff0b0', '#b8781a'); x.beginPath(); x.moveTo(tx, ty + th); x.lineTo(tx + th * 0.5, ty); x.lineTo(tx + tw - th * 0.5, ty); x.lineTo(tx + tw, ty + th); x.closePath(); x.fill();
+      x.fillStyle = '#3a1a00'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, px + w / 2, ty + th * 0.55);
+    }
   }
   // Enredaderas de habichuela sobre el marco de madera
   vines(x, px, py, w, h, big) {
@@ -350,8 +410,9 @@ class Colossal {
   // Escenario del juego (fondo completo + cuadro sobre el tablero principal)
   renderBg() {
     const { W, H, cfg } = this, dpr = this.app.dpr, L = this.app.light, cnv = makeCanvas(W * dpr, H * dpr), x = cnv.getContext('2d'); x.scale(dpr, dpr);
-    (cfg.id === 'giant' ? giantScene : spartaScene)(x, 0, 0, W, H);
-    x.fillStyle = L ? 'rgba(255,250,240,0.25)' : 'rgba(10,4,20,0.45)'; x.fillRect(0, 0, W, H);
+    if (cfg.id === 'giant') { x.fillStyle = '#6ab8f0'; x.fillRect(0, 0, W, H); cover(x, IMG.sky, 0, 0, W, H, 0.3, 0.5); }
+    else spartaScene(x, 0, 0, W, H);
+    x.fillStyle = L ? 'rgba(255,250,240,0.2)' : 'rgba(10,4,20,0.35)'; x.fillRect(0, 0, W, H);
     const v = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
     v.addColorStop(0, L ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.25)'); v.addColorStop(1, L ? 'rgba(255,250,235,0.35)' : 'rgba(0,0,0,0.7)');
     x.fillStyle = v; x.fillRect(0, 0, W, H);
@@ -367,8 +428,16 @@ class Colossal {
     const g = x.createLinearGradient(0, by, 0, by + bh); if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(1, '#4a2808'); } else { g.addColorStop(0, '#fff0b0'); g.addColorStop(0.5, '#c8901e'); g.addColorStop(1, '#6a3a06'); }
     x.fillStyle = g; x.fill(); x.restore();
     x.save(); roundRect(x, bx, by, bw, bh, 6); x.clip();
-    (giant ? giantScene : spartaScene)(x, bx, by, bw, bh);
     if (giant) {
+      // cielo con el castillo y el gigante de la portada a la derecha (se funde con las nubes)
+      x.fillStyle = '#6ab8f0'; x.fillRect(bx, by, bw, bh); cover(x, IMG.sky, bx, by, bw, bh, 0.15, 0.6);
+      const hero = IMG.hero;
+      if (hero) {
+        const hh = bh, hw = hero.width * hh / hero.height, hx = bx + bw - hw, t = makeCanvas(hw * this.app.dpr, hh * this.app.dpr), tx = t.getContext('2d');
+        tx.imageSmoothingQuality = 'high'; tx.drawImage(hero, 0, 0, t.width, t.height);
+        tx.globalCompositeOperation = 'destination-in'; const fg = tx.createLinearGradient(0, 0, t.width * 0.35, 0); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)'); tx.fillStyle = fg; tx.fillRect(0, 0, t.width, t.height);
+        x.drawImage(t, hx, by, hw, hh);
+      }
       // cinta rosada con la regla del bono y huevo "FEATURE" a la izquierda, como en la máquina
       const eh = Math.min(bh * 0.62, bw * 0.2), ex = bx + 6, ey = by + 6;
       x.drawImage(symIcon(cfg, 'egg', eh * this.app.dpr), ex, ey, eh, eh);
@@ -380,12 +449,21 @@ class Colossal {
       x.fillStyle = '#fff8e0'; x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
       x.fillText('3+ HUEVOS DE ORO EN 3 RODILLOS', rx + rw / 2, ry + rh * (bh > 90 ? 0.32 : 0.5), rw * 0.82);
       if (bh > 90) x.fillText('DAN 5 A 100 GIROS GRATIS', rx + rw / 2, ry + rh * 0.7, rw * 0.82);
-      if (bh > 120) goldText(x, 'ORO DEL GIGANTE', bx + bw / 2, by + bh - Math.min(30, bh * 0.16), Math.min(34, bw * 0.08), { maxW: bw * 0.9, stroke: '#2a1400', glowColor: '#8aff6a' });
+      if (bh > 120) { const lw = IMG.hero ? bw * 0.5 : bw; goldText(x, 'ORO DEL', bx + lw / 2 + 6, by + bh * 0.58, Math.min(40, lw * 0.18), { maxW: lw * 0.9, stroke: '#2a1400', glowColor: '#8aff6a' }); goldText(x, 'GIGANTE', bx + lw / 2 + 6, by + bh * 0.58 + Math.min(44, lw * 0.2), Math.min(40, lw * 0.18), { maxW: lw * 0.9, stroke: '#2a1400', glowColor: '#8aff6a' }); }
     } else {
       // Espartaco de cuerpo entero a la izquierda y el logo dorado
       // sin agrandar la figura más allá de su tamaño original (se vería borrosa)
-      const fh = Math.min(bh * 0.92, 196 * 1.25 / this.app.dpr), fw = Math.max(fh * 0.5, bw * 0.22);
-      x.save(); x.shadowColor = 'rgba(0,0,0,0.7)'; x.shadowBlur = 10; art(x, 'sparta', bx + bw * 0.06, by + bh * 0.97 - fh, fh * 0.5, fh, 1, 1); x.restore();
+      spartaScene(x, bx, by, bw, bh, true);
+      const sh = IMG.shero, fh = Math.min(bh, 240 * 1.6 / this.app.dpr), fw = sh ? Math.max(fh * sh.width / sh.height, bw * 0.22) : bw * 0.22;
+      if (sh) {
+        // la figura se funde con el fondo por arriba y por la derecha (sin bordes rectos)
+        const hw = fh * sh.width / sh.height, d = this.app.dpr, t = makeCanvas(hw * d, fh * d), tx = t.getContext('2d');
+        tx.imageSmoothingQuality = 'high'; tx.drawImage(sh, 0, 0, t.width, t.height); tx.globalCompositeOperation = 'destination-in';
+        const gr = tx.createLinearGradient(0, 0, t.width, 0); gr.addColorStop(0.55, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); tx.fillStyle = gr; tx.fillRect(0, 0, t.width, t.height);
+        const gt = tx.createLinearGradient(0, 0, 0, t.height * 0.25); gt.addColorStop(0, 'rgba(0,0,0,0)'); gt.addColorStop(1, 'rgba(0,0,0,1)'); tx.fillStyle = gt; tx.fillRect(0, 0, t.width, t.height);
+        x.drawImage(t, bx, by + bh - fh, hw, fh);
+      }
+      const cs = Math.min(bh * 0.5, 196 * 1.2 / this.app.dpr, bw * 0.3); if (bh > 90) { x.globalAlpha = 0.9; art(x, 'colis', bx + bw - cs - 6, by + bh - cs - 4, cs, cs); x.globalAlpha = 1; }
       const lx = bx + fw + (bw - fw) / 2, fs = Math.min(bh * 0.3, (bw - fw) * 0.16, 40);
       goldText(x, 'ESPARTACO', lx, by + bh * (bh > 90 ? 0.4 : 0.36), fs, { maxW: (bw - fw) * 0.92, stroke: '#3a0400', glowColor: '#ff6a2a' });
       const sf = Math.max(9, fs * 0.42);
@@ -401,6 +479,7 @@ class Colossal {
   drawMain(x, s, px, py, w, h, o) {
     if (!s) return;
     if (s.full && o && this.wildShown(this.main, o.c)) return;
+    if (o && o.r >= 0 && this.stackCells && this.stackCells.has(o.c * 10 + o.r)) return;
     const dpr = this.app.dpr, size = Math.min(w, h) * 0.96;
     let sc = 1, a = 1; if (o && o.fx) { sc = o.fx.scale || 1; a = o.fx.alpha == null ? 1 : o.fx.alpha; }
     const d = size * sc, cx = px + w / 2, cy = py + h / 2;
@@ -409,6 +488,50 @@ class Colossal {
     const img = symIcon(this.cfg, s.k, size * dpr, s.mult);
     if (o && o.blur) x.drawImage(img, cx - d / 2, cy - d * 0.62, d, d * 1.24); else x.drawImage(img, cx - d / 2, cy - d / 2, d, d);
     x.globalAlpha = 1;
+  }
+  // Personajes apilados (2 a 4 filas) en el principal: una sola figura alta, como en la máquina
+  computeStacks() {
+    const cfg = this.cfg, out = [], cells = new Set();
+    for (let c = 0; c < COLS; c++) {
+      const col = this.main.columns[c]; if ((col.state !== 'idle' && col.state !== 'bounce') || this.wildShown(this.main, c)) continue;
+      const g = this.main.grid[c]; let r = 0;
+      while (r < ROWS) { let e = r + 1; while (e < ROWS && g[e].k === g[r].k) e++; if (e - r >= 2 && cfg.tall.includes(g[r].k)) { out.push({ c, r, n: e - r, k: g[r].k }); for (let i = r; i < e; i++) cells.add(c * 10 + i); } r = e; }
+    }
+    this.stacks = out; this.stackCells = cells;
+  }
+  drawStacks(x) {
+    const w = this.curWin();
+    (this.stacks || []).forEach(({ c, r, n, k }) => {
+      const px = this.mx + c * this.cw, py = this.my + (r + this.main.columns[c].shift) * this.ch, pw = this.cw, ph = n * this.ch;
+      let hit = false; if (w && w.set === 'main' && c < w.n && w.line[c] >= r && w.line[c] < r + n) hit = true;
+      x.globalAlpha = w && !hit ? 0.4 : 1;
+      if (k === 'giant' && IMG.hero) this.heroPanel(x, px, py, pw, ph, n / 4, 1);
+      else this.charPanel(x, k, px, py, pw, ph);
+      x.globalAlpha = 1;
+    });
+  }
+  // Gigante de cuerpo entero: se ve la parte de arriba si la pila es corta
+  heroPanel(x, px, py, w, h, frac) {
+    const img = IMG.hero; x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip();
+    let sh = img.height * Math.max(0.3, frac), sw = sh * w / h;
+    if (sw > img.width) { sw = img.width; sh = sw * h / w; }
+    const sx = Math.max(0, Math.min(img.width - sw, img.width * 0.4 - sw / 2));
+    x.imageSmoothingQuality = 'high'; x.drawImage(img, sx, 0, sw, sh, px, py, w, h);
+    x.restore(); x.strokeStyle = '#ffd24a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+  }
+  // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
+  charPanel(x, k, px, py, w, h) {
+    const girl = k === 'girl';
+    x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, girl ? 8 : 4); x.clip();
+    const g = x.createLinearGradient(0, py, 0, py + h); if (girl) { g.addColorStop(0, '#ffd0ec'); g.addColorStop(1, '#a8307a'); } else { g.addColorStop(0, '#3a0a06'); g.addColorStop(1, '#120402'); }
+    x.fillStyle = g; x.fillRect(px, py, w, h);
+    if (!girl) { x.fillStyle = 'rgba(255,190,90,0.18)'; x.beginPath(); x.moveTo(px + w * 0.12, py + h); x.lineTo(px + w * 0.12, py + w * 0.5); x.arc(px + w / 2, py + w * 0.5, w * 0.38, Math.PI, 0); x.lineTo(px + w * 0.88, py + h); x.fill(); }
+    else { const seg = w * 2; for (let y = py + h; y > py - seg; y -= seg * 0.95) { x.globalAlpha = 0.55; art(x, 'bean', px, y - seg, w, seg, 1.1); } x.globalAlpha = 1; }
+    const sz = Math.min(w * 1.02, 250 / this.app.dpr), cy = py + Math.min(h / 2, sz * 0.5 + h * 0.08);
+    x.save(); x.shadowColor = 'rgba(0,0,0,0.5)'; x.shadowBlur = 8; art(x, k, px + (w - sz) / 2, cy - sz / 2, sz, sz, 1); x.restore();
+    x.restore();
+    x.strokeStyle = girl ? '#ff9ad8' : '#e8b060'; x.lineWidth = 3; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, girl ? 8 : 4); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,0.5)'; x.lineWidth = 1; roundRect(x, px + 4, py + 4, w - 8, h - 8, girl ? 6 : 3); x.stroke();
   }
   scatGlow(x, cx, cy, w, h) { x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.3 + 0.2 * Math.sin(this.time * 5); x.drawImage(glow('rgba(255,190,60,1)', 64), cx - w * 0.6, cy - h * 0.6, w * 1.2, h * 1.2); x.restore(); }
   wildShown(set, c) {
@@ -436,7 +559,7 @@ class Colossal {
         let hit = false; if (w && w.set === 'big') for (let rr = r; rr < e; rr++) if (w.line[c] === rr && c < w.n) hit = true;
         const pulse = hit ? 1 + 0.06 * Math.sin(this.winT * 11) : 1;
         x.globalAlpha = w && !hit ? 0.4 : 1;
-        const perCell = (RANKTXT[s.k] && !s.dbl) || (s.k === cfg.scatter && cfg.eggStack);
+        const perCell = (isLow(cfg, s.k) && !s.dbl) || (s.k === cfg.scatter && cfg.eggStack);
         if (perCell) {
           for (let rr = r; rr < e; rr++) {
             const size = Math.min(bcw, bch) * 0.94 * pulse, cy = by + (rr + col.shift) * bch + bch / 2;
@@ -445,13 +568,14 @@ class Colossal {
           }
         } else {
           // figura colosal: panel de la pila + imagen grande
-          if (hh > bch * 1.5 && !s.mult && !isWild(cfg, s.k) && s.k !== cfg.scatter && !RANKTXT[s.k]) {
+          if (hh > bch * 1.5 && !s.mult && !isWild(cfg, s.k) && s.k !== cfg.scatter && !isLow(cfg, s.k) && !(s.k === 'giant' && IMG.hero)) {
             const [c1, c2] = cfg.colors[s.k] || ['#fff', '#888'], pg = x.createLinearGradient(0, py, 0, py + hh);
             pg.addColorStop(0, c1); pg.addColorStop(1, c2); x.globalAlpha *= 0.35; x.fillStyle = pg; roundRect(x, px + 2, py + 2, bcw - 4, hh - 4, 6); x.fill(); x.globalAlpha = w && !hit ? 0.4 : 1;
           }
           const cx = px + bcw / 2, cy = py + hh / 2;
           if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, bcw, hh);
-          if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || RANKTXT[s.k]) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
+          if (s.k === 'giant' && IMG.hero && hh > bch * 1.5) this.heroPanel(x, px, py, bcw, hh, Math.min(1, (e - r) / 4), hit ? pulse : 1);
+          else if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || isLow(cfg, s.k) || cfg.badge[s.k]) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
           else { const f = 0.96 * pulse, cap = 250 / dpr * pulse, ww = Math.min(bcw * f, cap), h2 = Math.min(hh * f, cap); x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
         }
         x.globalAlpha = 1; r = e;
@@ -475,9 +599,9 @@ class Colossal {
       const step = big ? Math.max(1, Math.round(cellH * 3 > w ? 2 : 3)) : 1;
       for (let r = 0; r < h / cellH - 0.5; r += step) goldText(x, 'WILD', px + w / 2, py + (r + step / 2) * cellH, Math.min(w * 0.26, cellH * step * 0.42, 22), { maxW: w * 0.9, colors: ['#ffffff', '#fff6a0', '#ffc020', '#fff6a0'], stroke: '#1a4a0a' });
     } else if (!mega) {
-      // colosal: bustos de Espartaco apilados, cada uno con su "WILD"
-      const seg = Math.max(w * 0.95, cellH * 2), n = Math.max(1, Math.round(h / seg)), sh = h / n;
-      for (let i = 0; i < n; i++) { art(x, 'bust', px, py + i * sh, w, sh * 0.8, 0.95); goldText(x, 'WILD', px + w / 2, py + i * sh + sh * 0.84, Math.min(w * 0.24, sh * 0.2, 20), { maxW: w * 0.9 }); }
+      // placas del logo "ESPARTACO" apiladas en todo el rodillo, como en la máquina
+      const per = Math.max(1, Math.round(w * 0.85 / cellH)), n = Math.max(1, Math.round(h / (cellH * per))), sh = h / n, sz = Math.min(w, sh) * 0.98;
+      for (let i = 0; i < n; i++) x.drawImage(symIcon(cfg, sup ? cfg.super : cfg.wild, sz * this.app.dpr), px + (w - sz) / 2, py + i * sh + (sh - sz) / 2, sz, sz);
     } else {
       const bs = Math.min(w * 0.92, h * 0.62); x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; art(x, 'bust', px + (w - bs) / 2, py + h * 0.08, bs, bs, 1); x.restore();
     }
@@ -499,7 +623,9 @@ class Colossal {
       x.save(); x.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(x, bx, by + bh - Math.min(30, bh * 0.4), bw, Math.min(30, bh * 0.4), 6); x.fill(); x.restore();
       goldText(x, t, bx + bw / 2, by + bh - Math.min(15, bh * 0.2), Math.min(16, bh * 0.26), { maxW: bw * 0.94 });
     }
+    this.computeStacks();
     this.main.draw(x, (c, r) => this.cellFx(c, r));
+    this.drawStacks(x);
     this.full.forEach(c => { if (this.wildShown(this.main, c) && !(this.mega >= 0 && (c === this.mega || c === this.mega + 1))) this.drawTallWild(x, this.mx + c * this.cw, this.my + this.main.columns[c].shift * this.ch, this.cw, this.ch * ROWS, c, false, false, this.superCols && this.superCols.includes(c)); });
     if (this.mega >= 0 && this.wildShown(this.main, this.mega + 1)) this.drawTallWild(x, this.mx + this.mega * this.cw, this.my, this.cw * 2, this.ch * ROWS, this.mega, false, true, this.megaK === cfg.super);
     this.big.draw(x, null);
