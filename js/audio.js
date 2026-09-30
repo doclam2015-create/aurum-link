@@ -531,6 +531,32 @@ class Sfx {
     const v = ctx.createGain(); v.gain.value = 0.6; g.connect(v); v.connect(this.verbSend);
     s.start(t0, Math.random() * 2); s.stop(t0 + dur + 0.1);
   }
+  // Rodillo WILD arrastrado de un tablero al otro: agarre, arrastre que acelera (roce de piedra en Espartaco,
+  // hojas y viento en el Gigante) y golpe seco al encajar en el colosal
+  reelDrag(dur = 0.4, giant = false, at = 0, i = 0) {
+    if (!this.ok) return;
+    const ctx = this.ctx, t0 = ctx.currentTime + at, t1 = t0 + dur;
+    // agarre
+    this.tone(giant ? 520 : 180, 0.08, { type: 'triangle', vol: 0.16, at, slide: 1.6 }); this.noise(0.05, { at, vol: 0.12, freq: giant ? 3000 : 1400, q: 3 });
+    // arrastre: ruido que sube de volumen y de tono, con aspereza que tiembla (roce)
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    s.buffer = giant ? this.noiseBuf : (this.brownBuf || this.noiseBuf); s.loop = true;
+    f.type = 'bandpass'; f.Q.value = giant ? 1.8 : 1.1;
+    f.frequency.setValueAtTime(giant ? 700 : 260, t0); f.frequency.exponentialRampToValueAtTime(giant ? 4200 : 1800, t1);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(giant ? 0.32 : 0.55, t0 + dur * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.05);
+    lfo.frequency.setValueAtTime(giant ? 18 : 26, t0); lfo.frequency.linearRampToValueAtTime(giant ? 40 : 60, t1); lg.gain.value = giant ? 0.12 : 0.25;
+    lfo.connect(lg); lg.connect(g.gain);
+    s.connect(f); f.connect(g); g.connect(this.sfxBus);
+    s.start(t0, Math.random()); s.stop(t1 + 0.1); lfo.start(t0); lfo.stop(t1 + 0.1);
+    // silbido que sube (velocidad)
+    this.tone(giant ? 380 : 140, dur, { type: giant ? 'sine' : 'sawtooth', vol: giant ? 0.06 : 0.035, at, attack: dur * 0.6, slide: 3 });
+    // golpe al encajar
+    const L = at + dur;
+    this.drum(L, 0.55, giant ? 95 : 70);
+    this.noise(0.09, { at: L, vol: 0.3, type: 'lowpass', freq: 1800, q: 0.6 });
+    if (giant) { this.wood(L, 0.16, 520); this.celesta(1047 + i * 131, L + 0.03, 0.08, 0.8); this.noise(0.35, { at: L, vol: 0.12, type: 'highpass', freq: 3500, q: 0.7 }); }
+    else { this.tone(1244 + i * 70, 0.7, { vol: 0.07, at: L, attack: 0.002 }); this.tone(1873 + i * 90, 0.5, { vol: 0.05, at: L, attack: 0.002 }); this.tone(2790, 0.3, { vol: 0.03, at: L, attack: 0.002 }); this.noise(0.25, { at: L, vol: 0.14, type: 'bandpass', freq: 5200, freqEnd: 2500, q: 2 }); }
+  }
   // Chasquido del rayo: estallido seco de banda ancha + desgarro que baja
   crack(vol = 0.5, at = 0) {
     this.noise(0.035, { at, vol, type: 'highpass', freq: 900, q: 0.5 });
