@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **67**, visible al final de Ajustes.
+- La versión actual es la **68**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -28,7 +28,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 | `js/gfx.js` | Canvas: atlas de sprites, partículas, `goldText`, `glow`, easing y `FONT` |
 | `js/audio.js` | `sfx`, con efectos sintetizados en Web Audio, muestras decodificadas (`preload`/`play`), estilos de música por juego, locutor, `loadSfxPack`, `realMachine`, `bigWin`, `jackpot`, `winJingle` y `bonusFanfare` |
 | `js/games/*.js` | Un archivo por juego. Ver la lista más abajo. |
-| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine.webp` y `sparta_hero/heroine/bg.webp` (escenarios y personajes), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
+| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine.webp` y `sparta_sym/tall/wtall/scene.webp` (escenarios, personajes y símbolos de Espartaco), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
 | `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `build_colossal.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
 
 ### Juegos (orden de `GAMES` en `js/app.js`)
@@ -45,7 +45,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 10. `reef.js`: Arrecife de Gemas
 11. `western.js`: Duelo del Oeste
 12. `galaxy.js`: Galaxia Infinita
-13. `colossal.js`: Oro del Gigante y Espartaco Coloso (`GiantGold`, `Spartacus`), agregados en la v60 y rehechos en la v61–v67 para parecerse a *Giant's Gold* y *Spartacus Super Colossal Reels* de WMS. `scenes.js` dibuja el fondo azul con greca de Espartaco.
+13. `colossal.js`: Oro del Gigante y Espartaco Coloso (`GiantGold`, `Spartacus`), agregados en la v60 y rehechos en la v61–v68 para parecerse a *Giant's Gold* y *Spartacus Super Colossal Reels* de WMS. El arte de Espartaco (v68) sale de capturas de la máquina que subió el usuario (uso personal).
 
 ### Interfaz de un juego (clase)
 
@@ -122,6 +122,7 @@ No poner identificadores de modelo en commits ni PRs.
   - Arte: los símbolos se generaron con IA en Canva (`assets/src/colossal/`). Los personajes y escenarios salen de las portadas y capturas que subió el usuario (`ref_*`), usando solo zonas sin logo ni marca de agua.
   - Los tableros van **siempre lado a lado** (principal a la izquierda, colosal a la derecha), también en vertical. El usuario lo pidió así.
   - Los personajes apilados (gigante, heroína, guerrera, Espartaco) se muestran como una figura alta, como en la máquina.
+- La v68 ([PR 40](https://github.com/doclam2015-create/aurum-link/pull/40)) rehízo el arte de Espartaco con las capturas de la máquina: escenario de piedra con brasero, marcos rojos, celdas crema, letras A/K/Q/J, gladiador con mayal como símbolo nuevo y símbolos repetidos por celda en el colosal. RTP ~94,5 %.
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
