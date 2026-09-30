@@ -1,0 +1,123 @@
+# Aurum Link: contexto del proyecto para Claude
+
+Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, para continuar en otra sesión, por ejemplo en Claude Code de la app de escritorio sobre el Mac. Claude Code lo lee automáticamente al abrir esta carpeta.
+
+## Quién es el usuario
+
+- DocLam (doclam2015-create en GitHub) es médico pediatra y médico jefe operativo de un servicio de urgencias.
+- **Siempre responder en español**, con lenguaje claro y no técnico.
+- Juega la app en **iPhone y iPad**, instalada desde Safari como PWA.
+- Suele pedir los cambios y cerrar con "fusiona". Eso significa hacer el PR y fusionarlo a `main` sin preguntar.
+
+## Qué es la app
+
+- Aurum Link es una colección de **15 tragamonedas** con **créditos ficticios**, sin dinero real ni compras.
+- Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
+- GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
+- Tiene un service worker (`sw.js`) para uso offline.
+- La versión actual es la **60**, visible al final de Ajustes.
+- El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
+
+### Estructura
+
+| Ruta | Contenido |
+|---|---|
+| `index.html`, `css/`, `manifest.webmanifest`, `icon-*.png` | Shell de la PWA |
+| `js/app.js` | Contiene el lobby, el HUD, el saldo, la apuesta, los jackpots progresivos (`state.jp`), los overlays (BIG/AWESOME/SUPER WIN), el giro automático, los ajustes, `app.awardJackpot(key)` y `app.bonusPay(n, bet, name, min)`. También define la lista `GAMES`. |
+| `js/reels.js` | Motor de rodillos `ReelSet`: `start()`, `stopTo(final,{anticFrom,minTime,onStop})`, `slam()` y `draw(x,fx)`. Cada `columns[c].state` pasa por windup, spin, feeding, bounce e idle. Exporta `sleep`. |
+| `js/gfx.js` | Canvas: atlas de sprites, partículas, `goldText`, `glow`, easing y `FONT` |
+| `js/audio.js` | `sfx`, con efectos sintetizados en Web Audio, muestras decodificadas (`preload`/`play`), estilos de música por juego, locutor, `loadSfxPack`, `realMachine`, `bigWin`, `jackpot`, `winJingle` y `bonusFanfare` |
+| `js/games/*.js` | Un archivo por juego. Ver la lista más abajo. |
+| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
+| `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
+
+### Juegos (orden de `GAMES` en `js/app.js`)
+
+1. `xlink.js`: Xtension Link
+2. `xthemes.js`: Sueño Rojo y Reino de Nieve (`RedDream`, `SnowKingdom`)
+3. `wolf.js`: Carrera del Lobo
+4. `avalanche.js`: Avalancha Glacial
+5. `firewheel.js`: Rueda de Fuego
+6. `legion.js`: Legión Dorada
+7. `bull.js`: Toro Dorado
+8. `dragon.js`: Caminos del Dragón
+9. `codex.js`: Códice del Sol
+10. `reef.js`: Arrecife de Gemas
+11. `western.js`: Duelo del Oeste
+12. `galaxy.js`: Galaxia Infinita
+13. `colossal.js`: Oro del Gigante y Espartaco Coloso (`GiantGold`, `Spartacus`), agregados en la v60
+
+### Interfaz de un juego (clase)
+
+- Propiedades estáticas: `static id`, `static name`, `static music` y `static lobby = {c1, c2, mechanic, desc, …}`. Algunas clases tienen además `static iconStyle`.
+- `constructor(app)`
+- `resize(W,H,DPR)`, `update(dt)` y `draw(ctx)`
+- `async play(bet)`: devuelve `{win}`.
+- `slam()`, `info(bet, fmt)` y `rules()`
+- Estado: `freeRound`, `locked`, `keepWin`, `extra`, `animating` y `hint`
+- `destroy()` es opcional.
+
+### Reglas de diseño comunes (el usuario ya las pidió)
+
+- Los 15 juegos tienen 4 jackpots progresivos: MINI, MINOR, MAJOR y GRAND.
+- **Pago base al activar un bono**: con el mínimo de símbolos se paga 2× la apuesta; con uno más, 10×; con dos más, 50×; con tres o más, 100×.
+- **Bono sorpresa**: en giros pagados pueden caer rayos que activan el bono. El bono aparece en total cerca de 1 vez cada 60–90 giros.
+- Los montos en pantalla (bolas y monedas) se reescalan al cambiar la apuesta con `rescaleValues`.
+- El RTP se calibra a **~93–95 %** con una simulación en Node que importa las funciones puras del juego (de 100 a 300 mil giros).
+- Estilo visual: casino de calidad, con marcos dorados, animaciones fluidas y efectos sonoros abundantes.
+
+### Sonidos (`assets/sfx/`)
+
+- `bonus_in1/2`, `levelup2/3`, `coin_loop`, `jackpot2/3` y `youwin1/2/3` vienen de efectos de floraphonic que subió el usuario.
+- `real_1..real_15.mp3` son grabaciones de máquinas reales del usuario (Gp3–Gp13, Gran premio, Nueva grabación y Sonidos). Se recortaron con `tools/make_machine_sfx.py` a los 7 s de más energía, con loudnorm −14.
+- Dónde suenan:
+  - Entrada a bono: `bonus_in`.
+  - "+N giros": `levelup`.
+  - BIG/AWESOME/SUPER: `youwin` + `coin_loop` + `realMachine`.
+  - Jackpots: `jackpot2/3`.
+- `ElevenLabs_Generation_1.ogg` sigue pendiente porque el usuario no llegó a subirlo.
+
+## Flujo de trabajo estándar (seguirlo en cada pedido)
+
+1. Implementar el cambio.
+2. Probar en el navegador:
+   - Levantar el servidor con `python3 -m http.server 8765`.
+   - Correr Playwright en retrato (430×900) y apaisado (1024×768).
+   - Revisar que no haya errores de consola.
+   - Si hace falta forzar estados, interceptar `app.js` para exponer `window.__app` y los demás objetos de prueba. Los juegos tienen ganchos de prueba como `app._forceScat`, `_forceFull` y `_forceMega`.
+   - Mantener las pruebas cortas.
+3. **Subir la versión**: `python3 tools/bump_version.py N`, con N igual a la versión anterior + 1.
+   - El script cambia `?v=` en todos los imports, `index.html` y `sw.js`, y el nombre de caché `aurum-vN`.
+   - Obliga a iOS a descargar lo nuevo.
+4. Si se agregan archivos (JS, mp3, imágenes), sumarlos a la lista `FILES` de `sw.js`.
+5. Actualizar `README.md`.
+6. Hacer commit en una rama, subirla, crear el PR y fusionarlo a `main`.
+   - En la nube la rama era `claude/adoring-hamilton-disfbd`, recreada desde `origin/main` en cada pedido.
+7. Responder en español:
+   - la versión nueva;
+   - qué cambió;
+   - y que cierre y vuelva a abrir la app para confirmar "Versión N" en Ajustes.
+
+No poner identificadores de modelo en commits ni PRs.
+
+## Historial breve
+
+- Del PR 1 al 30 (versiones hasta la 59), en orden:
+  - Xtension Link con Golden Spins y cortinas.
+  - Temas Sueño Rojo y Reino de Nieve.
+  - Carrera del Lobo con arte realista.
+  - Resto de los juegos.
+  - Jackpots progresivos en todos.
+  - Pago base de bono.
+  - Bono sorpresa.
+  - Locutor grabado con Piper, en voz de hombre y exclamativo.
+  - Música por juego.
+  - Modo claro, velocidad y volúmenes.
+- La v60 ([PR 31](https://github.com/doclam2015-create/aurum-link/pull/31)) agregó:
+  - Oro del Gigante y Espartaco Coloso, con rodillos colosales 5×4 + 5×12 y 100 líneas.
+  - Los sonidos grabados del usuario.
+
+## Ideas / pendientes que pueden surgir
+
+- Integrar `ElevenLabs_Generation_1.ogg` si el usuario lo entrega.
+- Ajustar los volúmenes o la asignación de los sonidos reales según lo que escuche en el iPhone.
