@@ -10,9 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=65';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=65';
-import { spartaScene } from './scenes.js?v=65';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=66';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=66';
+import { spartaScene } from './scenes.js?v=66';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -200,7 +200,7 @@ const TALL = { bean: 3000, sparta: 3100 };
 function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 export function loadColossalArt() {
   const one = (k, f) => loadImg('assets/' + f).then(i => { IMG[k] = i; }).catch(() => { });
-  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('shero', 'sparta_hero.webp'), one('sheroine', 'sparta_heroine.webp'), one('sbg', 'sparta_bg.webp')]).then(() => cache.clear());
+  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('gheroine', 'giant_heroine.webp'), one('shero', 'sparta_hero.webp'), one('sheroine', 'sparta_heroine.webp'), one('sbg', 'sparta_bg.webp')]).then(() => cache.clear());
 }
 // Recorte de la hoja: [sx, sy, sw, sh]
 function src(k) { if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
@@ -253,7 +253,7 @@ function rankIcon(cfg, k, s, x) {
 const SUITS = { heart: 1, spade: 1, diamond: 1, club: 1 };
 const isLow = (cfg, k) => cfg.low.includes(k);
 // Personajes con imagen de cuerpo entero: [imagen, posición horizontal de la cara (0–1)]
-const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], warrior: ['sheroine', 0.55, [48, 0, 156, 156]], helm: ['shero', 0.6, [76, 6, 148, 148]] };
+const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.54, [30, 70, 125, 125]], warrior: ['sheroine', 0.55, [48, 0, 156, 156]], helm: ['shero', 0.6, [76, 6, 148, 148]] };
 const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
 function suitPath(x, k, s) {
   const c = s / 2; x.beginPath();
@@ -304,7 +304,7 @@ export function symIcon(cfg, k, size, mult) {
       const [key, , [sx, sy, sw, sh]] = heroOf(k), m = s * 0.05, r = s * 0.12;
       roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.fillStyle = '#000'; x.fill(); x.restore();
       x.save(); roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.clip(); x.imageSmoothingQuality = 'high'; x.drawImage(IMG[key], sx, sy, sw, sh, m, m, s - 2 * m, s - 2 * m); x.restore();
-      x.lineWidth = s * 0.045; x.strokeStyle = k === 'giant' ? '#ffd24a' : '#e8a050'; roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.stroke();
+      x.lineWidth = s * 0.045; x.strokeStyle = k === 'giant' ? '#ffd24a' : k === 'girl' ? '#ff8ad0' : '#e8a050'; roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.stroke();
       return;
     }
     if (cfg.badge && cfg.badge[k]) {
@@ -516,7 +516,7 @@ class Colossal {
     if (sw > img.width) { sw = img.width; sh = sw * h / w; }
     const sx = Math.max(0, Math.min(img.width - sw, img.width * fx - sw / 2));
     x.imageSmoothingQuality = 'high'; x.drawImage(img, sx, 0, sw, sh, px, py, w, h);
-    x.restore(); x.strokeStyle = rim || '#ffd24a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+    x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
   charPanel(x, k, px, py, w, h) {
