@@ -824,13 +824,14 @@ class Sfx {
       fairyBonus: { bpm: 132, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 7, 12, 5, 12, 7, 12], arp: 'up', lead: 'celesta', pad: 'sine', bells: 0.5,
         scale: [0, 2, 4, 7, 9], mel: 'dizi', wood: 'x.x.x.x.x.x.x.x.',
         melody: [5, 7, 8, 10, 8, 7, 5, -2, 6, 8, 9, -2, 8, 7, 6, -2, 7, 9, 10, 12, 10, 9, 7, -2, 8, 7, 6, 5, 5, -2, -2, -1] },
-      // Espartaco: épico de arena, tambores de guerra, gong y cuerda grave
-      arena: { bpm: 94, root: 38, prog: [[0, M], [8, J], [10, J], [7, M]], kick: 'x.....x.x.......', snare: '....x.......x.xx', hat: '..x...x...x...x.', bass: [0, -1, 0, 7, 0, -1, 3, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.12, toms: true,
-        scale: [0, 3, 5, 7, 10], mel: 'erhu', gong: 4,
-        melody: [5, -2, 6, 7, -2, 6, 5, -2, 3, -2, 5, -2, -2, -2, -2, -1, 5, -2, 7, 8, -2, 7, 6, 5, 3, 2, 0, -2, -2, -2, -2, -1] },
-      arenaBonus: { bpm: 128, root: 38, prog: [[0, M], [10, J], [8, J], [7, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x..x', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 0, 7, 0, 12, 10, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.2, toms: true,
-        scale: [0, 3, 5, 7, 10], mel: 'erhu', gong: 2,
-        melody: [5, 7, 8, 10, 8, 7, 5, -2, 7, 8, 10, -2, 12, -2, 10, 8, 7, 8, 10, 8, 7, 5, 3, -2, 5, 7, 5, 3, 2, -2, -2, -1] },
+      // Espartaco: épica del Imperio romano (re menor): trompetas y cornos en fanfarria, coro "aah",
+      // lira en arpegio, cuerdas graves en ostinato de marcha, tambores de guerra y caja militar, gong
+      arena: { bpm: 84, root: 38, prog: [[0, M], [8, J], [10, J], [0, M]], kick: 'x.......x.......', snare: '....x..x....x.xx', hat: '................', bass: [0, 0, 0, -1, 0, 0, 7, 5], arp: 'updown', lead: 'pluck', pad: 'sawtooth', bells: 0, choir: true,
+        scale: [0, 3, 5, 7, 10], mel: 'brass', war: 'x..x..x.....x.x.', gong: 4,
+        melody: [0, -2, -2, 3, 5, -2, 3, 2, 3, -2, -2, -2, -2, -2, -2, -1, 0, -2, -2, 3, 5, -2, 6, 5, 3, -2, 2, 1, 0, -2, -2, -1] },
+      arenaBonus: { bpm: 112, root: 38, prog: [[0, M], [10, J], [8, J], [7, J]], kick: 'x...x...x...x...', snare: '....x..x.x..x.xx', hat: '................', bass: [0, 0, 7, 0, 0, 0, 10, 7], arp: 'up', lead: 'pluck', pad: 'sawtooth', bells: 0, choir: true,
+        scale: [0, 3, 5, 7, 10], mel: 'brass', war: 'x.xx..x.x.xx..x.', gong: 2,
+        melody: [3, -2, 5, -2, 6, 5, 3, -2, 5, -2, -2, -2, 3, -2, -2, -1, 3, -2, 5, -2, 7, 6, 5, -2, 6, -2, -2, -2, 5, -2, -2, -1] },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
     }, st = styles[style];
@@ -874,6 +875,25 @@ class Sfx {
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.setValueAtTime(v * 0.8, t + Math.max(0.02, d - 0.06)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
       [-8, 8].forEach(det => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; o.connect(fl); o.start(t); o.stop(t + d + 0.05); });
       fl.connect(g); g.connect(bus); };
+    // Trompeta/corno romano: tres dientes de sierra con el filtro que se abre (ataque de metal)
+    const brassM = (f, t, d, v) => { const fl = ctx.createBiquadFilter(), g = ctx.createGain(), vib = ctx.createOscillator(), vg = ctx.createGain(); fl.type = 'lowpass'; fl.Q.value = 1.5;
+      fl.frequency.setValueAtTime(f * 1.2, t); fl.frequency.exponentialRampToValueAtTime(f * 6, t + 0.09); fl.frequency.exponentialRampToValueAtTime(f * 3.2, t + Math.max(0.15, d));
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.05); g.gain.setValueAtTime(v * 0.85, t + Math.max(0.06, d - 0.1)); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.08);
+      vib.frequency.value = 5; vg.gain.value = f * 0.006; vib.connect(vg);
+      [-7, 0, 7].forEach(det => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; vg.connect(o.frequency); o.connect(fl); o.start(t); o.stop(t + d + 0.15); });
+      // la octava baja (corno) refuerza
+      const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.type = 'triangle'; o2.frequency.value = f / 2; env(g2, t, 0.06, v * 0.6, d + 0.05); o2.connect(g2); g2.connect(bus); o2.start(t); o2.stop(t + d + 0.1);
+      fl.connect(g); g.connect(bus); vib.start(t); vib.stop(t + d + 0.15); };
+    // Coro "aah": voces desafinadas por dos formantes, entrada lenta, todo el compás
+    const choirM = (notes, t, d) => { const f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g = ctx.createGain();
+      f1.type = 'bandpass'; f1.frequency.value = 760; f1.Q.value = 5; f2.type = 'bandpass'; f2.frequency.value = 1150; f2.Q.value = 7;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + d * 0.3); g.gain.setValueAtTime(0.16, t + d * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      f1.connect(g); f2.connect(g); g.connect(bus);
+      notes.forEach(n => [-12, 0, 12].forEach(det => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = hz(n); o.detune.value = det + (Math.random() - 0.5) * 6; og.gain.value = 0.05;
+        o.connect(og); og.connect(f1); og.connect(f2); o.start(t); o.stop(t + d + 0.05); })); };
+    // Tambor de guerra: parche grave con golpe de ruido
+    const warM = (t, acc) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(acc ? 95 : 80, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.35); env(g, t, 0.003, acc ? 0.4 : 0.26, 0.6); o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.65);
+      noiseHit(t, 'lowpass', 600, 0.12, acc ? 0.16 : 0.1, 0.8); };
     const clapM = t => { [0, 0.012, 0.024].forEach(dt => noiseHit(t + dt, 'bandpass', 1400, 0.09, 0.18, 1.5)); };
     const woodM = t => { osc('square', 880, t, 0.05, 0.05, bus, 0.001); osc('sine', 1320, t, 0.05, 0.12, bus, 0.001); };
     const jingleM = t => { for (let k = 0; k < 3; k++) noiseHit(t + k * 0.018, 'bandpass', 6500 + Math.random() * 2500, 0.07, 0.07 * (1 - k * 0.25), 7); };
@@ -895,15 +915,16 @@ class Sfx {
         // Bajo en corcheas
         if (s16 % 2 === 0) { const b = st.bass[(s16 / 2) % 8]; if (b >= 0) { osc('sawtooth', hz(st.root + ch[0] + b), t, step * 1.7, 0.16, bus, 0.004); osc('sine', hz(st.root + ch[0] + b - 12), t, step * 1.8, 0.25, bus); } }
         // Acordes al inicio de cada compás
-        if (s16 === 0) notes.concat([notes[0] + 12]).forEach(n => { [-9, 9].forEach(d => osc(st.pad, hz(n), t, step * 15.5, 0.05, padF, 0.25, d)); });
+        if (s16 === 0) { if (st.choir) choirM(notes.map(n => n + 12), t, step * 16); else notes.concat([notes[0] + 12]).forEach(n => { [-9, 9].forEach(d => osc(st.pad, hz(n), t, step * 15.5, 0.05, padF, 0.25, d)); }); }
         // Arpegio
         const idx = st.arp === 'down' ? 3 - (s16 % 4) : st.arp === 'updown' ? [0, 1, 2, 3, 2, 1][s16 % 6] : s16 % 4;
         const an = (notes.concat([notes[0] + 12]))[idx] + 12;
-        if (st.lead === 'pluck') { if (s16 % 2 === 0) pluckM(hz(an), t, 0.05); }
+        if (st.lead === 'pluck') { if (s16 % 2 === 0) pluckM(hz(an), t, st.choir ? 0.03 : 0.05); }
         else if (st.lead === 'celesta') { if (s16 % 2 === 0) celestaM(hz(an + 12), t, 0.03); }
         else if (style !== 'ice' || s16 % 2 === 0) osc(st.lead, hz(an), t, step * 0.9, st.lead === 'sawtooth' ? 0.035 : 0.045, bus);
         // Percusión de los temas
         if (st.wood && st.wood[s16] === 'x') woodM(t);
+        if (st.war && st.war[s16] === 'x') warM(t, s16 === 0);
         if (st.jingle && st.jingle[s16] === 'x') jingleM(t);
         if (st.claps && (s16 === 4 || s16 === 12)) clapM(t);
         if (st.gong && s16 === 0 && (i / 16 | 0) % st.gong === 0) gongM(t);
@@ -914,6 +935,7 @@ class Sfx {
             const dur = step * 2 * n, f = scaleHz(d);
             if (st.mel === 'celesta') celestaM(f, t, 0.06, Math.max(0.8, dur));
             else if (st.mel === 'synth') synthM(f, t, dur * 0.9, 0.045);
+            else if (st.mel === 'brass') brassM(f, t, dur * 0.92, 0.05);
             else voiceM(f, t, dur * 0.95, st.mel === 'dizi' ? 0.05 : 0.055, st.mel === 'dizi'); }
         }
         // Campanitas brillantes
