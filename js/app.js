@@ -1,19 +1,19 @@
-import { sfx, usableVoices } from './audio.js?v=60';
-import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=60';
-import { sleep } from './reels.js?v=60';
-import XLink from './games/xlink.js?v=60';
-import Avalanche from './games/avalanche.js?v=60';
-import FireWheel from './games/firewheel.js?v=60';
-import Legion from './games/legion.js?v=60';
-import Bull from './games/bull.js?v=60';
-import Dragon from './games/dragon.js?v=60';
-import Codex from './games/codex.js?v=60';
-import Reef from './games/reef.js?v=60';
-import Western from './games/western.js?v=60';
-import Galaxy from './games/galaxy.js?v=60';
-import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=60';
-import Wolf, { loadWolfArt } from './games/wolf.js?v=60';
-import { GiantGold, Spartacus } from './games/colossal.js?v=60';
+import { sfx, usableVoices } from './audio.js?v=61';
+import { loadAtlas, clearSpriteCache, Particles, goldText, ease, glow, clamp, FONT, rand } from './gfx.js?v=61';
+import { sleep } from './reels.js?v=61';
+import XLink from './games/xlink.js?v=61';
+import Avalanche from './games/avalanche.js?v=61';
+import FireWheel from './games/firewheel.js?v=61';
+import Legion from './games/legion.js?v=61';
+import Bull from './games/bull.js?v=61';
+import Dragon from './games/dragon.js?v=61';
+import Codex from './games/codex.js?v=61';
+import Reef from './games/reef.js?v=61';
+import Western from './games/western.js?v=61';
+import Galaxy from './games/galaxy.js?v=61';
+import { RedDream, SnowKingdom, loadThemeArt, sheetIconStyle } from './games/xthemes.js?v=61';
+import Wolf, { loadWolfArt } from './games/wolf.js?v=61';
+import { GiantGold, Spartacus, loadColossalArt } from './games/colossal.js?v=61';
 
 const GAMES = [XLink, RedDream, SnowKingdom, Wolf, Avalanche, FireWheel, Legion, Bull, Dragon, Codex, Reef, Western, Galaxy, GiantGold, Spartacus];
 const BETS = [10, 20, 30, 50, 100, 200, 500];
@@ -700,7 +700,7 @@ async function boot() {
   sfx.preload('howl', 'assets/sfx/howl.wav');
   sfx.loadSfxPack('assets/sfx/');
   sfx.loadVoice('assets/voice/');
-  await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e)), loadWolfArt().catch(e => console.warn('lobo', e))]);
+  await Promise.all([loadAtlas('assets/symbols.webp').catch(e => console.warn('atlas', e)), loadThemeArt().catch(e => console.warn('temas', e)), loadWolfArt().catch(e => console.warn('lobo', e)), loadColossalArt().catch(e => console.warn('colosal', e))]);
   $('loader').classList.add('gone');
   selectGame(state.game || GAMES[0].id);
   if (!state.game || !localStorage.getItem(SAVE_KEY + '.seen')) { openLobby(); try { localStorage.setItem(SAVE_KEY + '.seen', '1'); } catch (e) { } }
