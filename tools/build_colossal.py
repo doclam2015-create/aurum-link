@@ -5,6 +5,9 @@
 import sys; sys.path.insert(0, 'tools')
 from PIL import Image
 from build_themes import flood_key, fit, T
+cream = lambda p: p[0] > 185 and p[1] > 160 and p[2] > 110 and p[0] - p[2] < 120
+# crema del Gigante: algo amarillento (el blanco puro del cisne y de los bordes de las letras se conserva)
+gcream = lambda p: p[0] > 190 and p[1] > 175 and p[2] > 120 and 10 < p[0] - p[2] < 110
 SRC = 'assets/src/colossal/'
 SQ = ['giant', 'girl', 'harp', 'cow', 'goose', 'sack', 'egg', 'lion', 'warrior', 'helm', 'chariot', 'sword', 'colis', 'shield', 'bust']
 TALL = ['bean', 'sparta']
@@ -33,23 +36,44 @@ ref.crop((0, 292, 410, 599)).save('assets/giant_sky.webp', 'WEBP', quality=88, m
 # (portada nítida de 500×500: solo la parte de arriba, antes del logo)
 Image.open(SRC + 'ref_giant2.png').convert('RGB').crop((140, 0, 340, 205)).save('assets/giant_heroine.webp', 'WEBP', quality=92, method=6)
 # Espartaco Coloso: todo sale de las capturas de la máquina que compartió el usuario.
-#   sparta_sym.webp   hoja de 2200×200: lion, chariot, sword (escudo+gladius), net (gladiador con mayal),
-#                     K, J, Q, A, sparta (placa WILD), super (placa azul), mw (marco del multiplicador)
+#   sparta_sym.webp   hoja de 2400×200: lion, chariot, sword (escudo+gladius), net (gladiador con mayal),
+#                     K, J, Q, A, sparta (placa WILD), super (placa azul), mw (marco del multiplicador),
+#                     colis (Coliseo BONUS, generado en Canva al estilo de la máquina)
 #   sparta_tall.webp  Espartaco de cuerpo entero en su marco azul (personaje apilado y MEGA WILD)
 #   sparta_wtall.webp la guerrera de cuerpo entero
 #   sparta_scene.webp escenario: cortina, brasero, muro de piedra y logo (cuadro sobre el principal y fondo)
 A = Image.open(SRC + 'ref_sparta_play1.webp').convert('RGB'); B = Image.open(SRC + 'ref_sparta_play2.webp').convert('RGB')
 SP = [('lion', A, (18, 383, 112, 452)), ('chariot', B, (945, 385, 1088, 500)), ('sword', A, (918, 190, 1062, 305)), ('net', B, (940, 80, 1087, 222)),
       ('K', B, (385, 387, 465, 448)), ('J', B, (58, 462, 130, 522)), ('Q', B, (503, 387, 572, 448)), ('A', A, (770, 130, 822, 172)),
-      ('sparta', B, (372, 603, 470, 668)), ('super', A, (918, 28, 1062, 168)), ('mw', B, (940, 228, 1088, 376))]
+      ('sparta', B, (372, 603, 470, 668)), ('super', A, (918, 28, 1062, 168)), ('mw', B, (940, 228, 1088, 376)),
+      ('colis', Image.open(SRC + 'colis_sparta.jpg').convert('RGB'), (0, 0, 200, 200))]
 sheet = Image.new('RGBA', (T * len(SP), T), (0, 0, 0, 0))
 for n, (k, im, box) in enumerate(SP):
     c = im.crop(box); w, h = c.size; f = (T - 4) / max(w, h)
     c = c.resize((round(w * f), round(h * f)), Image.LANCZOS)
     if f > 2: c = c.filter(ImageFilter.UnsharpMask(radius=2, percent=70, threshold=2))
-    sheet.paste(c, (n * T + (T - c.width) // 2, (T - c.height) // 2))
+    c = flood_key(c, cream) if k in ('chariot', 'sword', 'K', 'J', 'Q', 'A') else c.convert('RGBA')
+    sheet.alpha_composite(c, (n * T + (T - c.width) // 2, (T - c.height) // 2))
 sheet.save('assets/sparta_sym.webp', 'WEBP', quality=90, method=6)
 A.crop((345, 385, 452, 686)).save('assets/sparta_tall.webp', 'WEBP', quality=92, method=6)
 A.crop((682, 225, 757, 630)).save('assets/sparta_wtall.webp', 'WEBP', quality=92, method=6)
 A.crop((0, 0, 600, 372)).save('assets/sparta_scene.webp', 'WEBP', quality=90, method=6)
 print('escenarios listos', [k for k, _, _ in SP])
+
+# Oro del Gigante: símbolos y escenario sacados de las capturas de la máquina que compartió el usuario.
+#   giant_sym.webp    hoja de 2000×200: sack, goose, harp, Q, K, J, egg, A, cow, bean (WILD)
+#   giant_scene.webp  campo con la granja y la habichuela (cuadro sobre el tablero principal)
+GP = {n: Image.open(SRC + 'ref_giant_p%s.webp' % n).convert('RGB') for n in ('11', '12', '13', '14')}
+GS = [('sack', '12', (82, 116, 152, 160)), ('goose', '12', (82, 161, 152, 208)), ('harp', '12', (155, 207, 225, 254)), ('Q', '12', (300, 207, 371, 254)),
+      ('K', '12', (300, 255, 371, 300)), ('J', '12', (82, 255, 152, 300)), ('egg', '12', (374, 255, 444, 300)), ('A', '13', (84, 118, 144, 159)),
+      ('cow', '14', (166, 162, 235, 209)), ('bean', '11', (17, 134, 97, 188))]
+gs = Image.new('RGBA', (T * len(GS), T), (0, 0, 0, 0))
+for n, (k, src, box) in enumerate(GS):
+    c = GP[src].crop(box); w, h = c.size; f = (T - 4) / max(w, h)
+    c = c.resize((round(w * f), round(h * f)), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=2, percent=70, threshold=2))
+    c = c.convert('RGBA') if k in ('egg', 'bean') else flood_key(c, gcream)
+    gs.alpha_composite(c, (n * T + (T - c.width) // 2, (T - c.height) // 2))
+gs.save('assets/giant_sym.webp', 'WEBP', quality=90, method=6)
+GP['12'].crop((22, 12, 440, 112)).save('assets/giant_scene.webp', 'WEBP', quality=92, method=6)
+print('gigante listo', [k for k, _, _ in GS])
+
