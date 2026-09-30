@@ -1,6 +1,6 @@
 # Aurum Link
 
-Colección de 13 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
+Colección de 15 tragamonedas para iPhone / iPad (Safari), con **créditos ficticios**. Sin dinero real ni compras.
 
 | Juego | Dinámica |
 |---|---|
@@ -17,9 +17,11 @@ Colección de 13 tragamonedas para iPhone / iPad (Safari), con **créditos ficti
 | **Arrecife de Gemas** | Fondo marino, 7×7 con **grupos** de 5+ gemas conectadas y cascadas. Donde estalla un grupo queda una marca que se vuelve **multiplicador** (x2 → x128). 3+ perlas = giros gratis con marcas fijas. |
 | **Duelo del Oeste** | Pueblo del desierto de noche, 5×3 y 20 líneas. **Wilds caminantes**: cada forajido da un re-giro y avanza un rodillo a la izquierda hasta salir. 3+ estrellas de sheriff = 10 giros gratis donde cada forajido duplica su línea. |
 | **Galaxia Infinita** | Espacio profundo. **Rodillos infinitos**: empieza con 3 y cada premio que llega al último rodillo agrega uno nuevo (hasta 15). 3+ portales = 8 giros gratis con multiplicador que sube con cada rodillo nuevo. |
+| **Oro del Gigante** | Estilo *Giant's Gold* (Jack y las habichuelas mágicas). **Rodillos colosales**: tablero principal de 5×4 (40 líneas) y colosal de 5×12 (60 líneas) = 100 líneas; en el colosal los símbolos caen en bloques gigantes. La habichuela es WILD apilado: un rodillo lleno de WILD en el principal se **transfiere** al mismo rodillo del colosal. 3/4/5/6 huevos de oro (rodillos 1, 3 y 5 de ambos tableros) = 5/10/20/50 giros gratis con los premios del colosal x2. |
+| **Espartaco Coloso** | Estilo *Spartacus Super Colossal Reels*: gladiadores en el Coliseo, mismos dos tableros (100 líneas). **MEGA WILD** de 2 rodillos de ancho, **Super Espartaco** WILD con multiplicador x2…x25 (hasta x100 en giros gratis). 3/4/5+ coliseos = 8/12/20 giros gratis x2/x3/x5. |
 
-**Los 13 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
-Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lleno), Carrera del Lobo (2/3/4/5 rodillos llenos de WILD), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND), Duelo del Oeste (3/4/5/6+ forajidos a la vez) y Galaxia Infinita (8/10/12/15 rodillos).
+**Los 15 juegos** tienen los 4 jackpots progresivos (MINI · MINOR · MAJOR · GRAND) que crecen con cada giro:
+Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lleno), Carrera del Lobo (2/3/4/5 rodillos llenos de WILD), Avalancha (bolas de hielo), Rueda de Fuego (segmentos de la rueda) Legión Dorada (minijuego *Tesoro del César*: 3+ monedas JP, elige hasta juntar 3 iguales), Toro Dorado (monedas de jackpot que recoge el toro) Caminos del Dragón (5/6/7 perlas = MINOR/MAJOR/GRAND; 3 perlas en giros gratis = MINI), Códice del Sol (4/5 códices = MINOR/MAJOR; especial expandido en 5 rodillos = MINI, o GRAND si es el Sol) Arrecife de Gemas (grupo de 15+ = MINI; 5/6/7 perlas = MINOR/MAJOR/GRAND), Duelo del Oeste (3/4/5/6+ forajidos a la vez) Galaxia Infinita (8/10/12/15 rodillos), Oro del Gigante (2/3/4/5 rodillos WILD transferidos al colosal) y Espartaco Coloso (3/4/5/6+ Super Espartacos).
 
 **Pago base al activar un bono** en todos los juegos con giros gratis: según los símbolos de bono en pantalla, el mínimo que lo activa paga 2× la apuesta, uno más 10×, dos más 50× y tres o más 100× (también al repetirse).
 
@@ -30,6 +32,8 @@ Xtension Link, Sueño Rojo y Reino de Nieve (bolas en Golden Spins y tablero lle
 **Fanfarria y locutor**: cada bono entra con redoble y una fanfarria de trompetas *ta-taaaam* (golpe corto y acorde largo sostenido con timbal); luego un locutor de show con voz masculina y grave alarga las palabras de premio (¡Booono!, Biiig win!) y sobresale porque la música y los efectos bajan mientras habla; usa voces «Mejorada/Premium» del iPhone si están descargadas (Ajustes de la app → Probar voz para comprobarla) (Ajustes → Accesibilidad → Contenido leído → Voces).
 
 **Anuncios de premio** en todos los juegos: **BIG WIN** (5× la apuesta), **AWESOME** (15×) y **SUPER WIN** (40×), con lluvia de monedas, fanfarria y parafernalia (redoble, platillo, bocinas de estadio, silbatos y público que celebra) y un locutor entusiasta ("Big, big win!", "Totally awesome!", "Super win!"). El cartel parte en BIG WIN y sube a AWESOME y SUPER WIN mientras cuenta, con barrido, platillo y timbre de máquina. Toda ganancia enciende la marquesina de ampolletas alrededor de los rodillos y el medidor de PREMIO; desde 2× hay "NICE WIN!", reflectores y confeti, y en los grandes, fuegos artificiales con su silbido y estallido.
+
+**Sonidos grabados** (`assets/sfx/`): la entrada a los bonos suma un jingle de casino (*bonus 1/2*), los "+N GIROS" un *level up*, los BIG WIN / AWESOME / SUPER WIN un *you win* de 1 a 3 niveles con lluvia de monedas (*coin loop*), los jackpots su propio jingle y, de fondo, una de **15 grabaciones de máquinas reales** (tramo más intenso de cada una, recortado con `python3 tools/make_machine_sfx.py <carpeta>`). Si aún no cargan, suena lo sintetizado.
 
 **Ajustes (⚙)**: velocidad de giro (½× a 3×, también con el botón ⚡), volumen de efectos y de música, música on/off y rodillos en modo claro u oscuro (también con ☀︎/☾).
 
@@ -44,7 +48,7 @@ En Xtension Link, Sueño Rojo y Reino de Nieve las 8 filas giran juntas: las de 
 
 ## Técnica
 - Render en `<canvas>` con sprites pre-escalados (sin reescalado por cuadro), fondos cacheados, DPR limitado a 2 y 30 fps en reposo → fluido en iOS.
-- Sonido y música 100 % sintetizados con Web Audio (sin archivos).
+- Música sintetizada con Web Audio; efectos sintetizados más los sonidos grabados de `assets/sfx/`.
 - `assets/symbols.webp` (475 KB) reemplaza los ~4 MB de imágenes embebidas del diseño anterior. Se regenera con `python3 tools/build_atlas.py` desde `assets/src/`. Las imágenes de Sueño Rojo y Reino de Nieve van en `assets/themes.webp` (`python3 tools/build_themes.py` desde `assets/src/themes/`) y las de Carrera del Lobo en `assets/wolf.webp` (`python3 tools/build_wolf.py` desde `assets/src/wolf/`, generadas con IA en Canva). El aullido `assets/sfx/howl.wav` se genera con `python3 tools/make_howl.py`.
 - Tras cada cambio: `python3 tools/bump_version.py N` para que Safari/iOS descargue todos los archivos nuevos (la versión aparece en el lobby y en Ajustes).
 - Service worker para uso offline. Se publica con GitHub Pages desde `main` (`.github/workflows/pages.yml`).

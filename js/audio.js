@@ -194,6 +194,7 @@ class Sfx {
     const notes = level ? [523.3, 659.3, 784, 1046.5, 1318.5, 1568] : [659.3, 784, 1046.5, 1318.5];
     notes.forEach((f, i) => { this.tone(f, 0.22, { type: 'square', vol: 0.035, at: i * 0.07 }); this.tone(f * 2, 0.3, { type: 'triangle', vol: 0.05, at: i * 0.07, verb: 0.3 }); });
     this.bellRing(level ? 1.1 : 0.5, 0.045, 0.1);
+    if (level && Math.random() < 0.5) this.realMachine(0.32);
     if (level) { this.noise(1.2, { at: 0.35, vol: 0.12, type: 'highpass', freq: 6000, q: 0.4, verb: 0.5 }); this.tone(1568, 0.2, { type: 'sine', vol: 0.05, at: 0.45, slide: 1.4 }); }
   }
   // Sube de categoría el cartel (BIG → AWESOME → SUPER): barrido ascendente y golpe de platillo
@@ -217,9 +218,26 @@ class Sfx {
     this.noise(0.9, { at: b + 0.12, vol: vol * 0.35, buf: this.crackleBuf, type: 'highpass', freq: 3000, q: 0.6, verb: 0.4 });
   }
   // Entrada a un bono: sirena corta, redoble, platillo, fanfarria ascendente, timbre y público
+  // Sonidos grabados (assets/sfx): entrada a bono, subida de nivel, "you win", jackpot, monedas
+  // y 15 grabaciones de máquinas reales (real_1…real_15). Si aún no cargan, queda lo sintetizado.
+  loadSfxPack(base = 'assets/sfx/') {
+    ['bonus_in1', 'bonus_in2', 'levelup2', 'levelup3', 'coin_loop', 'jackpot2', 'jackpot3', 'youwin1', 'youwin2', 'youwin3']
+      .forEach(k => this.preload(k, base + k + '.mp3'));
+    for (let i = 1; i <= 15; i++) this.preload('real_' + i, base + 'real_' + i + '.mp3');
+  }
+  _alt(list, key) { this._altI = this._altI || {}; const i = this._altI[key] = ((this._altI[key] || 0) + 1) % list.length; return list[i]; }
+  // Grabación de máquina real al azar (sin repetir la anterior)
+  realMachine(vol = 0.5, at = 0) {
+    const ok = Array.from({ length: 15 }, (_, i) => 'real_' + (i + 1)).filter(k => this.samples && this.samples[k] && k !== this._lastReal);
+    if (!ok.length) return false;
+    const k = ok[Math.random() * ok.length | 0]; this._lastReal = k;
+    return this.play(k, { at, vol });
+  }
   bonusFanfare(big = true) {
     if (!this.ok) return;
     this._fanfareT = performance.now();
+    if (big) this.play(this._alt(['bonus_in1', 'bonus_in2'], 'bi'), { vol: 0.85, verb: 0.15 });
+    else this.play(this._alt(['levelup2', 'levelup3'], 'lu'), { vol: 0.9, verb: 0.15 });
     if (big) this.siren(0.9);
     const n = big ? 18 : 10;
     for (let i = 0; i < n; i++) { const at = i * 0.035; this.noise(0.05, { at, vol: 0.08 + 0.18 * i / n, type: 'bandpass', freq: 1800, q: 0.8 }); }
@@ -672,6 +690,9 @@ class Sfx {
   }
   bigWin(level = 1) {
     this.hype(level);
+    this.play('youwin' + Math.max(1, Math.min(3, level)), { vol: 0.8, verb: 0.15 });
+    this.play('coin_loop', { at: 0.4, vol: 0.55 });
+    this.realMachine(0.45, 0.2);
     if (this.theme === 'china') { this.gong(98, 3, 0.4); this.firecrackers(10 + level * 6, 0.2, 0.22); }
     if (this.theme === 'snow') { for (let i = 0; i < 10 + level * 4; i++) this.jingle(i * 0.11, 0.07); this.wind(1.5, 0.12); }
     const chords = [[261.6, 329.6, 392], [349.2, 440, 523.3], [392, 493.9, 587.3], [523.3, 659.3, 784, 1046.5]];
@@ -681,6 +702,9 @@ class Sfx {
   }
   // Jackpot: sirena + carillón + metales; más largo cuanto mayor el nivel (0 mini … 3 grand)
   jackpot(level = 1) {
+    this.play(level >= 2 ? 'jackpot3' : 'jackpot2', { vol: 0.85, verb: 0.15 });
+    this.play('coin_loop', { at: 1, vol: 0.5 });
+    this.realMachine(0.4, 0.3);
     if (this.theme === 'china') { this.gong(73, 4, 0.45); this.firecrackers(20 + level * 8, 0.4, 0.25); }
     if (this.theme === 'snow') { for (let i = 0; i < 16; i++) this.celesta(this._scale(16 - i), 0.2 + i * 0.05, 0.06); for (let i = 0; i < 10; i++) this.jingle(0.3 + i * 0.1, 0.07); }
     this.thunder(0.5 + level * 0.1);
@@ -766,6 +790,20 @@ class Sfx {
         melody: [7, -2, 8, 7, 5, -2, -2, -1, 5, 7, 8, -2, 10, -2, 8, -2, 7, -2, 5, 3, 5, -2, -2, -1, 3, 5, 7, 5, 3, -2, 2, -2] },
       wolfBonus: { bpm: 128, root: 45, prog: [[0, M], [8, J], [10, J], [7, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 0, 7, 0, 12, 10, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.25, toms: true,
         scale: [0, 3, 5, 7, 10], mel: 'dizi', wood: 'x.xxx.xxx.xxx.xx',
+        melody: [5, 7, 8, 10, 8, 7, 5, -2, 7, 8, 10, -2, 12, -2, 10, 8, 7, 8, 10, 8, 7, 5, 3, -2, 5, 7, 5, 3, 2, -2, -2, -1] },
+      // Oro del Gigante: cuento de hadas, flauta y celesta en mayor
+      fairy: { bpm: 100, root: 48, prog: [[0, J], [5, J], [9, M], [7, J]], kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', bass: [0, -1, 7, -1, 5, -1, 7, -1], arp: 'updown', lead: 'celesta', pad: 'sine', bells: 0.45,
+        scale: [0, 2, 4, 7, 9], mel: 'dizi', wood: 'x.......x...x...',
+        melody: [5, 6, 7, -2, 6, 5, 3, -2, 4, 5, 6, -2, 5, -2, -2, -1, 5, 7, 8, -2, 7, 6, 5, 3, 4, 3, 2, -2, 0, -2, -2, -1] },
+      fairyBonus: { bpm: 132, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 7, 12, 5, 12, 7, 12], arp: 'up', lead: 'celesta', pad: 'sine', bells: 0.5,
+        scale: [0, 2, 4, 7, 9], mel: 'dizi', wood: 'x.x.x.x.x.x.x.x.',
+        melody: [5, 7, 8, 10, 8, 7, 5, -2, 6, 8, 9, -2, 8, 7, 6, -2, 7, 9, 10, 12, 10, 9, 7, -2, 8, 7, 6, 5, 5, -2, -2, -1] },
+      // Espartaco: épico de arena, tambores de guerra, gong y cuerda grave
+      arena: { bpm: 94, root: 38, prog: [[0, M], [8, J], [10, J], [7, M]], kick: 'x.....x.x.......', snare: '....x.......x.xx', hat: '..x...x...x...x.', bass: [0, -1, 0, 7, 0, -1, 3, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.12, toms: true,
+        scale: [0, 3, 5, 7, 10], mel: 'erhu', gong: 4,
+        melody: [5, -2, 6, 7, -2, 6, 5, -2, 3, -2, 5, -2, -2, -2, -2, -1, 5, -2, 7, 8, -2, 7, 6, 5, 3, 2, 0, -2, -2, -2, -2, -1] },
+      arenaBonus: { bpm: 128, root: 38, prog: [[0, M], [10, J], [8, J], [7, M]], kick: 'x..x..x.x..x..x.', snare: '....x.......x..x', hat: 'x.x.x.x.x.x.x.x.', bass: [0, 12, 0, 7, 0, 12, 10, 7], arp: 'up', lead: 'triangle', pad: 'sawtooth', bells: 0.2, toms: true,
+        scale: [0, 3, 5, 7, 10], mel: 'erhu', gong: 2,
         melody: [5, 7, 8, 10, 8, 7, 5, -2, 7, 8, 10, -2, 12, -2, 10, 8, 7, 8, 10, 8, 7, 5, 3, -2, 5, 7, 5, 3, 2, -2, -2, -1] },
       // Bonos: eufórico en mayor
       bonus: { bpm: 150, root: 48, prog: [[0, J], [7, J], [9, M], [5, J]], kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', bass: [0, 12, 0, 12, 7, 12, 0, 12], arp: 'up', lead: 'square', pad: 'sawtooth', bells: 0.45 }
