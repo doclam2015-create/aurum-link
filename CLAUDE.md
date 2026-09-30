@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **68**, visible al final de Ajustes.
+- La versión actual es la **69**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -28,7 +28,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 | `js/gfx.js` | Canvas: atlas de sprites, partículas, `goldText`, `glow`, easing y `FONT` |
 | `js/audio.js` | `sfx`, con efectos sintetizados en Web Audio, muestras decodificadas (`preload`/`play`), estilos de música por juego, locutor, `loadSfxPack`, `realMachine`, `bigWin`, `jackpot`, `winJingle` y `bonusFanfare` |
 | `js/games/*.js` | Un archivo por juego. Ver la lista más abajo. |
-| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine.webp` y `sparta_sym/tall/wtall/scene.webp` (escenarios, personajes y símbolos de Espartaco), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
+| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine/sym/scene.webp` y `sparta_sym/tall/wtall/scene.webp` (escenarios, personajes y símbolos de Espartaco), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
 | `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `build_colossal.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
 
 ### Juegos (orden de `GAMES` en `js/app.js`)
@@ -123,6 +123,7 @@ No poner identificadores de modelo en commits ni PRs.
   - Los tableros van **siempre lado a lado** (principal a la izquierda, colosal a la derecha), también en vertical. El usuario lo pidió así.
   - Los personajes apilados (gigante, heroína, guerrera, Espartaco) se muestran como una figura alta, como en la máquina.
 - La v68 ([PR 40](https://github.com/doclam2015-create/aurum-link/pull/40)) rehízo el arte de Espartaco con las capturas de la máquina: escenario de piedra con brasero, marcos rojos, celdas crema, letras A/K/Q/J, gladiador con mayal como símbolo nuevo y símbolos repetidos por celda en el colosal. RTP ~94,5 %.
+- La v69 ([PR 41](https://github.com/doclam2015-create/aurum-link/pull/41)) hizo lo mismo con Oro del Gigante (símbolos y escenario de capturas de la máquina, sin el «10») y agregó el Coliseo BONUS de Espartaco al estilo de la máquina. RTP ~94 % en ambos.
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
