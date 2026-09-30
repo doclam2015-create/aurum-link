@@ -2,8 +2,8 @@
 // 6x5, pagos en cualquier posición (8+ iguales). Los símbolos ganadores estallan en hielo y
 // caen nuevos (cascadas). Multiplicador base x1→x2→x3→x5 por cascada. 4+ copos = 10 giros
 // gratis con multiplicador progresivo que NO se reinicia (+1 por cada cascada ganadora).
-import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js?v=71';
-import { weighted } from '../reels.js?v=71';
+import { S, sym, ball, jackpotBall, shortMoney, glow, goldText, roundRect, ease, rand, FONT, makeCanvas, electricRing } from '../gfx.js?v=72';
+import { weighted } from '../reels.js?v=72';
 
 const COLS = 6, ROWS = 5;
 export const PAY = {

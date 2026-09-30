@@ -9,9 +9,10 @@
 //    MEGA WILD de 2 rodillos de ancho. Un rodillo lleno de WILD se transfiere al colosal y, si
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
-//    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=71';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=71';
+//    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
+//    rodillo del principal y pasa entero al colosal.
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=72';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=72';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -58,8 +59,8 @@ export const SPARTA = {
     chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { helm: 3, warrior: 3.3, lion: 3.5, net: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
-  scale: 0.97,
-  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25,
+  scale: 0.86,
+  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, freeExpand: true, freeWild: 0.1,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
   colors: {
     warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#c080ff', '#3a0a6a'], helm: ['#ffd0a0', '#8a3a0a'], net: ['#8ab0e0', '#0a1a3a'], chariot: ['#fff4d0', '#c8a050'], sword: ['#fff4d0', '#c8a050'],
@@ -76,7 +77,7 @@ export function pickSym(cfg, c, free, big) {
   const w = Object.assign({}, cfg.weights);
   if (!SCAT_REELS.includes(c)) w[cfg.scatter] = 0;
   if (cfg.multWild && !(big && c === 4)) w[cfg.multWild] = 0;
-  if (free) w[cfg.wild] *= 1.4;
+  if (free) w[cfg.wild] *= cfg.freeWild || 1.4;
   const k = weighted(w);
   return k === cfg.multWild ? { k, mult: pickMult(cfg, free) } : { k };
 }
@@ -114,8 +115,8 @@ export function bigColumn(cfg, c, free) {
     let s = pickSym(cfg, c, free, true);
     if (s.k === cfg.scatter) { if (sc) continue; sc = true; }
     const rem = BIG_ROWS - col.length;
-    let h = s.k === cfg.scatter ? (cfg.eggStack ? 1 + (Math.random() * 3 | 0) : 2) : Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4;
-    h = Math.min(h, rem); if (rem - h === 1) h = h < 4 ? h + 1 : h - 1;
+    let h = s.k === cfg.scatter ? (cfg.eggStack ? 1 + (Math.random() * 3 | 0) : 1) : Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4;
+    h = Math.min(h, rem); if (rem - h === 1 && !(s.k === cfg.scatter && !cfg.eggStack)) h = h < 4 ? h + 1 : h - 1;
     const id = Math.random();
     for (let i = 0; i < h; i++) col.push(Object.assign({ blk: id }, s));
   }
@@ -164,12 +165,20 @@ export function spinBoards(cfg, free, hold = []) {
       [mega, mega + 1].forEach(c => { main[c] = Array.from({ length: ROWS }, () => ({ k, full: true, mega: true })); });
     }
   }
+  // Giros gratis de Espartaco: un WILD en cualquier casilla del principal se EXPANDE a todo el rodillo
+  // (y por eso se transfiere entero al colosal). Se guarda el rodillo original para animar la expansión.
+  const expand = [], orig = {};
+  if (free && cfg.freeExpand) main.forEach((col, c) => {
+    if (hold.includes(c) || col[0].mega || col.every(s => isWild(cfg, s.k)) || !col.some(s => isWild(cfg, s.k))) return;
+    orig[c] = col; expand.push(c);
+  });
   // Antes del giro, algunos Espartacos de los rodillos 1–4 se vuelven Super Espartaco (máx. 4)
   if (cfg.super) {
     let n = 0;
     for (let c = 0; c < 4; c++) if (!hold.includes(c) && !main[c][0].mega) main[c].forEach((s, r) => { if (s.k === cfg.wild && n < 4 && Math.random() < cfg.superP) { main[c][r] = Object.assign({}, s, { k: cfg.super }); n++; } });
   }
-  return { main, big, mega, hold: hold.slice() };
+  expand.forEach(c => { const k = orig[c].some(s => s.k === cfg.super) ? cfg.super : cfg.wild; main[c] = fullCol(cfg, ROWS, k); });
+  return { main, big, mega, hold: hold.slice(), expand, orig };
 }
 // Rodillos del principal llenos de WILD → se transfieren al colosal (los ya fijos no cuentan de nuevo)
 export function transfers(cfg, b) {
@@ -190,7 +199,7 @@ export function settle(cfg, b, bet, free) {
 }
 // Progresivos: cantidad de rodillos transferidos al colosal en la jugada (con sus re-giros)
 export const jackpotFor = n => ({ 2: 'mini', 3: 'minor', 4: 'major', 5: 'grand' })[Math.min(5, n)] || null;
-export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >= 5 ? 20 : sc.reels === 4 ? 15 : 10;
+export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >= 5 ? 20 : sc.reels === 4 ? 12 : 8;
 
 // ---------- Arte (assets/colossal.webp y las imágenes de escenario, ver tools/build_colossal.py) ----------
 let SHEET = null; const IMG = {};
@@ -738,7 +747,11 @@ class Colossal {
     }
     if (app._forceFull) { const n = app._forceFull; app._forceFull = 0; for (let c = 0; c < n; c++) if (!hold.includes(c)) b.main[c] = fullCol(cfg, ROWS, cfg.super && c === 0 ? cfg.super : cfg.wild); }
     if (app._forceMega && cfg.mega) { app._forceMega = 0; b.mega = 1; [1, 2].forEach(c => { b.main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.super, full: true, mega: true })); }); }
+    if (app._forceExpand && cfg.freeExpand && this.inFree && !hold.includes(1)) { app._forceExpand = 0; if (!b.expand.includes(1)) { b.orig[1] = b.main[1].map((s, r) => r === 2 ? { k: cfg.wild } : s); b.expand.push(1); b.main[1] = fullCol(cfg, ROWS); } }
+    const ex = b.expand || [], bigOrig = {}; ex.forEach(c => { bigOrig[c] = b.big[c]; });
     const tr = transfers(cfg, b);
+    // los rodillos que se van a expandir paran primero con sus símbolos originales
+    const mainShow = b.main.map((col, c) => ex.includes(c) ? b.orig[c] : col), bigShow = b.big.map((col, c) => ex.includes(c) ? bigOrig[c] : col);
     const scatIn = c => (b.main[c].some(s => s.k === cfg.scatter) ? 1 : 0) + (b.big[c].some(s => s.k === cfg.scatter) ? 1 : 0);
     const anticFrom = scatIn(0) + scatIn(2) >= 2 ? 4 : -1;
     sfx.spinStart(app.speed >= 2);
@@ -746,14 +759,14 @@ class Colossal {
     if (anticFrom >= 0 && !cfg.eggStack) sfx.play('sparta_antic', { vol: 0.55, at: 0.6 });
     // los rodillos fijos del re-giro no giran
     hold.forEach(c => { [this.main, this.big].forEach(set => { const col = set.columns[c]; col.state = 'idle'; col.shift = 0; }); });
-    const bigDone = this.big.stopTo(b.big, { anticFrom, minTime: 0.75 / (app.speed || 1), onStop: (c) => {
+    const bigDone = this.big.stopTo(bigShow, { anticFrom, minTime: 0.75 / (app.speed || 1), onStop: (c) => {
       sfx.reelStop(c, false);
       b.big[c].forEach((s, r) => { if (s.k === cfg.scatter && (r === 0 || b.big[c][r - 1].blk !== s.blk || cfg.eggStack)) { const [px, py] = this.center('big', c, r); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 12, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); } });
       if (b.big[c].some(s => s.mult)) sfx.multiplier(4);
     } });
-    await this.main.stopTo(b.main, { anticFrom, onStop: (c) => {
+    await this.main.stopTo(mainShow, { anticFrom, onStop: (c) => {
       sfx.reelStop(c, false);
-      if (tr.cols.includes(c) && !(b.mega >= 0 && c === b.mega)) {
+      if (tr.cols.includes(c) && !ex.includes(c) && !(b.mega >= 0 && c === b.mega)) {
         this.full.push(c); if (b.mega >= 0 && c === b.mega + 1) this.full.push(b.mega);
         if (b.main[c].some(s => s.k === cfg.super)) (this.superCols = this.superCols || []).push(c);
         const [px, py] = this.center('main', c, 1.5); sfx.whoosh(); sfx.bell(660 + this.full.length * 110, 1, 0.12);
@@ -764,6 +777,18 @@ class Colossal {
     } });
     await bigDone;
     sfx.reelStop(4, true); sfx.anticipation(false);
+    // WILD expandido (giros gratis de Espartaco): crece a todo el rodillo y pasa entero al colosal
+    for (const c of ex) {
+      await app.wait(250);
+      this.setColumn(this.main, c, b.main[c]); this.full.push(c);
+      if (b.main[c][0].k === cfg.super) this.superCols.push(c);
+      let [px, py] = this.center('main', c, 1.5); sfx.whoosh(); sfx.bell(700 + c * 90, 1, 0.14);
+      app.burst(px, py, 26, { type: 'spark', color: '#ffc04a', speed: 340, size: 13 }); app.flash('#ffe0a0', 0.25);
+      app.message('<b>WILD expandido</b> en el rodillo ' + (c + 1) + ' · pasa al colosal');
+      await app.wait(300);
+      this.setColumn(this.big, c, b.big[c]);
+      [px, py] = this.center('big', c, 5.5); sfx.bell(900 + c * 90, 1, 0.14); app.burst(px, py, 30, { type: 'spark', color: '#8ad0ff', speed: 380, size: 13 });
+    }
     return { b, tr };
   }
 
@@ -850,12 +875,12 @@ class Colossal {
     sfx.music(cfg.bonusMusic);
     app.setSpinLabel('GRATIS', '1 de ' + this.freeTotal);
   }
-  async buyFree() { this.app.sfx.featureStart(); await this.startFree(this.cfg.eggStack ? 10 : 10); return { win: 0, celebrated: true }; }
+  async buyFree() { this.app.sfx.featureStart(); await this.startFree(this.cfg.eggStack ? 10 : 8); return { win: 0, celebrated: true }; }
   slam() { this.main.slam(); this.big.slam(); }
   info(bet, fmt) {
     const cfg = this.cfg, lb = bet / 100, img = k => '<img class="ico" src="' + symIcon(cfg, k, 96, k === 'mw' ? 5 : 0).toDataURL('image/png') + '" alt="">';
     return '<h3>Cómo se juega</h3><ul>' + this.rules() +
-      '<li><b>BONO</b>: compra 10 giros gratis por 50× la apuesta.</li></ul>' +
+      '<li><b>BONO</b>: compra ' + (cfg.eggStack ? 10 : 8) + ' giros gratis por 50× la apuesta.</li></ul>' +
       '<h3>Pagos por línea (apuesta ' + fmt(bet) + ') · 3 / 4 / 5</h3><table>' +
       Object.keys(cfg.pay).map(k => '<tr><td>' + img(k) + '</td><td>' + cfg.names[k] + '</td><td>' + [3, 4, 5].map(n => fmt(cfg.pay[k][n] * cfg.scale * lb)).join(' · ') + '</td></tr>').join('') + '</table>';
   }
@@ -903,7 +928,8 @@ export class Spartacus extends Colossal {
       '<li><b>MEGA WILD</b>: un Espartaco (o Super Espartaco) gigante de <b>2 rodillos de ancho</b> puede caer sobre los rodillos 1 a 4 del principal (uno por giro).</li>' +
       '<li><b>Transferencia</b>: un rodillo del principal <b>lleno de WILD</b> pasa entero al mismo rodillo del colosal. Si llevaba un <b>Super Espartaco</b>, hay un <b>RE-GIRO</b> con esos WILD fijos, hasta <b>9 re-giros</b> seguidos.</li>' +
       '<li><b>WILD con multiplicador</b> x2, x3, x5, x10 o x25 en el rodillo 5 del colosal; multiplica la línea. En los giros gratis también hay <b>x50 y x100</b>.</li>' +
-      '<li><b>Coliseo BONUS</b> solo en los rodillos 1, 3 y 5 de ambos tableros: en <b>3 rodillos = 10 · 4 = 15 · 5 o 6 = 20 giros gratis</b>, que se pueden volver a ganar.</li>' +
+      '<li><b>Coliseo BONUS</b> solo en los rodillos 1, 3 y 5 de ambos tableros: de a uno por rodillo: <b>3 = 8 · 4 = 12 · 5 o 6 = 20 giros gratis</b>, que se pueden volver a ganar.</li>' +
+      '<li>En los giros gratis, un <b>WILD en cualquier casilla del principal se expande a todo el rodillo</b> y pasa completo al mismo rodillo del colosal.</li>' +
       '<li><b>Progresivos</b>: rodillos transferidos al colosal en la jugada (con sus re-giros) · <b>2 = MINI · 3 = MINOR · 4 = MAJOR · 5 = GRAND</b>.</li>';
   }
 }
