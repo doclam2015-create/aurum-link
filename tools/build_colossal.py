@@ -45,7 +45,7 @@ Image.open(SRC + 'ref_giant2.png').convert('RGB').crop((140, 0, 340, 205)).save(
 A = Image.open(SRC + 'ref_sparta_play1.webp').convert('RGB'); B = Image.open(SRC + 'ref_sparta_play2.webp').convert('RGB')
 SP = [('lion', A, (18, 383, 112, 452)), ('chariot', B, (945, 385, 1088, 500)), ('sword', A, (918, 190, 1062, 305)), ('net', B, (940, 80, 1087, 222)),
       ('K', B, (385, 387, 465, 448)), ('J', B, (58, 462, 130, 522)), ('Q', B, (503, 387, 572, 448)), ('A', A, (770, 130, 822, 172)),
-      ('sparta', B, (372, 603, 470, 668)), ('super', A, (918, 28, 1062, 168)), ('mw', B, (940, 228, 1088, 376)),
+      ('sparta', Image.open(SRC + 'sparta_wild.png').convert('RGB'), (0, 0, 105, 73)), ('super', A, (918, 28, 1062, 168)), ('mw', B, (940, 228, 1088, 376)),
       ('colis', Image.open(SRC + 'colis_sparta.jpg').convert('RGB'), (0, 0, 200, 200))]
 sheet = Image.new('RGBA', (T * len(SP), T), (0, 0, 0, 0))
 for n, (k, im, box) in enumerate(SP):
