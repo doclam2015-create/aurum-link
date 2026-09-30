@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=74';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=74';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=75';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=75';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
