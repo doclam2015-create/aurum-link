@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **72**, visible al final de Ajustes.
+- La versión actual es la **73**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -128,6 +128,7 @@ No poner identificadores de modelo en commits ni PRs.
 - La v70 ([PR 42](https://github.com/doclam2015-create/aurum-link/pull/42)) sumó la dinámica de los videos de Espartaco: marco eléctrico, medallón de giros gratis, fondo nocturno en giros gratis, todas las líneas juntas al ganar, sonidos grabados, y borró la marca de agua «BETO» (inpainting con OpenCV en `build_colossal.py`).
 - La v71 ([PR 43](https://github.com/doclam2015-create/aurum-link/pull/43)) corrigió la cara de Espartaco (la marca de agua se tapa con la otra copia limpia de la figura, sin inpainting) y muestra a Espartaco y la guerrera completos, de pies a cabeza, al caer apilados y en el MEGA WILD.
 - La v72 ([PR 44](https://github.com/doclam2015-create/aurum-link/pull/44)): en Espartaco los coliseos caen de a uno por rodillo, 3/4/5 = 8/12/20 giros gratis, WILD expandible en giros gratis (`freeExpand`, `freeWild` 0,1, escala 0,86, RTP ~93,5 %) y placa WILD «SPARTACUS Gladiator of Rome» limpia (`sparta_wild.png`).
+- La v73: los rodillos WILD transferidos viajan del principal al colosal con una animación de desplazamiento (`fly`/`drawFlights`, en ambos juegos). Escenario de Espartaco sin la barra roja: logo entre Espartaco y la guerrera y Coliseo abajo al centro; en Oro del Gigante, el gigante y la heroína a los lados del título con el huevo al centro (`portrait`).
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
