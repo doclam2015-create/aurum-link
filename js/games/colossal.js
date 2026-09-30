@@ -10,8 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=61';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=61';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=62';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=62';
+import { giantScene, spartaScene } from './scenes.js?v=62';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -190,28 +191,22 @@ export function settle(cfg, b, bet, free) {
 export const jackpotFor = n => ({ 2: 'mini', 3: 'minor', 4: 'major', 5: 'grand' })[Math.min(5, n)] || null;
 export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >= 5 ? 20 : sc.reels === 4 ? 15 : 10;
 
-// ---------- Arte (assets/colossal.webp, ver tools/build_colossal.py) ----------
-let SHEET = null; const BG = {};
-const POS = { giant: 0, girl: 1, harp: 2, cow: 3, goose: 4, sack: 5, egg: 6, lion: 7, warrior: 8, helm: 9, chariot: 10, sword: 11, colis: 12, shield: 13 };
-const TALL = { bean: 2800, sparta: 2900 };
+// ---------- Arte (assets/colossal.webp, ver tools/build_colossal.py; escenarios en scenes.js) ----------
+let SHEET = null;
+const POS = { giant: 0, girl: 1, harp: 2, cow: 3, goose: 4, sack: 5, egg: 6, lion: 7, warrior: 8, helm: 9, chariot: 10, sword: 11, colis: 12, shield: 13, bust: 14 };
+const TALL = { bean: 3000, sparta: 3100 };
 function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 export function loadColossalArt() {
-  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; cache.clear(); }), loadImg('assets/giant_bg.webp').then(i => { BG.giant = i; }), loadImg('assets/sparta_bg.webp').then(i => { BG.spartacus = i; })]);
+  return loadImg('assets/colossal.webp').then(i => { SHEET = i; cache.clear(); });
 }
-// Recorte de la hoja: [sx, sy, sw, sh]. 'head' = busto de Espartaco (parte alta de la figura).
-function src(k) { if (k === 'head') return [TALL.sparta + 8, 2, 84, 70]; if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
+// Recorte de la hoja: [sx, sy, sw, sh]
+function src(k) { if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
 // Dibuja una figura de la hoja ajustada (sin deformar) dentro de un rectángulo
 function art(x, k, dx, dy, dw, dh, f = 1, ay = 0.5) {
   if (!SHEET) return;
   const [sx, sy, sw, sh] = src(k), s = Math.min(dw / sw, dh / sh) * f, w = sw * s, h = sh * s;
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
   x.drawImage(SHEET, sx, sy, sw, sh, dx + (dw - w) / 2, dy + (dh - h) * ay, w, h);
-}
-function cover(x, img, dx, dy, dw, dh, ax = 0.5, ay = 0.5) {
-  if (!img) return;
-  const s = Math.max(dw / img.width, dh / img.height), w = img.width * s, h = img.height * s;
-  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
-  x.drawImage(img, dx + (dw - w) * ax, dy + (dh - h) * ay, w, h);
 }
 const cache = new Map();
 function cached(key, w, h, fn) {
@@ -255,7 +250,7 @@ export function symIcon(cfg, k, size, mult) {
     if (k === 'sparta' || k === 'super') {
       const sup = k === 'super'; tile(x, s, s, sup ? '#fff0a0' : '#e8503a', sup ? '#a8600a' : '#4a0806', sup ? '#fff' : '#f5d27a'); x.restore();
       if (sup) x.drawImage(glow('rgba(255,240,160,1)', 64), 0, 0, s, s);
-      art(x, 'head', 0, s * 0.04, s, s * 0.7, 1); label(x, s / 2, sup ? 'SUPER' : 'WILD', s * 0.8, s * (sup ? 0.22 : 0.26), s * 0.92, sup ? ['#fff', '#ffb020'] : undefined);
+      art(x, 'bust', 0, s * 0.04, s, s * 0.7, 1); label(x, s / 2, sup ? 'SUPER' : 'WILD', s * 0.8, s * (sup ? 0.22 : 0.26), s * 0.92, sup ? ['#fff', '#ffb020'] : undefined);
       return;
     }
     if (k === 'mw') { tile(x, s, s, '#ffd870', '#6a2a04'); x.restore(); art(x, 'shield', 0, s * 0.02, s, s * 0.66, 0.95); label(x, s / 2, 'x' + (mult || 2), s * 0.76, s * 0.3, s * 0.92, ['#fff', '#ff5a2a']); return; }
@@ -265,7 +260,7 @@ export function symIcon(cfg, k, size, mult) {
 }
 export function colossalIconStyle(k) {
   const p = POS[k] != null ? POS[k] : 0;
-  return 'background-image:url(assets/colossal.webp);background-size:1500% 100%;background-position:' + (p * 100 / 14).toFixed(3) + '% 0';
+  return 'background-image:url(assets/colossal.webp);background-size:1600% 100%;background-position:' + (p * 100 / 15).toFixed(3) + '% 0';
 }
 
 // ---------- Juego ----------
@@ -355,9 +350,8 @@ class Colossal {
   // Escenario del juego (fondo completo + cuadro sobre el tablero principal)
   renderBg() {
     const { W, H, cfg } = this, dpr = this.app.dpr, L = this.app.light, cnv = makeCanvas(W * dpr, H * dpr), x = cnv.getContext('2d'); x.scale(dpr, dpr);
-    const img = BG[cfg.id];
-    x.fillStyle = cfg.id === 'giant' ? '#1a3a5a' : '#2a0804'; x.fillRect(0, 0, W, H);
-    if (img) { x.globalAlpha = 0.85; cover(x, img, 0, 0, W, H); x.globalAlpha = 1; }
+    (cfg.id === 'giant' ? giantScene : spartaScene)(x, 0, 0, W, H);
+    x.fillStyle = L ? 'rgba(255,250,240,0.25)' : 'rgba(10,4,20,0.45)'; x.fillRect(0, 0, W, H);
     const v = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
     v.addColorStop(0, L ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.25)'); v.addColorStop(1, L ? 'rgba(255,250,235,0.35)' : 'rgba(0,0,0,0.7)');
     x.fillStyle = v; x.fillRect(0, 0, W, H);
@@ -373,7 +367,7 @@ class Colossal {
     const g = x.createLinearGradient(0, by, 0, by + bh); if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(1, '#4a2808'); } else { g.addColorStop(0, '#fff0b0'); g.addColorStop(0.5, '#c8901e'); g.addColorStop(1, '#6a3a06'); }
     x.fillStyle = g; x.fill(); x.restore();
     x.save(); roundRect(x, bx, by, bw, bh, 6); x.clip();
-    cover(x, BG[cfg.id], bx, by, bw, bh, 0.5, giant ? 0.75 : 0.45);
+    (giant ? giantScene : spartaScene)(x, bx, by, bw, bh);
     if (giant) {
       // cinta rosada con la regla del bono y huevo "FEATURE" a la izquierda, como en la máquina
       const eh = Math.min(bh * 0.62, bw * 0.2), ex = bx + 6, ey = by + 6;
@@ -389,8 +383,9 @@ class Colossal {
       if (bh > 120) goldText(x, 'ORO DEL GIGANTE', bx + bw / 2, by + bh - Math.min(30, bh * 0.16), Math.min(34, bw * 0.08), { maxW: bw * 0.9, stroke: '#2a1400', glowColor: '#8aff6a' });
     } else {
       // Espartaco de cuerpo entero a la izquierda y el logo dorado
-      const fh = bh * 0.98, fw = fh * 0.5;
-      x.save(); x.shadowColor = 'rgba(0,0,0,0.7)'; x.shadowBlur = 10; art(x, 'sparta', bx + 2, by + bh - fh, fw, fh, 1, 1); x.restore();
+      // sin agrandar la figura más allá de su tamaño original (se vería borrosa)
+      const fh = Math.min(bh * 0.92, 196 * 1.25 / this.app.dpr), fw = Math.max(fh * 0.5, bw * 0.22);
+      x.save(); x.shadowColor = 'rgba(0,0,0,0.7)'; x.shadowBlur = 10; art(x, 'sparta', bx + bw * 0.06, by + bh * 0.97 - fh, fh * 0.5, fh, 1, 1); x.restore();
       const lx = bx + fw + (bw - fw) / 2, fs = Math.min(bh * 0.3, (bw - fw) * 0.16, 40);
       goldText(x, 'ESPARTACO', lx, by + bh * (bh > 90 ? 0.4 : 0.36), fs, { maxW: (bw - fw) * 0.92, stroke: '#3a0400', glowColor: '#ff6a2a' });
       const sf = Math.max(9, fs * 0.42);
@@ -457,7 +452,7 @@ class Colossal {
           const cx = px + bcw / 2, cy = py + hh / 2;
           if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, bcw, hh);
           if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || RANKTXT[s.k]) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
-          else { const f = 0.96 * pulse, ww = bcw * f, h2 = hh * f; x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
+          else { const f = 0.96 * pulse, cap = 250 / dpr * pulse, ww = Math.min(bcw * f, cap), h2 = Math.min(hh * f, cap); x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
         }
         x.globalAlpha = 1; r = e;
       }
@@ -479,18 +474,18 @@ class Colossal {
       const seg = w * 2; for (let y = py + h; y > py - seg; y -= seg * 0.96) art(x, 'bean', px, y - seg, w, seg, 1.15);
       const step = big ? Math.max(1, Math.round(cellH * 3 > w ? 2 : 3)) : 1;
       for (let r = 0; r < h / cellH - 0.5; r += step) goldText(x, 'WILD', px + w / 2, py + (r + step / 2) * cellH, Math.min(w * 0.26, cellH * step * 0.42, 22), { maxW: w * 0.9, colors: ['#ffffff', '#fff6a0', '#ffc020', '#fff6a0'], stroke: '#1a4a0a' });
-    } else if (big || h / w > 4.2) {
+    } else if (!mega) {
       // colosal: bustos de Espartaco apilados, cada uno con su "WILD"
       const seg = Math.max(w * 0.95, cellH * 2), n = Math.max(1, Math.round(h / seg)), sh = h / n;
-      for (let i = 0; i < n; i++) { art(x, 'head', px, py + i * sh, w, sh * 0.8, 0.95); goldText(x, 'WILD', px + w / 2, py + i * sh + sh * 0.84, Math.min(w * 0.24, sh * 0.2, 20), { maxW: w * 0.9 }); }
+      for (let i = 0; i < n; i++) { art(x, 'bust', px, py + i * sh, w, sh * 0.8, 0.95); goldText(x, 'WILD', px + w / 2, py + i * sh + sh * 0.84, Math.min(w * 0.24, sh * 0.2, 20), { maxW: w * 0.9 }); }
     } else {
-      x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; art(x, 'sparta', px, py + h * 0.02, w, h * 0.86, 1, 0); x.restore();
+      const bs = Math.min(w * 0.92, h * 0.62); x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; art(x, 'bust', px + (w - bs) / 2, py + h * 0.08, bs, bs, 1); x.restore();
     }
     x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18 + 0.12 * Math.sin(time * 4 + c);
     x.drawImage(glow(giant ? 'rgba(160,255,160,1)' : 'rgba(255,200,90,1)', 64), px - w * 0.3, py, w * 1.6, h);
     x.restore();
     x.strokeStyle = giant ? '#6ad83a' : '#f5d27a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
-    if (!giant && !big && h / w <= 4.2) goldText(x, mega ? (sup ? 'SUPER MEGA WILD' : 'MEGA WILD') : sup ? 'SUPER WILD' : 'WILD', px + w / 2, py + h - Math.min(h * 0.08, 18), Math.min(22, w * (mega ? 0.12 : 0.24)), { maxW: w * 0.94, glowColor: '#ff8a2e' });
+    if (!giant && mega) goldText(x, mega ? (sup ? 'SUPER MEGA WILD' : 'MEGA WILD') : sup ? 'SUPER WILD' : 'WILD', px + w / 2, py + h - Math.min(h * 0.08, 18), Math.min(22, w * (mega ? 0.12 : 0.24)), { maxW: w * 0.94, glowColor: '#ff8a2e' });
   }
   update(dt) { this.time += dt; this.main.update(dt); this.big.update(dt); if (this.wins) this.winT += dt; }
   curWin() { return this.wins && this.wins.length ? this.wins[Math.floor(this.winT / 1.1) % this.wins.length] : null; }
