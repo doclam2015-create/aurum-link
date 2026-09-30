@@ -10,9 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=66';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=66';
-import { spartaScene } from './scenes.js?v=66';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=67';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=67';
+import { spartaScene } from './scenes.js?v=67';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -253,7 +253,7 @@ function rankIcon(cfg, k, s, x) {
 const SUITS = { heart: 1, spade: 1, diamond: 1, club: 1 };
 const isLow = (cfg, k) => cfg.low.includes(k);
 // Personajes con imagen de cuerpo entero: [imagen, posición horizontal de la cara (0–1)]
-const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.54, [30, 70, 125, 125]], warrior: ['sheroine', 0.55, [48, 0, 156, 156]], helm: ['shero', 0.6, [76, 6, 148, 148]] };
+const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.5, [55, 30, 100, 100]], warrior: ['sheroine', 0.55, [48, 0, 156, 156]], helm: ['shero', 0.6, [76, 6, 148, 148]] };
 const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
 function suitPath(x, k, s) {
   const c = s / 2; x.beginPath();

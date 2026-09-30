@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **60**, visible al final de Ajustes.
+- La versión actual es la **67**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -28,8 +28,8 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 | `js/gfx.js` | Canvas: atlas de sprites, partículas, `goldText`, `glow`, easing y `FONT` |
 | `js/audio.js` | `sfx`, con efectos sintetizados en Web Audio, muestras decodificadas (`preload`/`play`), estilos de música por juego, locutor, `loadSfxPack`, `realMachine`, `bigWin`, `jackpot`, `winJingle` y `bonusFanfare` |
 | `js/games/*.js` | Un archivo por juego. Ver la lista más abajo. |
-| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
-| `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
+| `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine.webp` y `sparta_hero/heroine/bg.webp` (escenarios y personajes), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
+| `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `build_colossal.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
 
 ### Juegos (orden de `GAMES` en `js/app.js`)
 
@@ -45,7 +45,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 10. `reef.js`: Arrecife de Gemas
 11. `western.js`: Duelo del Oeste
 12. `galaxy.js`: Galaxia Infinita
-13. `colossal.js`: Oro del Gigante y Espartaco Coloso (`GiantGold`, `Spartacus`), agregados en la v60
+13. `colossal.js`: Oro del Gigante y Espartaco Coloso (`GiantGold`, `Spartacus`), agregados en la v60 y rehechos en la v61–v67 para parecerse a *Giant's Gold* y *Spartacus Super Colossal Reels* de WMS. `scenes.js` dibuja el fondo azul con greca de Espartaco.
 
 ### Interfaz de un juego (clase)
 
@@ -75,7 +75,6 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
   - "+N giros": `levelup`.
   - BIG/AWESOME/SUPER: `youwin` + `coin_loop` + `realMachine`.
   - Jackpots: `jackpot2/3`.
-- `ElevenLabs_Generation_1.ogg` sigue pendiente porque el usuario no llegó a subirlo.
 
 ## Flujo de trabajo estándar (seguirlo en cada pedido)
 
@@ -117,7 +116,15 @@ No poner identificadores de modelo en commits ni PRs.
   - Oro del Gigante y Espartaco Coloso, con rodillos colosales 5×4 + 5×12 y 100 líneas.
   - Los sonidos grabados del usuario.
 
+- De la v61 a la v67 ([PR 33](https://github.com/doclam2015-create/aurum-link/pull/33) a PR 39) se rehicieron los dos juegos colosales:
+  - Reglas como los originales. Oro del Gigante: huevos apilados que dan de 5 a 100 giros gratis según los huevos a la vista, colosal x2 en giros gratis. Espartaco: Super Espartaco, MEGA WILD, transferencia con re-giro (hasta 9), rodillo 5 del colosal doble con WILD x2…x100, y 10/15/20 giros gratis.
+  - Jackpots por rodillos transferidos (2/3/4/5), bono sorpresa y RTP ~94 % (simulado).
+  - Arte: los símbolos se generaron con IA en Canva (`assets/src/colossal/`). Los personajes y escenarios salen de las portadas y capturas que subió el usuario (`ref_*`), usando solo zonas sin logo ni marca de agua.
+  - Los tableros van **siempre lado a lado** (principal a la izquierda, colosal a la derecha), también en vertical. El usuario lo pidió así.
+  - Los personajes apilados (gigante, heroína, guerrera, Espartaco) se muestran como una figura alta, como en la máquina.
+- Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
+
 ## Ideas / pendientes que pueden surgir
 
-- Integrar `ElevenLabs_Generation_1.ogg` si el usuario lo entrega.
+- Si el usuario entrega imágenes más grandes de algún personaje, reemplazar las actuales.
 - Ajustar los volúmenes o la asignación de los sonidos reales según lo que escuche en el iPhone.
