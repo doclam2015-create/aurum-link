@@ -22,11 +22,24 @@ A.save('assets/colossal.webp', 'WEBP', quality=86, method=6)
 print(SQ + TALL, A.size)
 
 # Escenarios a partir de las portadas que compartió el usuario (solo zonas sin logo ni marca de agua):
-#   giant_hero.webp  gigante de cuerpo entero con cielo (personaje alto y escenario)
-#   giant_sky.webp   nubes con el castillo y el huevo de oro (fondo)
-#   sparta_hero.webp Espartaco con escudo y espada
+#   giant_hero.webp     gigante de cuerpo entero con cielo (personaje alto y escenario)
+#   giant_sky.webp      nubes con el castillo y el huevo de oro (fondo)
+#   sparta_hero.webp    Espartaco con escudo y espada (cuadro y MEGA WILD)
+#   sparta_heroine.webp la guerrera con dos espadas (cuando cae apilada)
+#   sparta_bg.webp      cielo, mar y rocas del centro; donde estaba el logo queda un degradado suave
+from PIL import ImageFilter, ImageDraw
 ref = Image.open(SRC + 'ref_giant.jpg').convert('RGB')
 ref.crop((494, 60, 800, 599)).save('assets/giant_hero.webp', 'WEBP', quality=90, method=6)
 ref.crop((0, 292, 410, 599)).save('assets/giant_sky.webp', 'WEBP', quality=88, method=6)
-Image.open(SRC + 'ref_sparta.webp').convert('RGB').crop((0, 0, 132, 240)).save('assets/sparta_hero.webp', 'WEBP', quality=92, method=6)
+sp = Image.open(SRC + 'ref_sparta2.webp').convert('RGB')
+sp.crop((0, 40, 248, 541)).save('assets/sparta_hero.webp', 'WEBP', quality=90, method=6)
+sp.crop((735, 60, 960, 541)).save('assets/sparta_heroine.webp', 'WEBP', quality=90, method=6)
+bg = sp.crop((262, 0, 640, 541)).copy(); w, h = bg.size; y0, y1 = 92, 428; px = bg.load()
+for x in range(w):
+    a, b = px[x, y0], px[x, y1]
+    for y in range(y0, y1):
+        t = (y - y0) / (y1 - y0); px[x, y] = tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rectangle((0, y0 - 10, w, y1 + 10), fill=255)
+bg = Image.composite(bg.filter(ImageFilter.GaussianBlur(18)), bg, mask.filter(ImageFilter.GaussianBlur(10)))
+bg.save('assets/sparta_bg.webp', 'WEBP', quality=88, method=6)
 print('escenarios listos')
