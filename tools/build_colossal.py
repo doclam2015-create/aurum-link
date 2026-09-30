@@ -65,7 +65,11 @@ def dewatermark(im, boxes, thr=7):
     mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
     a = cv2.inpaint(a, mask, 4, cv2.INPAINT_TELEA)
     return Image.fromarray(cv2.cvtColor(a, cv2.COLOR_BGR2RGB))
-dewatermark(A.crop((345, 385, 452, 686)), [(8, 40, 50, 88)], thr=5).save('assets/sparta_tall.webp', 'WEBP', quality=92, method=6)
+# Espartaco: la misma figura aparece dos veces en la captura; la marca de agua de la primera (junto a la cara)
+# se tapa con ese mismo trozo de la segunda copia, que ahí está limpia (sin borrar ni deformar la cara).
+t1 = A.crop((345, 385, 452, 676)); t2 = A.crop((455, 385, 562, 676))
+t1.paste(t2.crop((0, 40, 44, 100)), (0, 40))
+t1.save('assets/sparta_tall.webp', 'WEBP', quality=92, method=6)
 dewatermark(A.crop((682, 225, 757, 630)), [(45, 320, 75, 365)]).save('assets/sparta_wtall.webp', 'WEBP', quality=92, method=6)
 dewatermark(A.crop((0, 0, 592, 372)), [(280, 60, 352, 135)]).save('assets/sparta_scene.webp', 'WEBP', quality=90, method=6)
 print('escenarios listos', [k for k, _, _ in SP])

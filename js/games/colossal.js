@@ -10,8 +10,8 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=70';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=70';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=71';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=71';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -261,7 +261,7 @@ function rankIcon(cfg, k, s, x) {
 const SUITS = { heart: 1, spade: 1, diamond: 1, club: 1 };
 const isLow = (cfg, k) => cfg.low.includes(k);
 // Personajes con imagen de cuerpo entero: [imagen, posición horizontal de la cara (0–1)]
-const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.5, [55, 30, 100, 100]], warrior: ['wartall', 0.5, [0, 14, 75, 75]], helm: ['sptall', 0.5, [6, 18, 95, 95]] };
+const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.5, [55, 30, 100, 100]], warrior: ['wartall', 0.5, [0, 14, 75, 75]], helm: ['sptall', 0.5, [4, 0, 100, 100]] };
 const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
 function suitPath(x, k, s) {
   const c = s / 2; x.beginPath();
@@ -520,10 +520,18 @@ class Colossal {
   // Gigante de cuerpo entero: se ve la parte de arriba si la pila es corta
   heroPanel(x, px, py, w, h, frac, k, rim) {
     const [key, fx] = heroOf(k), img = IMG[key]; x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip();
-    let sh = img.height * Math.max(0.3, frac), sw = sh * w / h;
-    if (sw > img.width) { sw = img.width; sh = sw * h / w; }
-    const sx = Math.max(0, Math.min(img.width - sw, img.width * fx - sw / 2));
-    x.imageSmoothingQuality = 'high'; x.drawImage(img, sx, 0, sw, sh, px, py, w, h);
+    x.imageSmoothingQuality = 'high';
+    if (this.cfg.id === 'spartacus') {
+      // Espartaco y la guerrera se ven completos (de pies a cabeza) sobre su fondo azul, sin recortes
+      x.fillStyle = '#0a1a4a'; x.fillRect(px, py, w, h);
+      const s = Math.min(w / img.width, h / img.height), dw = img.width * s, dh = img.height * s;
+      x.drawImage(img, px + (w - dw) / 2, py + (h - dh) / 2, dw, dh);
+    } else {
+      let sh = img.height * Math.max(0.3, frac), sw = sh * w / h;
+      if (sw > img.width) { sw = img.width; sh = sw * h / w; }
+      const sx = Math.max(0, Math.min(img.width - sw, img.width * fx - sw / 2));
+      x.drawImage(img, sx, 0, sw, sh, px, py, w, h);
+    }
     x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
@@ -603,7 +611,7 @@ class Colossal {
       const per = Math.max(1, Math.round(w * 0.85 / cellH)), n = Math.max(1, Math.round(h / (cellH * per))), sh = h / n, sz = Math.min(w, sh) * 0.98;
       for (let i = 0; i < n; i++) x.drawImage(symIcon(cfg, sup ? cfg.super : cfg.wild, sz * this.app.dpr), px + (w - sz) / 2, py + i * sh + (sh - sz) / 2, sz, sz);
     } else {
-      if (IMG.sptall) { const img = IMG.sptall, s2 = Math.max(w / img.width, h / img.height); x.imageSmoothingQuality = 'high'; x.drawImage(img, px + (w - img.width * s2) * 0.35, py, img.width * s2, img.height * s2); if (sup) { x.globalCompositeOperation = 'overlay'; x.fillStyle = 'rgba(255,200,60,0.45)'; x.fillRect(px, py, w, h); x.globalCompositeOperation = 'source-over'; } }
+      if (IMG.sptall) { const img = IMG.sptall, s2 = Math.min(w / img.width, h / img.height); x.fillStyle = '#0a1a4a'; x.fillRect(px, py, w, h); x.imageSmoothingQuality = 'high'; x.drawImage(img, px + (w - img.width * s2) / 2, py + (h - img.height * s2) / 2, img.width * s2, img.height * s2); if (sup) { x.globalCompositeOperation = 'overlay'; x.fillStyle = 'rgba(255,200,60,0.45)'; x.fillRect(px, py, w, h); x.globalCompositeOperation = 'source-over'; } }
       else { const bs = Math.min(w * 0.92, h * 0.62); art(x, 'bust', px + (w - bs) / 2, py + h * 0.08, bs, bs, 1); }
     }
     x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18 + 0.12 * Math.sin(time * 4 + c);
