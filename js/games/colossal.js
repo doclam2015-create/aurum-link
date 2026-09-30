@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=73';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=73';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=74';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=74';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -222,6 +222,8 @@ function cover(x, img, dx, dy, dw, dh, ax = 0.5, ay = 0.5) {
 // Espartaco: casillas de la hoja sparta_sym.webp (sacadas de las capturas de la máquina)
 const GPT = { sack: 0, goose: 1, harp: 2, Q: 3, K: 4, J: 5, egg: 6, A: 7, cow: 8, bean: 9 };
 // hoja de casillas de cada juego: [imagen, mapa]
+// Arrastre de un rodillo WILD: fracción de la animación para el agarre y para el encaje
+const FLY_GRAB = 0.16, FLY_LAND = 0.8;
 const tilesOf = cfg => cfg.id === 'giant' ? [IMG.gsym, GPT] : [IMG.spsym, SPT];
 const SPT = { lion: 0, chariot: 1, sword: 2, net: 3, K: 4, J: 5, Q: 6, A: 7, sparta: 8, super: 9, mw: 10, colis: 11 };
 // Dibuja una figura de la hoja ajustada (sin deformar) dentro de un rectángulo
@@ -664,37 +666,60 @@ class Colossal {
   }
   // Rodillo WILD que viaja del principal al colosal (desplazamiento rápido con estela)
   fly(c) {
-    const dur = 0.42 / Math.min(2, this.app.speed || 1), sup = !!(this.superCols && this.superCols.includes(c));
-    (this.flights = this.flights || []).push({ c, t0: this.time + (this.flights.length ? 0.07 : 0), dur, sup, done: false });
-    this.app.sfx.whoosh();
+    const dur = 0.62 / Math.min(2, this.app.speed || 1), sup = !!(this.superCols && this.superCols.includes(c));
+    this.flights = this.flights || [];
+    const busy = this.flights.filter(f => !f.done), t0 = Math.max(this.time, ...busy.map(f => f.t0 + f.dur * 0.35));
+    this.flights.push({ c, t0, dur, sup, done: false, hit: false });
+    this.app.sfx.reelDrag(dur * (FLY_LAND - FLY_GRAB), !!this.cfg.eggStack, t0 - this.time + dur * FLY_GRAB, busy.length);
   }
-  landed(c) { return !(this.flights || []).some(f => f.c === c && !f.done); }
+  landed(c) { return !(this.flights || []).some(f => f.c === c && !f.hit); }
   flightRect(c, e) {
     const a = [this.mx + c * this.cw, this.my, this.cw, this.ch * ROWS], b = [this.bx + c * this.bcw, this.by, this.bcw, this.bch * BIG_ROWS];
     return a.map((v, i) => v + (b[i] - v) * e);
   }
+  // Arrastre: la columna se "agarra" (se levanta y tiembla), sale disparada con estela borrosa y
+  // estirada por la velocidad, y encaja de golpe en el colosal (aplastamiento, destello y temblor)
   drawFlights(x) {
+    const app = this.app, giant = !!this.cfg.eggStack, col = giant ? '#a8ffa8' : '#ffd24a';
+    const io = u => u <= 0 ? 0 : u >= 1 ? 1 : u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
     (this.flights || []).forEach(f => {
       if (f.done) return;
       const t = (this.time - f.t0) / f.dur; if (t < 0) return;
-      if (t >= 1) {
-        f.done = true; const [px, py, w, h] = this.flightRect(f.c, 1), app = this.app;
-        app.sfx.bell(880 + f.c * 90, 1, 0.14); app.burst(px + w / 2, py + h / 2, 26, { type: 'spark', color: this.cfg.eggStack ? '#a8ffa8' : '#ffd24a', speed: 360, size: 12 });
+      if (t >= 1) { f.done = f.hit = true; return; }
+      const u = (t - FLY_GRAB) / (FLY_LAND - FLY_GRAB), big = u > 0.5;
+      if (t < FLY_GRAB) {
+        // agarre en el tablero principal
+        const k = t / FLY_GRAB, [px, py, w, h] = this.flightRect(f.c, 0), sc = 1 + 0.07 * k, j = (Math.random() - 0.5) * 3 * k;
+        x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.5 * k; x.drawImage(glow(giant ? 'rgba(160,255,160,1)' : 'rgba(255,200,90,1)', 64), px - w * 0.4, py - h * 0.1, w * 1.8, h * 1.2); x.restore();
+        this.drawTallWild(x, px + j - w * (sc - 1) / 2, py - h * (sc - 1) / 2, w * sc, h * sc, f.c, false, false, f.sup);
         return;
       }
-      const ease = u => u < 0 ? 0 : u * u * (3 - 2 * u);
-      // estela: copias anteriores cada vez más transparentes
-      for (let i = 4; i >= 1; i--) { const [px, py, w, h] = this.flightRect(f.c, ease(t - i * 0.07)); x.globalAlpha = 0.12 * (5 - i); this.drawTallWild(x, px, py, w, h, f.c, t > 0.5, false, f.sup); }
-      x.globalAlpha = 1;
-      const [px, py, w, h] = this.flightRect(f.c, ease(t));
-      // líneas de velocidad
-      x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = this.cfg.eggStack ? 'rgba(170,255,170,0.7)' : 'rgba(255,215,120,0.7)'; x.lineWidth = 2;
-      for (let i = 0; i < 7; i++) { const yy = py + h * (i + 0.5) / 7, len = w * (1.2 + (i % 3) * 0.5); x.beginPath(); x.moveTo(px - len, yy); x.lineTo(px - 4, yy); x.stroke(); }
+      if (t < FLY_LAND) {
+        const e = io(u), v = u < 0.5 ? 12 * u * u : 12 * (1 - u) * (1 - u); // velocidad relativa (0..3)
+        // estela borrosa a lo largo del camino
+        for (let i = 9; i >= 1; i--) { const [px, py, w, h] = this.flightRect(f.c, io(u - i * 0.035)); x.globalAlpha = 0.28 * (1 - i / 10) * Math.min(1, v); this.drawTallWild(x, px, py, w, h, f.c, big, false, f.sup); }
+        x.globalAlpha = 1;
+        let [px, py, w, h] = this.flightRect(f.c, e);
+        // líneas de velocidad y polvo que deja atrás
+        x.save(); x.globalCompositeOperation = 'lighter'; x.strokeStyle = giant ? 'rgba(170,255,170,0.75)' : 'rgba(255,215,120,0.75)';
+        for (let i = 0; i < 9; i++) { const yy = py + h * (i + 0.5) / 9, len = w * (0.6 + ((i * 7) % 5) * 0.35) * v; x.lineWidth = 1 + (i % 3); x.beginPath(); x.moveTo(px - len - 6, yy); x.lineTo(px - 6, yy); x.stroke(); }
+        x.restore();
+        if (Math.random() < 0.6) app.burst(px, py + Math.random() * h, 2, { type: 'spark', color: col, speed: 90, size: 6 });
+        // estirada en la dirección del movimiento (el borde delantero adelante)
+        const st = 1 + 0.45 * Math.min(1, v); this.drawTallWild(x, px + w - w * st, py, w * st, h, f.c, big, false, f.sup);
+        return;
+      }
+      // encaje en el colosal
+      const k = (t - FLY_LAND) / (1 - FLY_LAND), [px, py, w, h] = this.flightRect(f.c, 1);
+      if (!f.hit) { f.hit = true; app.shake(false); app.flash(giant ? '#d8ffd0' : '#ffe8b0', 0.22); app.burst(px + w / 2, py + h / 2, 30, { type: 'spark', color: col, speed: 380, size: 12 }); for (let r = 0; r < 4; r++) app.burst(px + w / 2, py + h * (r + 0.5) / 4, 6, { type: 'spark', color: '#fff', speed: 200, size: 7 }); }
+      const sq = 1 + 0.16 * (1 - k) * Math.cos(k * 9);
+      x.save(); x.beginPath(); x.rect(px - w, py, w * 3, h); x.clip();
+      this.drawTallWild(x, px - w * (sq - 1) / 2, py, w * sq, h, f.c, true, false, f.sup);
+      x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.7 * (1 - k); x.fillStyle = giant ? '#c8ffc8' : '#fff0c0'; x.fillRect(px, py, w, h);
       x.restore();
-      this.drawTallWild(x, px, py, w, h, f.c, t > 0.5, false, f.sup);
     });
   }
-  async flightsDone() { const t0 = Date.now(); while ((this.flights || []).some(f => !f.done) && Date.now() - t0 < 2500) await new Promise(r => setTimeout(r, 30)); (this.flights || []).forEach(f => { f.done = true; }); }
+  async flightsDone() { const t0 = Date.now(); while ((this.flights || []).some(f => !f.done) && Date.now() - t0 < 4000) await new Promise(r => setTimeout(r, 30)); (this.flights || []).forEach(f => { f.done = true; }); }
   update(dt) { if (this.fsIntro) this.fsIntro.t += dt; this.time += dt; this.main.update(dt); this.big.update(dt); if (this.wins) this.winT += dt; }
   get allLines() { return this.wins && this.wins.length > 1 && this.winT < 1.6; }
   curWin() { return this.wins && this.wins.length && !this.allLines ? this.wins[Math.floor((this.winT - (this.wins.length > 1 ? 1.6 : 0)) / 1.1) % this.wins.length] : null; }
