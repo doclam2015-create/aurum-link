@@ -1,17 +1,20 @@
-// RODILLOS COLOSALES (estilo WMS "Colossal Reels"): un tablero principal de 5×4 y, a su lado,
-// un tablero colosal de 5×12 donde los símbolos caen en bloques gigantes. 100 líneas en total
-// (40 en el principal + 60 en el colosal). Dos juegos comparten el motor:
-//  · ORO DEL GIGANTE (estilo Giant's Gold): la habichuela es WILD apilado; un rodillo lleno de WILD
-//    en el principal se TRANSFIERE entero al mismo rodillo del colosal. 3+ huevos de oro = 5 a 50
-//    giros gratis con los premios del colosal x2. Progresivos: 2/3/4/5 rodillos WILD transferidos.
-//  · ESPARTACO COLOSO (estilo Spartacus Super Colossal Reels): MEGA WILD de 2 rodillos de ancho en
-//    el principal, Super Espartaco WILD con multiplicador x2…x25 (hasta x100 en giros gratis).
-//    3/4/5+ coliseos = 8/12/20 giros gratis x2/x3/x5. Progresivos: 3/4/5/6+ Super Espartacos.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=60';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=60';
+// RODILLOS COLOSALES (como los "Colossal Reels" de WMS): un tablero principal de 5×4 y, a su
+// derecha, un tablero colosal de 5×12. 100 líneas (40 en el principal + 60 en el colosal).
+//  · ORO DEL GIGANTE (como Giant's Gold): la habichuela es WILD apilado; un rodillo del principal
+//    lleno de WILD se TRANSFIERE entero al mismo rodillo del colosal. Los huevos de oro (apilados,
+//    solo en los rodillos 1, 3 y 5 de ambos tableros) en 3+ rodillos dan de 5 a 100 giros gratis
+//    según cuántos huevos haya a la vista; en los giros gratis el colosal paga x2.
+//  · ESPARTACO COLOSO (como Spartacus Super Colossal Reels): Espartaco es WILD apilado. Antes de
+//    girar, algunos Espartacos de los rodillos 1–4 se vuelven SUPER ESPARTACO; puede caer un
+//    MEGA WILD de 2 rodillos de ancho. Un rodillo lleno de WILD se transfiere al colosal y, si
+//    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
+//    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
+//    3/4/5+ coliseos = 10/15/20 giros gratis.
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=61';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=61';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
-// 40 líneas del tablero principal (como Carrera del Lobo) y 60 del colosal (20 por cada banda de 4 filas)
+// 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
 function mainLines() {
   const out = [], seen = new Set();
   const add = l => { const k = l.join(); if (!seen.has(k) && out.length < 40) { seen.add(k); out.push(l); } };
@@ -22,86 +25,101 @@ function mainLines() {
 export const LINES = mainLines();
 export const BIG_LINES = [0, 4, 8].flatMap(b => LINES.slice(0, 20).map(L => L.map(r => r + b)));
 const SCAT_REELS = [0, 2, 4];
+// Huevos de oro a la vista → giros gratis (3 huevos = 5 giros … 40 o más = 100 giros)
+const EGG_SPINS = [[40, 100], [35, 80], [30, 65], [25, 50], [20, 40], [16, 30], [13, 25], [10, 20], [8, 15], [7, 12], [6, 10], [5, 8], [4, 6], [3, 5]];
+export const eggSpins = n => (EGG_SPINS.find(([m]) => n >= m) || [0, 5])[1];
+export const MYSTERY_P = 1 / 260;
 
 // ---------- Configuración de cada juego ----------
 export const GIANT = {
   id: 'giant', name: 'Oro del Gigante', music: 'fairy', bonusMusic: 'fairyBonus',
-  wild: 'bean', scatter: 'egg', scatName: 'huevos de oro',
-  high: ['giant', 'girl', 'harp', 'cow', 'goose'], low: ['A', 'K', 'Q', 'J', 'ten'],
+  wild: 'bean', scatter: 'egg', scatName: 'rodillos con huevos de oro',
+  high: ['giant', 'girl', 'harp', 'sack', 'cow', 'goose'], low: ['A', 'K', 'Q', 'J', 'ten'],
   pay: {
-    bean: [0, 0, 0, 60, 250, 1000], giant: [0, 0, 0, 50, 200, 750], girl: [0, 0, 0, 40, 150, 500], harp: [0, 0, 0, 30, 100, 400],
-    cow: [0, 0, 0, 20, 60, 200], goose: [0, 0, 0, 20, 50, 150], A: [0, 0, 0, 10, 25, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60], ten: [0, 0, 0, 5, 10, 50]
+    bean: [0, 0, 0, 50, 200, 1000], giant: [0, 0, 0, 40, 150, 750], girl: [0, 0, 0, 30, 120, 500], harp: [0, 0, 0, 25, 100, 300], sack: [0, 0, 0, 20, 80, 250],
+    cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60], ten: [0, 0, 0, 5, 10, 50]
   },
-  weights: { giant: 3, girl: 3.5, harp: 4, cow: 5, goose: 5, A: 8, K: 8, Q: 9, J: 9, ten: 10, bean: 0.8, egg: 1.1 },
-  scale: 1.1,
-  fullWild: { base: 0.022, free: 0.12 }, stackP: 0.3,
-  spins: n => n >= 6 ? 50 : n === 5 ? 20 : n === 4 ? 10 : 5,
+  weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 8, K: 8, Q: 9, J: 9, ten: 10, bean: 0.8, egg: 1.4 },
+  scale: 1.65,
+  fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35,
   colors: {
-    giant: ['#8a5a2a', '#3a2008'], girl: ['#e86aa8', '#6a1840'], harp: ['#f0c040', '#7a4a06'], cow: ['#7ac8f0', '#1a4a6a'], goose: ['#f4e0a0', '#8a6a20'],
-    A: ['#e84a2a'], K: ['#2a8ad0'], Q: ['#9a3ad0'], J: ['#2aa870'], ten: ['#f09a20']
+    giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
+    A: ['#b02ad8', '#3a0a5a'], K: ['#f08a1a', '#6a2a04'], Q: ['#e0b010', '#6a4a04'], J: ['#2a7ae0', '#0a2a6a'], ten: ['#20a860', '#0a4a24']
   },
-  emoji: { giant: '🧌', girl: '👩‍🦰', cow: '🐄', goose: '🦆' },
-  names: { bean: 'Habichuela mágica (WILD)', giant: 'Gigante', girl: 'Heroína', harp: 'Arpa dorada', cow: 'Vaca', goose: 'Pato', egg: 'Huevo de oro (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J', ten: '10' }
+  names: { bean: 'Habichuela mágica (WILD)', giant: 'Gigante', girl: 'Heroína', harp: 'Arpa dorada', sack: 'Saco de oro', cow: 'Vaca', goose: 'Ganso', egg: 'Huevo de oro (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J', ten: '10' }
 };
 export const SPARTA = {
   id: 'spartacus', name: 'Espartaco Coloso', music: 'arena', bonusMusic: 'arenaBonus',
-  wild: 'sparta', super: 'super', scatter: 'colis', scatName: 'coliseos',
+  wild: 'sparta', super: 'super', multWild: 'mw', scatter: 'colis', scatName: 'coliseos',
   high: ['warrior', 'lion', 'helm', 'chariot', 'sword'], low: ['A', 'K', 'Q', 'J'],
   pay: {
-    sparta: [0, 0, 0, 60, 250, 1000], warrior: [0, 0, 0, 50, 200, 750], lion: [0, 0, 0, 40, 150, 500], helm: [0, 0, 0, 30, 100, 300],
-    chariot: [0, 0, 0, 25, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
+    sparta: [0, 0, 0, 50, 250, 1000], warrior: [0, 0, 0, 40, 150, 600], lion: [0, 0, 0, 30, 120, 400], helm: [0, 0, 0, 25, 100, 300],
+    chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
   },
-  weights: { warrior: 3, lion: 3.5, helm: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.7, super: 0.2, colis: 0.95 },
-  scale: 0.72,
-  mega: { base: 0.05, free: 0.12 }, stackP: 0.3,
+  weights: { warrior: 3, lion: 3.5, helm: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
+  scale: 0.85,
+  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
-  spins: n => n >= 5 ? 20 : n === 4 ? 12 : 8, freeMult: n => n >= 5 ? 5 : n === 4 ? 3 : 2,
   colors: {
-    warrior: ['#c83a2a', '#4a0a06'], lion: ['#e0a040', '#6a3a08'], helm: ['#a8b8c8', '#3a4a5a'], chariot: ['#d88a3a', '#5a2a08'], sword: ['#b8c8e0', '#2a3a5a'],
-    A: ['#e8401c'], K: ['#d0a020'], Q: ['#b83ad0'], J: ['#2a90d0']
+    warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#ffe0a0', '#a86a10'], helm: ['#ffd0a0', '#8a3a0a'], chariot: ['#ffe8a0', '#a8761a'], sword: ['#e0e8f0', '#5a6a80'],
+    A: ['#ffd24a', '#8a4a06'], K: ['#e8e8f0', '#5a5a70'], Q: ['#ff8a4a', '#7a1a04'], J: ['#d0a870', '#5a3a14']
   },
-  emoji: { warrior: '🦸‍♀️', lion: '🦁', helm: '🪖', chariot: '🐎', sword: '🗡️' },
-  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD x2…x25)', warrior: 'Guerrera', lion: 'León', helm: 'Guerrero del yelmo', chariot: 'Carro de guerra', sword: 'Espada', colis: 'Coliseo (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J' }
+  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD, da re-giro al transferirse)', mw: 'WILD x2…x25 (solo rodillo 5 del colosal)', warrior: 'Guerrera', lion: 'León', helm: 'Gladiador del yelmo', chariot: 'Carro de guerra', sword: 'Gladius', colis: 'Coliseo (BONUS)', A: 'A', K: 'K', Q: 'Q', J: 'J' }
 };
 
 // ---------- Lógica pura (se puede simular sin pantalla) ----------
 function pickMult(cfg, free) { const t = {}; (free ? cfg.freeMults : cfg.mults).forEach(([m, w]) => { t[m] = w; }); return +weighted(t); }
+// big: tablero colosal. Los WILD con multiplicador solo existen en el rodillo 5 del colosal.
 export function pickSym(cfg, c, free, big) {
   const w = Object.assign({}, cfg.weights);
   if (!SCAT_REELS.includes(c)) w[cfg.scatter] = 0;
-  if (cfg.super && !big) w[cfg.super] *= 0.5;
+  if (cfg.multWild && !(big && c === 4)) w[cfg.multWild] = 0;
   if (free) w[cfg.wild] *= 1.4;
   const k = weighted(w);
-  return k === cfg.super ? { k, mult: pickMult(cfg, free) } : { k };
+  return k === cfg.multWild ? { k, mult: pickMult(cfg, free) } : { k };
 }
-const isWild = (cfg, k) => k === cfg.wild || (cfg.super && k === cfg.super);
-// Rodillo del tablero principal: lleno de WILD, pila de un símbolo alto o sueltos (máx. 1 BONUS)
+export const isWild = (cfg, k) => k === cfg.wild || k === cfg.super || k === cfg.multWild;
+const fullCol = (cfg, n, k) => Array.from({ length: n }, () => ({ k: k || cfg.wild, full: true }));
+// Rodillo del tablero principal: sueltos + (a veces) una pila de un símbolo alto o de WILD.
+// Los huevos de oro también caen apilados; los coliseos, de a uno por rodillo.
 export function mainColumn(cfg, c, free) {
-  if (cfg.fullWild && Math.random() < (free ? cfg.fullWild.free : cfg.fullWild.base)) return Array.from({ length: ROWS }, () => ({ k: cfg.wild, full: true }));
+  if (Math.random() < (free ? cfg.fullWild.free : cfg.fullWild.base)) return fullCol(cfg, ROWS);
   const col = []; let sc = false;
-  for (let r = 0; r < ROWS; r++) { let s = pickSym(cfg, c, free, false); if (s.k === cfg.scatter && sc) s = { k: cfg.low[0] }; if (s.k === cfg.scatter) sc = true; col.push(s); }
+  for (let r = 0; r < ROWS; r++) { let s = pickSym(cfg, c, free, false); if (s.k === cfg.scatter && sc && !cfg.eggStack) s = { k: cfg.low[0] }; if (s.k === cfg.scatter) sc = true; col.push(s); }
   if (Math.random() < cfg.stackP) {
-    const k = Math.random() < 0.15 ? cfg.wild : cfg.high[Math.random() * cfg.high.length | 0];
+    const k = Math.random() < cfg.wildStack ? cfg.wild : cfg.high[Math.random() * cfg.high.length | 0];
     const h = 2 + (Math.random() * 3 | 0), r0 = Math.random() * (ROWS - h + 1) | 0;
     for (let r = r0; r < r0 + h; r++) if (col[r].k !== cfg.scatter) col[r] = { k };
   }
-  return col;
-}
-// Rodillo colosal: bloques gigantes de 2 a 4 filas del mismo símbolo (máx. 1 BONUS por rodillo)
-export function bigColumn(cfg, c, free) {
-  const col = []; let sc = false;
-  while (col.length < BIG_ROWS) {
-    let s = pickSym(cfg, c, free, true);
-    if (s.k === cfg.scatter) { if (sc) continue; sc = true; }
-    const h = s.k === cfg.scatter || s.k === cfg.super ? Math.min(3, BIG_ROWS - col.length) : Math.min(BIG_ROWS - col.length, Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4);
-    let h2 = h; const rem = BIG_ROWS - col.length; if (rem - h2 === 1) h2 = h2 < 4 ? h2 + 1 : h2 - 1;
-    const id = Math.random();
-    for (let i = 0; i < h2; i++) col.push(Object.assign({ blk: id }, s));
+  if (cfg.eggStack && sc && Math.random() < cfg.eggStack) {
+    const r = col.findIndex(s => s.k === cfg.scatter), h = 1 + (Math.random() * 3 | 0);
+    for (let i = r; i < Math.min(ROWS, r + h); i++) col[i] = { k: cfg.scatter };
   }
   return col;
 }
-// Líneas: WILD y Super WILD sustituyen a todo menos el BONUS. El Super multiplica la línea
-// (el mayor multiplicador de la línea).
+// Rodillo colosal: pilas de 2 a 4 filas del mismo símbolo. En Espartaco el rodillo 5 lleva
+// 6 símbolos dobles (2 filas cada uno).
+export function bigColumn(cfg, c, free) {
+  const col = []; let sc = false;
+  if (cfg.multWild && c === 4) {
+    for (let i = 0; i < BIG_ROWS / 2; i++) {
+      let s = pickSym(cfg, c, free, true); if (s.k === cfg.scatter) { if (sc) s = { k: cfg.low[i % cfg.low.length] }; else sc = true; }
+      const id = Math.random(); col.push(Object.assign({ blk: id, dbl: true }, s), Object.assign({ blk: id, dbl: true }, s));
+    }
+    return col;
+  }
+  while (col.length < BIG_ROWS) {
+    let s = pickSym(cfg, c, free, true);
+    if (s.k === cfg.scatter) { if (sc) continue; sc = true; }
+    const rem = BIG_ROWS - col.length;
+    let h = s.k === cfg.scatter ? (cfg.eggStack ? 1 + (Math.random() * 3 | 0) : 2) : Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4;
+    h = Math.min(h, rem); if (rem - h === 1) h = h < 4 ? h + 1 : h - 1;
+    const id = Math.random();
+    for (let i = 0; i < h; i++) col.push(Object.assign({ blk: id }, s));
+  }
+  return col;
+}
+// Líneas: los WILD sustituyen a todo menos el BONUS; el WILD con multiplicador multiplica la línea.
 export function evalLines(cfg, g, lines, lineBet, set, mult = 1) {
   const wins = [];
   lines.forEach((L, li) => {
@@ -122,136 +140,132 @@ export function evalLines(cfg, g, lines, lineBet, set, mult = 1) {
   });
   return wins;
 }
+// Rodillos con BONUS (de 6: 1, 3 y 5 de cada tablero) y cantidad de símbolos BONUS a la vista
 export function countScatters(cfg, main, big) {
-  let n = 0; SCAT_REELS.forEach(c => { if (main[c].some(s => s.k === cfg.scatter)) n++; if (big[c].some(s => s.k === cfg.scatter)) n++; }); return n;
+  let reels = 0, n = 0;
+  SCAT_REELS.forEach(c => [main[c], big[c]].forEach(col => { const k = col.filter(s => s.k === cfg.scatter).length; if (k) reels++; n += k; }));
+  return { reels, n };
 }
-// Tirada completa (sin animación): tableros finales, rodillos WILD y MEGA WILD
-export function spinBoards(cfg, free) {
+// Tirada (sin animación). hold = columnas WILD fijas de un re-giro (Espartaco).
+export function spinBoards(cfg, free, hold = []) {
   const main = [], big = [];
-  for (let c = 0; c < COLS; c++) { main.push(mainColumn(cfg, c, free)); big.push(bigColumn(cfg, c, free)); }
+  for (let c = 0; c < COLS; c++) {
+    if (hold.includes(c)) { main.push(fullCol(cfg, ROWS)); big.push(fullCol(cfg, BIG_ROWS)); continue; }
+    main.push(mainColumn(cfg, c, free)); big.push(bigColumn(cfg, c, free));
+  }
   let mega = -1;
   if (cfg.mega && Math.random() < (free ? cfg.mega.free : cfg.mega.base)) {
-    mega = Math.random() * 4 | 0;
-    [mega, mega + 1].forEach(c => { main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.wild, full: true, mega: true })); });
+    const opts = [0, 1, 2, 3].filter(c => !hold.includes(c) && !hold.includes(c + 1));
+    if (opts.length) {
+      mega = opts[Math.random() * opts.length | 0];
+      const k = Math.random() < 0.35 ? cfg.super : cfg.wild;
+      [mega, mega + 1].forEach(c => { main[c] = Array.from({ length: ROWS }, () => ({ k, full: true, mega: true })); });
+    }
   }
-  const full = [];
-  if (cfg.fullWild) main.forEach((col, c) => { if (col[0].full) { full.push(c); big[c] = Array.from({ length: BIG_ROWS }, () => ({ k: cfg.wild, full: true })); } });
-  return { main, big, full, mega };
+  // Antes del giro, algunos Espartacos de los rodillos 1–4 se vuelven Super Espartaco (máx. 4)
+  if (cfg.super) {
+    let n = 0;
+    for (let c = 0; c < 4; c++) if (!hold.includes(c) && !main[c][0].mega) main[c].forEach((s, r) => { if (s.k === cfg.wild && n < 4 && Math.random() < cfg.superP) { main[c][r] = Object.assign({}, s, { k: cfg.super }); n++; } });
+  }
+  return { main, big, mega, hold: hold.slice() };
 }
-export function settle(cfg, b, bet, free, fm = 1) {
+// Rodillos del principal llenos de WILD → se transfieren al colosal (los ya fijos no cuentan de nuevo)
+export function transfers(cfg, b) {
+  const out = []; let sup = false;
+  b.main.forEach((col, c) => {
+    if (b.hold.includes(c) || !col.every(s => isWild(cfg, s.k))) return;
+    out.push(c); if (col.some(s => s.k === cfg.super)) sup = true;
+    b.big[c] = fullCol(cfg, BIG_ROWS);
+  });
+  return { cols: out, respin: sup };
+}
+export function settle(cfg, b, bet, free) {
   const lb = bet / 100;
-  const wm = evalLines(cfg, b.main, LINES, lb, 'main', fm);
-  const wb = evalLines(cfg, b.big, BIG_LINES, lb, 'big', fm * (free && cfg.fullWild ? 2 : 1));
+  const wm = evalLines(cfg, b.main, LINES, lb, 'main');
+  const wb = evalLines(cfg, b.big, BIG_LINES, lb, 'big', free && cfg.eggStack ? 2 : 1);
   const wins = wm.concat(wb);
-  const supers = cfg.super ? b.main.concat(b.big).flat().filter(s => s.k === cfg.super) : [];
-  // En el colosal cada Super ocupa un bloque de 3 filas: se cuenta un Super por bloque
-  const nSuper = cfg.super ? new Set(supers.map(s => s.blk || Math.random())).size : 0;
-  const jp = cfg.fullWild ? ({ 2: 'mini', 3: 'minor', 4: 'major', 5: 'grand' })[b.full.length] || null
-    : nSuper >= 6 ? 'grand' : nSuper === 5 ? 'major' : nSuper === 4 ? 'minor' : nSuper === 3 ? 'mini' : null;
-  return { wins, total: wins.reduce((a, w) => a + w.win, 0), scat: countScatters(cfg, b.main, b.big), jp, nSuper };
+  return { wins, total: wins.reduce((a, w) => a + w.win, 0), scat: countScatters(cfg, b.main, b.big) };
 }
+// Progresivos: cantidad de rodillos transferidos al colosal en la jugada (con sus re-giros)
+export const jackpotFor = n => ({ 2: 'mini', 3: 'minor', 4: 'major', 5: 'grand' })[Math.min(5, n)] || null;
+export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >= 5 ? 20 : sc.reels === 4 ? 15 : 10;
 
-// ---------- Arte (dibujado en canvas, cacheado por tamaño) ----------
+// ---------- Arte (assets/colossal.webp, ver tools/build_colossal.py) ----------
+let SHEET = null; const BG = {};
+const POS = { giant: 0, girl: 1, harp: 2, cow: 3, goose: 4, sack: 5, egg: 6, lion: 7, warrior: 8, helm: 9, chariot: 10, sword: 11, colis: 12, shield: 13 };
+const TALL = { bean: 2800, sparta: 2900 };
+function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+export function loadColossalArt() {
+  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; cache.clear(); }), loadImg('assets/giant_bg.webp').then(i => { BG.giant = i; }), loadImg('assets/sparta_bg.webp').then(i => { BG.spartacus = i; })]);
+}
+// Recorte de la hoja: [sx, sy, sw, sh]. 'head' = busto de Espartaco (parte alta de la figura).
+function src(k) { if (k === 'head') return [TALL.sparta + 8, 2, 84, 70]; if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
+// Dibuja una figura de la hoja ajustada (sin deformar) dentro de un rectángulo
+function art(x, k, dx, dy, dw, dh, f = 1, ay = 0.5) {
+  if (!SHEET) return;
+  const [sx, sy, sw, sh] = src(k), s = Math.min(dw / sw, dh / sh) * f, w = sw * s, h = sh * s;
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(SHEET, sx, sy, sw, sh, dx + (dw - w) / 2, dy + (dh - h) * ay, w, h);
+}
+function cover(x, img, dx, dy, dw, dh, ax = 0.5, ay = 0.5) {
+  if (!img) return;
+  const s = Math.max(dw / img.width, dh / img.height), w = img.width * s, h = img.height * s;
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(img, dx + (dw - w) * ax, dy + (dh - h) * ay, w, h);
+}
 const cache = new Map();
-function cached(key, size, fn) {
-  size = Math.max(8, Math.round(size)); const kk = key + '|' + size;
+function cached(key, w, h, fn) {
+  w = Math.max(8, Math.round(w)); h = Math.max(8, Math.round(h)); const kk = key + '|' + w + '|' + h;
   let c = cache.get(kk); if (c) return c;
-  c = makeCanvas(size, size); fn(c.getContext('2d'), size); cache.set(kk, c); return c;
+  c = makeCanvas(w, h); fn(c.getContext('2d'), w, h); if (SHEET) cache.set(kk, c); return c;
 }
-function panel(x, s, c1, c2, rr = 0.14) {
-  const m = s * 0.04, w = s - 2 * m, g = x.createLinearGradient(0, m, 0, m + w);
-  g.addColorStop(0, c1); g.addColorStop(1, c2);
-  x.save(); x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
-  roundRect(x, m, m, w, w, s * rr); x.fillStyle = g; x.fill(); x.restore();
-  x.lineWidth = s * 0.035; x.strokeStyle = '#f5d27a'; roundRect(x, m + s * 0.02, m + s * 0.02, w - s * 0.04, w - s * 0.04, s * rr * 0.8); x.stroke();
-  x.globalAlpha = 0.18; x.fillStyle = '#fff'; x.beginPath(); x.ellipse(s / 2, s * 0.26, w * 0.42, s * 0.14, 0, 0, 7); x.fill(); x.globalAlpha = 1;
-}
-function emojiOn(x, s, e, y = 0.5, f = 0.62) {
-  x.font = s * f + 'px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = s * 0.04; x.fillText(e, s / 2, s * y); x.shadowBlur = 0;
-}
-function label(x, s, t, y, fs, fill = ['#fff8d0', '#f0b020'], stroke = '#2a0a00') {
+function label(x, cx, t, y, fs, maxW, fill = ['#fff8d0', '#f0b020'], stroke = '#2a0a00') {
   x.font = '900 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
-  x.lineWidth = fs * 0.28; x.strokeStyle = stroke; x.strokeText(t, s / 2, y, s * 0.9);
+  x.lineWidth = fs * 0.3; x.strokeStyle = stroke; x.strokeText(t, cx, y, maxW);
   const g = x.createLinearGradient(0, y - fs / 2, 0, y + fs / 2); g.addColorStop(0, fill[0]); g.addColorStop(1, fill[1]);
-  x.fillStyle = g; x.fillText(t, s / 2, y, s * 0.9);
+  x.fillStyle = g; x.fillText(t, cx, y, maxW);
+}
+function tile(x, w, h, c1, c2, rim = '#f5d27a', rr = 0.12) {
+  const m = Math.min(w, h) * 0.04, g = x.createRadialGradient(w / 2, h * 0.4, 1, w / 2, h / 2, Math.max(w, h) * 0.7);
+  g.addColorStop(0, c1); g.addColorStop(1, c2);
+  roundRect(x, m, m, w - 2 * m, h - 2 * m, Math.min(w, h) * rr); x.fillStyle = g; x.fill();
+  x.lineWidth = Math.min(w, h) * 0.04; x.strokeStyle = rim; x.stroke();
 }
 const RANKTXT = { A: 'A', K: 'K', Q: 'Q', J: 'J', ten: '10' };
-function rankIcon(cfg, k, size) {
-  return cached(cfg.id + 'r' + k, size, (x, s) => {
-    const t = RANKTXT[k], col = cfg.colors[k][0], fs = s * (t.length > 1 ? 0.6 : 0.76);
-    x.font = '900 ' + fs + 'px Georgia, "Times New Roman", serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
-    x.lineWidth = s * 0.08; x.strokeStyle = '#fff4c8'; x.strokeText(t, s / 2, s * 0.54, s * 0.9);
-    x.lineWidth = s * 0.03; x.strokeStyle = '#3a1a00'; x.strokeText(t, s / 2, s * 0.54, s * 0.9);
-    const g = x.createLinearGradient(0, s * 0.2, 0, s * 0.85); g.addColorStop(0, '#fff'); g.addColorStop(0.35, col); g.addColorStop(1, '#2a0a00');
-    x.fillStyle = g; x.fillText(t, s / 2, s * 0.54, s * 0.9);
-  });
+function rankIcon(cfg, k, s, x) {
+  const t = RANKTXT[k], [c1, c2] = cfg.colors[k], fs = s * (t.length > 1 ? 0.62 : 0.8), y = s * 0.53;
+  const giant = cfg.id === 'giant';
+  x.font = '900 ' + fs + 'px Georgia, "Times New Roman", serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.lineWidth = s * 0.1; x.strokeStyle = giant ? '#fff' : '#2a0a04'; x.strokeText(t, s / 2, y, s * 0.92);
+  x.lineWidth = s * 0.04; x.strokeStyle = giant ? c2 : '#ffe8a0'; x.strokeText(t, s / 2, y, s * 0.92);
+  const g = x.createLinearGradient(0, y - fs / 2, 0, y + fs / 2); g.addColorStop(0, giant ? '#fff' : '#fffbe8'); g.addColorStop(0.35, c1); g.addColorStop(1, c2);
+  x.fillStyle = g; x.fillText(t, s / 2, y, s * 0.92);
+  // gema o remache decorativo
+  const gx = s * 0.8, gy = s * 0.2, gr = s * 0.07, gg = x.createRadialGradient(gx - gr * 0.3, gy - gr * 0.3, 1, gx, gy, gr);
+  gg.addColorStop(0, '#fff'); gg.addColorStop(0.4, giant ? c1 : '#ffd24a'); gg.addColorStop(1, giant ? c2 : '#6a3a04');
+  x.fillStyle = gg; x.beginPath(); x.arc(gx, gy, gr, 0, 7); x.fill();
 }
-// Arpa dorada dibujada a mano
-function harp(x, s) {
-  x.save(); x.translate(s * 0.5, s * 0.52); x.scale(s / 100, s / 100);
-  const g = x.createLinearGradient(-30, -35, 30, 35); g.addColorStop(0, '#fff3a0'); g.addColorStop(0.5, '#e8a820'); g.addColorStop(1, '#8a5206');
-  x.strokeStyle = '#fff6d0'; x.lineWidth = 1.2; for (let i = 0; i < 7; i++) { const px = -18 + i * 6; x.beginPath(); x.moveTo(px, -24 + i * 3.2); x.lineTo(px, 28); x.stroke(); }
-  x.lineCap = 'round'; x.strokeStyle = g; x.lineWidth = 7;
-  x.beginPath(); x.moveTo(-24, 32); x.lineTo(-24, -26); x.quadraticCurveTo(0, -40, 24, -10); x.stroke();
-  x.beginPath(); x.moveTo(-24, 32); x.lineTo(24, 32); x.stroke();
-  x.lineWidth = 6; x.beginPath(); x.moveTo(24, -10); x.lineTo(24, 32); x.stroke();
-  x.fillStyle = '#fff3a0'; x.beginPath(); x.arc(-24, -28, 5, 0, 7); x.fill();
-  x.restore();
-}
-function eggIcon(cfg, size) {
-  return cached(cfg.id + 'egg', size, (x, s) => {
-    panel(x, s, '#3a2a6a', '#140a30');
-    const cx = s / 2, cy = s * 0.44;
-    x.drawImage(glow('rgba(255,200,60,1)', 64), cx - s * 0.45, cy - s * 0.45, s * 0.9, s * 0.9);
-    const g = x.createRadialGradient(cx - s * 0.08, cy - s * 0.12, s * 0.02, cx, cy, s * 0.3);
-    g.addColorStop(0, '#fffbe0'); g.addColorStop(0.4, '#f5c535'); g.addColorStop(1, '#8a5206');
-    x.fillStyle = g; x.beginPath(); x.ellipse(cx, cy, s * 0.2, s * 0.26, 0, 0, 7); x.fill();
-    x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.ellipse(cx - s * 0.07, cy - s * 0.1, s * 0.04, s * 0.07, -0.4, 0, 7); x.fill();
-    label(x, s, 'BONUS', s * 0.82, s * 0.2);
-  });
-}
-function beanIcon(cfg, size) {
-  return cached(cfg.id + 'bean', size, (x, s) => {
-    panel(x, s, '#5ac85a', '#0e4a1a');
-    x.save(); x.translate(s / 2, 0);
-    x.strokeStyle = '#2a8a2a'; x.lineWidth = s * 0.07; x.lineCap = 'round';
-    x.beginPath(); for (let i = 0; i <= 20; i++) { const t = i / 20, y = s * (0.92 - t * 0.82); x.lineTo(Math.sin(t * 9) * s * 0.1, y); } x.stroke();
-    x.fillStyle = '#7ae07a';
-    for (let i = 1; i < 6; i++) { const t = i / 6, y = s * (0.92 - t * 0.82), px = Math.sin(t * 9) * s * 0.1, d = i % 2 ? 1 : -1;
-      x.beginPath(); x.ellipse(px + d * s * 0.1, y, s * 0.09, s * 0.04, d * 0.5, 0, 7); x.fill(); }
-    x.restore();
-    label(x, s, 'WILD', s * 0.78, s * 0.24);
-  });
-}
-function spartaIcon(cfg, size, mult) {
-  return cached(cfg.id + 'sp' + (mult || 0), size, (x, s) => {
-    panel(x, s, mult ? '#ffd24a' : '#c82a1a', mult ? '#8a4a06' : '#3a0404');
-    emojiOn(x, s, mult ? '⚔️' : '🛡️', 0.4, 0.5);
-    label(x, s, mult ? 'x' + mult : 'WILD', s * 0.8, s * (mult ? 0.3 : 0.24), mult ? ['#fff', '#ff5a2a'] : undefined);
-  });
-}
-function colisIcon(cfg, size) {
-  return cached(cfg.id + 'colis', size, (x, s) => {
-    panel(x, s, '#e8c890', '#6a4418');
-    x.drawImage(glow('rgba(255,210,80,1)', 64), s * 0.1, s * 0.02, s * 0.8, s * 0.8);
-    emojiOn(x, s, '🏛️', 0.42, 0.52);
-    label(x, s, 'BONUS', s * 0.82, s * 0.2);
-  });
-}
+// Icono cuadrado de cada símbolo (fondo transparente salvo WILD / BONUS)
 export function symIcon(cfg, k, size, mult) {
-  if (k === cfg.scatter) return cfg.id === 'giant' ? eggIcon(cfg, size) : colisIcon(cfg, size);
-  if (k === 'bean') return beanIcon(cfg, size);
-  if (k === 'sparta') return spartaIcon(cfg, size);
-  if (k === 'super') return spartaIcon(cfg, size, mult || 2);
-  if (RANKTXT[k]) return rankIcon(cfg, k, size);
-  return cached(cfg.id + k, size, (x, s) => {
-    const [c1, c2] = cfg.colors[k]; panel(x, s, c1, c2);
-    if (k === 'harp') harp(x, s); else emojiOn(x, s, cfg.emoji[k], 0.52, 0.64);
+  return cached(cfg.id + k + (mult || ''), size, size, (x, s) => {
+    if (RANKTXT[k]) return rankIcon(cfg, k, s, x);
+    x.save(); x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = s * 0.05; x.shadowOffsetY = s * 0.02;
+    if (k === 'egg') { tile(x, s, s, '#9a4ae0', '#2a0a5a'); x.restore(); x.drawImage(glow('rgba(255,210,80,1)', 64), 0, 0, s, s); art(x, 'egg', 0, s * 0.02, s, s * 0.8, 0.9); label(x, s / 2, 'BONUS', s * 0.84, s * 0.19, s * 0.9); return; }
+    if (k === 'bean') { tile(x, s, s, '#9aeaa0', '#1a6a2a'); x.restore(); art(x, 'bean', 0, 0, s, s * 0.86, 1.05); label(x, s / 2, 'WILD', s * 0.8, s * 0.26, s * 0.92); return; }
+    if (k === 'sparta' || k === 'super') {
+      const sup = k === 'super'; tile(x, s, s, sup ? '#fff0a0' : '#e8503a', sup ? '#a8600a' : '#4a0806', sup ? '#fff' : '#f5d27a'); x.restore();
+      if (sup) x.drawImage(glow('rgba(255,240,160,1)', 64), 0, 0, s, s);
+      art(x, 'head', 0, s * 0.04, s, s * 0.7, 1); label(x, s / 2, sup ? 'SUPER' : 'WILD', s * 0.8, s * (sup ? 0.22 : 0.26), s * 0.92, sup ? ['#fff', '#ffb020'] : undefined);
+      return;
+    }
+    if (k === 'mw') { tile(x, s, s, '#ffd870', '#6a2a04'); x.restore(); art(x, 'shield', 0, s * 0.02, s, s * 0.66, 0.95); label(x, s / 2, 'x' + (mult || 2), s * 0.76, s * 0.3, s * 0.92, ['#fff', '#ff5a2a']); return; }
+    if (k === 'colis') { tile(x, s, s, '#ffe0a0', '#8a3a0a'); x.restore(); x.drawImage(glow('rgba(255,210,80,1)', 64), 0, 0, s, s); art(x, 'colis', 0, s * 0.04, s, s * 0.72, 0.95); label(x, s / 2, 'BONUS', s * 0.84, s * 0.19, s * 0.9); return; }
+    art(x, k, 0, 0, s, s, 0.94); x.restore();
   });
 }
-function iconStyleFor(cfg) {
-  return k => { let url = ''; try { url = symIcon(cfg, k, 96).toDataURL('image/png'); } catch (e) { } return 'background-image:url(' + url + ');background-size:cover'; };
+export function colossalIconStyle(k) {
+  const p = POS[k] != null ? POS[k] : 0;
+  return 'background-image:url(assets/colossal.webp);background-size:1500% 100%;background-position:' + (p * 100 / 14).toFixed(3) + '% 0';
 }
 
 // ---------- Juego ----------
@@ -260,12 +274,13 @@ class Colossal {
     this.app = app; this.cfg = cfg; this.id = cfg.id;
     this.main = new ReelSet({ cols: COLS, rows: ROWS, pick: c => pickSym(cfg, c, this.inFree, false), drawSym: (x, s, px, py, w, h, o) => this.drawMain(x, s, px, py, w, h, o) });
     this.big = new ReelSet({ cols: COLS, rows: BIG_ROWS, pick: c => pickSym(cfg, c, this.inFree, true), drawSym: (x, s, px, py, w, h, o) => this.drawBigCell(x, s, px, py, w, h, o) });
-    // Al abrir, el colosal ya muestra bloques gigantes
-    for (let c = 0; c < COLS; c++) { const col = bigColumn(cfg, c, false); this.big.columns[c].syms = [col[0]].concat(col); this.big.grid[c] = col; }
-    this.freeLeft = 0; this.freeTotal = 0; this.inFree = false; this.fsTotal = 0; this.freeMult = 1;
-    this.wins = null; this.winT = 0; this.time = 0; this.full = []; this.mega = -1;
+    // Al abrir, el colosal ya muestra sus pilas
+    for (let c = 0; c < COLS; c++) this.setColumn(this.big, c, bigColumn(cfg, c, false));
+    this.freeLeft = 0; this.freeTotal = 0; this.inFree = false; this.fsTotal = 0;
+    this.wins = null; this.winT = 0; this.time = 0; this.full = []; this.mega = -1; this.megaK = null;
     this.buy = { label: 'BONO', sub: b => app.fmt(b * 50), cost: b => b * 50, run: () => this.buyFree() };
   }
+  setColumn(set, c, col) { set.grid[c] = col; set.columns[c].syms = [col[0]].concat(col); }
   get extra() { return this.inFree ? null : this.buy; }
   get freeRound() { return this.freeLeft > 0; }
   get freeCount() { return Math.max(1, this.freeTotal - this.freeLeft) + ' DE ' + this.freeTotal; }
@@ -273,106 +288,209 @@ class Colossal {
   get locked() { return this.inFree; }
   get animating() { return true; }
 
+  // Como la máquina real: principal a la izquierda con el escenario encima y colosal a la derecha.
+  // En pantallas angostas (iPhone en vertical) el colosal va debajo del principal.
   resize(W, H) {
     this.W = W; this.H = H;
-    const top = 34, avH = H - top - 12, avW = W - 24;
-    // Opción A: lado a lado (celdas del principal cuadradas). Opción B: principal arriba y colosal abajo.
-    const a = Math.min((avW - 12) / (COLS * 2), avH / ROWS);
-    const bw = Math.min(avW / COLS, (avH - 12) / (ROWS * 2) * 1.12), bh = Math.min(bw * 0.92, (avH - 12) / (ROWS * 2));
-    if (a >= Math.min(bw, bh)) {
-      this.side = true; this.cw = a; this.ch = a;
-      const tw = a * COLS * 2 + 12; this.mx = (W - tw) / 2; this.my = top + (avH - a * ROWS) / 2;
-      this.bx = this.mx + a * COLS + 12; this.by = this.my; this.bch = a * ROWS / BIG_ROWS;
+    const pad = 10, gap = 18;
+    this.side = W / H >= 0.78;
+    if (this.side) {
+      const b = (W - 2 * pad - gap) / 12.5, cw = b * 1.5;
+      let bch = Math.min((H - 2 * pad) / BIG_ROWS, b * 1.15), bcw = b;
+      const tot = bch * BIG_ROWS, ch = Math.min(cw * 0.86, (tot - gap - 40) / ROWS);
+      const tw = cw * COLS + gap + bcw * COLS, x0 = (W - tw) / 2, y0 = (H - tot) / 2;
+      Object.assign(this, { cw, ch, bcw, bch, mx: x0, my: y0 + tot - ch * ROWS, bx: x0 + cw * COLS + gap, by: y0 });
+      this.banner = [x0, y0, cw * COLS, this.my - gap - y0];
     } else {
-      this.side = false; this.cw = bw; this.ch = bh;
-      this.mx = (W - bw * COLS) / 2; this.my = top + (avH - bh * ROWS * 2 - 12) / 2;
-      this.bx = this.mx; this.by = this.my + bh * ROWS + 12; this.bch = bh * ROWS / BIG_ROWS;
+      const cw = (W - 2 * pad) / COLS; let ch = cw * 0.74;
+      const bannerH = Math.max(40, Math.min(cw * 0.9, H * 0.11));
+      let bch = (H - 2 * pad - bannerH - ch * ROWS - 2 * gap) / BIG_ROWS;
+      if (bch < cw * 0.3) { ch = cw * 0.62; bch = (H - 2 * pad - bannerH - ch * ROWS - 2 * gap) / BIG_ROWS; }
+      bch = Math.max(12, Math.min(bch, cw * 0.55));
+      const tot = bannerH + gap + ch * ROWS + gap + bch * BIG_ROWS, y0 = Math.max(pad, (H - tot) / 2);
+      Object.assign(this, { cw, ch, bcw: cw, bch, mx: pad, my: y0 + bannerH + gap });
+      this.bx = pad; this.by = this.my + ch * ROWS + gap;
+      this.banner = [pad, y0, cw * COLS, bannerH];
     }
     this.main.layout(this.mx, this.my, this.cw, this.ch);
-    this.big.layout(this.bx, this.by, this.cw, this.bch);
+    this.big.layout(this.bx, this.by, this.bcw, this.bch);
     this.bgCache = null;
   }
-  frame(x, px, py, w, h) {
-    roundRect(x, px - 8, py - 8, w + 16, h + 16, 8);
-    const g = x.createLinearGradient(0, py - 8, 0, py + h + 8); g.addColorStop(0, '#fff0b0'); g.addColorStop(0.5, '#c8901e'); g.addColorStop(1, '#7a4a06');
-    x.fillStyle = g; x.fill(); x.fillStyle = this.app.light ? '#fbf3e0' : '#140c22'; x.fillRect(px, py, w, h);
-    x.strokeStyle = 'rgba(200,150,60,0.25)'; x.lineWidth = 1;
-    for (let c = 1; c < COLS; c++) { x.beginPath(); x.moveTo(px + c * this.cw, py); x.lineTo(px + c * this.cw, py + h); x.stroke(); }
+  // Marco de la máquina alrededor de cada tablero y fondo de las celdas
+  frame(x, px, py, w, h, cw, big) {
+    const giant = this.cfg.id === 'giant', L = this.app.light, f = 7;
+    x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 14; x.shadowOffsetY = 4;
+    roundRect(x, px - f, py - f, w + 2 * f, h + 2 * f, 9);
+    const g = x.createLinearGradient(0, py - f, 0, py + h + f);
+    if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(0.5, '#6a3e14'); g.addColorStop(1, '#3a1e06'); }
+    else { g.addColorStop(0, '#fff0b0'); g.addColorStop(0.45, '#c8901e'); g.addColorStop(1, '#6a3a06'); }
+    x.fillStyle = g; x.fill(); x.restore();
+    x.strokeStyle = giant ? '#e8c070' : '#fff4c0'; x.lineWidth = 1.5; roundRect(x, px - 2, py - 2, w + 4, h + 4, 4); x.stroke();
+    // celdas: marfil (Gigante) o piedra roja oscura (Espartaco), rodillo por rodillo
+    for (let c = 0; c < COLS; c++) {
+      const cx = px + c * cw, cg = x.createLinearGradient(cx, 0, cx + cw, 0);
+      if (giant) { cg.addColorStop(0, L ? '#fffdf6' : '#f3e8cf'); cg.addColorStop(0.5, L ? '#ffffff' : '#fffaf0'); cg.addColorStop(1, L ? '#f8eeda' : '#eadcb8'); }
+      else { cg.addColorStop(0, L ? '#6a2014' : '#2a0806'); cg.addColorStop(0.5, L ? '#8a3020' : '#4a120a'); cg.addColorStop(1, L ? '#6a2014' : '#2a0806'); }
+      x.fillStyle = cg; x.fillRect(cx, py, cw, h);
+      if (c) { x.fillStyle = giant ? 'rgba(120,80,30,0.35)' : 'rgba(245,200,100,0.35)'; x.fillRect(cx - 0.75, py, 1.5, h); }
+    }
+    if (giant) this.vines(x, px - f, py - f, w + 2 * f, h + 2 * f, big);
   }
+  // Enredaderas de habichuela sobre el marco de madera
+  vines(x, px, py, w, h, big) {
+    x.save(); x.lineCap = 'round';
+    const leaf = (lx, ly, a, s) => { x.save(); x.translate(lx, ly); x.rotate(a); const g = x.createLinearGradient(0, -s, 0, s); g.addColorStop(0, '#9ae870'); g.addColorStop(1, '#2a7a1a'); x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(s * 0.9, -s * 0.6, s * 1.8, 0); x.quadraticCurveTo(s * 0.9, s * 0.6, 0, 0); x.fill(); x.restore(); };
+    const run = (pts, n) => {
+      x.strokeStyle = '#2a6a14'; x.lineWidth = 4.5; x.beginPath(); pts.forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke();
+      x.strokeStyle = '#6ac83a'; x.lineWidth = 2; x.stroke();
+      for (let i = 1; i < pts.length - 1; i += n) leaf(pts[i][0], pts[i][1], (i % 2 ? -1 : 1) * 0.9 + (pts[i + 1][0] - pts[i - 1][0] > 0 ? 0 : Math.PI), 7);
+    };
+    const wave = (x0, y0, x1, y1, amp, k) => { const out = []; for (let i = 0; i <= 40; i++) { const t = i / 40, nx = -(y1 - y0), ny = x1 - x0, l = Math.hypot(nx, ny), s = Math.sin(t * k) * amp; out.push([x0 + (x1 - x0) * t + nx / l * s, y0 + (y1 - y0) * t + ny / l * s]); } return out; };
+    run(wave(px, py + h * 0.35, px, py - 2, 3, 9), 5);
+    run(wave(px - 2, py, px + w * (big ? 0.5 : 0.4), py, 3, 11), 5);
+    run(wave(px + w + 2, py + h * 0.22, px + w + 2, py, 3, 8), 6);
+    run(wave(px, py + h, px + w * 0.28, py + h + 2, 3, 9), 6);
+    x.restore();
+  }
+  // Escenario del juego (fondo completo + cuadro sobre el tablero principal)
   renderBg() {
-    const { W, H } = this, dpr = this.app.dpr, L = this.app.light, cnv = makeCanvas(W * dpr, H * dpr), x = cnv.getContext('2d'); x.scale(dpr, dpr);
-    this.scenery(x, W, H, L);
-    this.frame(x, this.mx, this.my, this.cw * COLS, this.ch * ROWS);
-    this.frame(x, this.bx, this.by, this.cw * COLS, this.bch * BIG_ROWS);
+    const { W, H, cfg } = this, dpr = this.app.dpr, L = this.app.light, cnv = makeCanvas(W * dpr, H * dpr), x = cnv.getContext('2d'); x.scale(dpr, dpr);
+    const img = BG[cfg.id];
+    x.fillStyle = cfg.id === 'giant' ? '#1a3a5a' : '#2a0804'; x.fillRect(0, 0, W, H);
+    if (img) { x.globalAlpha = 0.85; cover(x, img, 0, 0, W, H); x.globalAlpha = 1; }
+    const v = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
+    v.addColorStop(0, L ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.25)'); v.addColorStop(1, L ? 'rgba(255,250,235,0.35)' : 'rgba(0,0,0,0.7)');
+    x.fillStyle = v; x.fillRect(0, 0, W, H);
+    this.drawBanner(x);
+    this.frame(x, this.mx, this.my, this.cw * COLS, this.ch * ROWS, this.cw, false);
+    this.frame(x, this.bx, this.by, this.bcw * COLS, this.bch * BIG_ROWS, this.bcw, true);
     return cnv;
+  }
+  drawBanner(x) {
+    const [bx, by, bw, bh] = this.banner, cfg = this.cfg, giant = cfg.id === 'giant';
+    if (bh < 24) return;
+    x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 12; roundRect(x, bx - 6, by - 6, bw + 12, bh + 12, 10);
+    const g = x.createLinearGradient(0, by, 0, by + bh); if (giant) { g.addColorStop(0, '#a8743a'); g.addColorStop(1, '#4a2808'); } else { g.addColorStop(0, '#fff0b0'); g.addColorStop(0.5, '#c8901e'); g.addColorStop(1, '#6a3a06'); }
+    x.fillStyle = g; x.fill(); x.restore();
+    x.save(); roundRect(x, bx, by, bw, bh, 6); x.clip();
+    cover(x, BG[cfg.id], bx, by, bw, bh, 0.5, giant ? 0.75 : 0.45);
+    if (giant) {
+      // cinta rosada con la regla del bono y huevo "FEATURE" a la izquierda, como en la máquina
+      const eh = Math.min(bh * 0.62, bw * 0.2), ex = bx + 6, ey = by + 6;
+      x.drawImage(symIcon(cfg, 'egg', eh * this.app.dpr), ex, ey, eh, eh);
+      const rx = ex + eh + 8, rw = bx + bw - rx - 8, rh = Math.min(bh * 0.44, 44), ry = by + 8;
+      const rg = x.createLinearGradient(0, ry, 0, ry + rh); rg.addColorStop(0, '#ff9ab0'); rg.addColorStop(1, '#c83a5a');
+      x.fillStyle = rg; x.beginPath(); x.moveTo(rx, ry); x.lineTo(rx + rw, ry); x.lineTo(rx + rw - rh * 0.3, ry + rh / 2); x.lineTo(rx + rw, ry + rh); x.lineTo(rx, ry + rh); x.lineTo(rx + rh * 0.3, ry + rh / 2); x.closePath(); x.fill();
+      x.strokeStyle = '#ffe0e8'; x.lineWidth = 1.5; x.stroke();
+      const fs = Math.min(rh * 0.36, 15);
+      x.fillStyle = '#fff8e0'; x.font = '800 ' + fs + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText('3+ HUEVOS DE ORO EN 3 RODILLOS', rx + rw / 2, ry + rh * (bh > 90 ? 0.32 : 0.5), rw * 0.82);
+      if (bh > 90) x.fillText('DAN 5 A 100 GIROS GRATIS', rx + rw / 2, ry + rh * 0.7, rw * 0.82);
+      if (bh > 120) goldText(x, 'ORO DEL GIGANTE', bx + bw / 2, by + bh - Math.min(30, bh * 0.16), Math.min(34, bw * 0.08), { maxW: bw * 0.9, stroke: '#2a1400', glowColor: '#8aff6a' });
+    } else {
+      // Espartaco de cuerpo entero a la izquierda y el logo dorado
+      const fh = bh * 0.98, fw = fh * 0.5;
+      x.save(); x.shadowColor = 'rgba(0,0,0,0.7)'; x.shadowBlur = 10; art(x, 'sparta', bx + 2, by + bh - fh, fw, fh, 1, 1); x.restore();
+      const lx = bx + fw + (bw - fw) / 2, fs = Math.min(bh * 0.3, (bw - fw) * 0.16, 40);
+      goldText(x, 'ESPARTACO', lx, by + bh * (bh > 90 ? 0.4 : 0.36), fs, { maxW: (bw - fw) * 0.92, stroke: '#3a0400', glowColor: '#ff6a2a' });
+      const sf = Math.max(9, fs * 0.42);
+      x.font = '900 ' + sf + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
+      const tw = Math.min((bw - fw) * 0.8, x.measureText('SUPER COLOSO').width + sf * 2), ty = by + bh * (bh > 90 ? 0.4 : 0.36) + fs * 0.85;
+      x.fillStyle = '#12306a'; roundRect(x, lx - tw / 2, ty - sf * 0.8, tw, sf * 1.6, sf * 0.5); x.fill(); x.strokeStyle = '#f5d27a'; x.lineWidth = 1.5; x.stroke();
+      x.fillStyle = '#ffe07a'; x.fillText('SUPER COLOSO', lx, ty, tw * 0.9);
+      if (bh > 120) { x.fillStyle = '#fff4d8'; x.font = '700 ' + Math.min(14, bh * 0.07) + 'px ' + FONT; x.fillText('3+ coliseos = 10, 15 o 20 giros gratis', lx, by + bh - 18, (bw - fw) * 0.92); }
+    }
+    x.restore();
   }
   // Símbolo del tablero principal
   drawMain(x, s, px, py, w, h, o) {
     if (!s) return;
     if (s.full && o && this.wildShown(this.main, o.c)) return;
-    const dpr = this.app.dpr, size = Math.min(w, h) * 0.94;
+    const dpr = this.app.dpr, size = Math.min(w, h) * 0.96;
     let sc = 1, a = 1; if (o && o.fx) { sc = o.fx.scale || 1; a = o.fx.alpha == null ? 1 : o.fx.alpha; }
     const d = size * sc, cx = px + w / 2, cy = py + h / 2;
-    x.globalAlpha = a * (o && o.blur ? 0.7 : 1);
+    x.globalAlpha = a * (o && o.blur ? 0.75 : 1);
     if (s.k === this.cfg.scatter && !(o && o.blur)) this.scatGlow(x, cx, cy, w, h);
     const img = symIcon(this.cfg, s.k, size * dpr, s.mult);
-    if (o && o.blur) x.drawImage(img, cx - d / 2, cy - d * 0.6, d, d * 1.2); else x.drawImage(img, cx - d / 2, cy - d / 2, d, d);
+    if (o && o.blur) x.drawImage(img, cx - d / 2, cy - d * 0.62, d, d * 1.24); else x.drawImage(img, cx - d / 2, cy - d / 2, d, d);
     x.globalAlpha = 1;
   }
   scatGlow(x, cx, cy, w, h) { x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.3 + 0.2 * Math.sin(this.time * 5); x.drawImage(glow('rgba(255,190,60,1)', 64), cx - w * 0.6, cy - h * 0.6, w * 1.2, h * 1.2); x.restore(); }
-  wildShown(set, c) { const st = set.columns[c].state; return (st === 'idle' || st === 'bounce') && (set === this.main ? this.full.includes(c) || (this.mega >= 0 && (this.mega === c || this.mega === c - 1)) : this.full.includes(c)); }
-  // Celdas del colosal mientras giran: franjas de color (los bloques gigantes se dibujan al parar)
+  wildShown(set, c) {
+    const st = set.columns[c].state; if (st !== 'idle' && st !== 'bounce') return false;
+    return this.full.includes(c) || (set === this.main && this.mega >= 0 && (this.mega === c || this.mega === c - 1));
+  }
+  // Celdas del colosal mientras giran (al parar se dibujan como pilas)
   drawBigCell(x, s, px, py, w, h, o) {
     if (!s || !o || !o.spinning) return;
-    const st = this.big.columns[o.c].state; if (st === 'bounce') return;
-    const col = this.cfg.colors[s.k] ? this.cfg.colors[s.k][0] : s.k === this.cfg.scatter ? '#ffd24a' : '#3ac83a';
-    x.globalAlpha = 0.55; x.fillStyle = col; x.fillRect(px + w * 0.12, py + 1, w * 0.76, h - 2); x.globalAlpha = 1;
+    if (this.big.columns[o.c].state === 'bounce') return;
+    const size = Math.min(w, h) * 0.92;
+    x.globalAlpha = 0.8; x.drawImage(symIcon(this.cfg, s.k, size * this.app.dpr, s.mult), px + (w - size) / 2, py + h / 2 - size * 0.6, size, size * 1.2); x.globalAlpha = 1;
   }
-  // Bloques gigantes del colosal (cada racha de símbolos iguales = una figura grande)
+  // Pilas del colosal: las figuras ocupan la pila completa; cartas y BONUS se repiten celda a celda
   drawBigBlocks(x) {
-    const { bx, by, cw, bch, cfg } = this, dpr = this.app.dpr, w = this.curWin();
-    x.save(); x.beginPath(); x.rect(bx, by, cw * COLS, bch * BIG_ROWS); x.clip();
+    const { bx, by, bcw, bch, cfg } = this, dpr = this.app.dpr, w = this.curWin();
+    x.save(); x.beginPath(); x.rect(bx, by, bcw * COLS, bch * BIG_ROWS); x.clip();
     for (let c = 0; c < COLS; c++) {
       const col = this.big.columns[c]; if (col.state !== 'idle' && col.state !== 'bounce') continue;
-      if (this.full.includes(c)) { this.drawTallWild(x, bx + c * cw, by + col.shift * bch, cw, bch * BIG_ROWS, c); continue; }
+      if (this.full.includes(c)) { this.drawTallWild(x, bx + c * bcw, by + col.shift * bch, bcw, bch * BIG_ROWS, c, true); continue; }
       const g = this.big.grid[c]; let r = 0;
       while (r < BIG_ROWS) {
         let e = r + 1; while (e < BIG_ROWS && g[e].k === g[r].k && g[e].blk === g[r].blk) e++;
-        const s = g[r], hh = (e - r) * bch, py = by + (r + col.shift) * bch;
+        const s = g[r], hh = (e - r) * bch, py = by + (r + col.shift) * bch, px = bx + c * bcw;
         let hit = false; if (w && w.set === 'big') for (let rr = r; rr < e; rr++) if (w.line[c] === rr && c < w.n) hit = true;
-        const dim = w && !hit, pulse = hit ? 1 + 0.06 * Math.sin(this.winT * 11) : 1;
-        const size = Math.min(cw, hh) * 0.96 * pulse, cx = bx + c * cw + cw / 2, cy = py + hh / 2;
-        x.globalAlpha = dim ? 0.45 : 1;
-        if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, size, size);
-        if (hh > cw * 1.05) { x.fillStyle = 'rgba(245,210,122,0.12)'; roundRect(x, bx + c * cw + 2, py + 2, cw - 4, hh - 4, 6); x.fill(); }
-        x.drawImage(symIcon(cfg, s.k, Math.min(cw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size);
+        const pulse = hit ? 1 + 0.06 * Math.sin(this.winT * 11) : 1;
+        x.globalAlpha = w && !hit ? 0.4 : 1;
+        const perCell = (RANKTXT[s.k] && !s.dbl) || (s.k === cfg.scatter && cfg.eggStack);
+        if (perCell) {
+          for (let rr = r; rr < e; rr++) {
+            const size = Math.min(bcw, bch) * 0.94 * pulse, cy = by + (rr + col.shift) * bch + bch / 2;
+            if (s.k === cfg.scatter) this.scatGlow(x, px + bcw / 2, cy, bcw, bch);
+            x.drawImage(symIcon(cfg, s.k, Math.min(bcw, bch) * 0.94 * dpr), px + bcw / 2 - size / 2, cy - size / 2, size, size);
+          }
+        } else {
+          // figura colosal: panel de la pila + imagen grande
+          if (hh > bch * 1.5 && !s.mult && !isWild(cfg, s.k) && s.k !== cfg.scatter && !RANKTXT[s.k]) {
+            const [c1, c2] = cfg.colors[s.k] || ['#fff', '#888'], pg = x.createLinearGradient(0, py, 0, py + hh);
+            pg.addColorStop(0, c1); pg.addColorStop(1, c2); x.globalAlpha *= 0.35; x.fillStyle = pg; roundRect(x, px + 2, py + 2, bcw - 4, hh - 4, 6); x.fill(); x.globalAlpha = w && !hit ? 0.4 : 1;
+          }
+          const cx = px + bcw / 2, cy = py + hh / 2;
+          if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, bcw, hh);
+          if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || RANKTXT[s.k]) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
+          else { const f = 0.96 * pulse, ww = bcw * f, h2 = hh * f; x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
+        }
         x.globalAlpha = 1; r = e;
       }
     }
     x.restore();
   }
   // Rodillo entero de WILD (principal o colosal) o MEGA WILD de 2 rodillos
-  drawTallWild(x, px, py, w, h, c, mega) {
-    const { cfg, time } = this;
-    x.save(); x.beginPath(); roundRect(x, px + 2, py + 2, w - 4, h - 4, 8); x.clip();
-    const g = x.createLinearGradient(0, py, 0, py + h);
-    if (cfg.id === 'giant') { g.addColorStop(0, '#9ae8ff'); g.addColorStop(1, '#1a6a2a'); } else { g.addColorStop(0, '#ffcf6a'); g.addColorStop(1, '#6a0a04'); }
+  drawTallWild(x, px, py, w, h, c, big, mega, sup) {
+    const { cfg, time } = this, giant = cfg.id === 'giant';
+    x.save(); x.beginPath(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip();
+    const g = x.createLinearGradient(px, 0, px + w, 0);
+    if (giant) { g.addColorStop(0, '#bff0ff'); g.addColorStop(0.5, '#e8fff0'); g.addColorStop(1, '#bff0ff'); }
+    else if (sup) { g.addColorStop(0, '#a8600a'); g.addColorStop(0.5, '#ffe07a'); g.addColorStop(1, '#a8600a'); }
+    else { g.addColorStop(0, '#4a0806'); g.addColorStop(0.5, '#b8281a'); g.addColorStop(1, '#4a0806'); }
     x.fillStyle = g; x.fillRect(px, py, w, h);
-    if (cfg.id === 'giant') {
-      // la habichuela sube serpenteando por todo el rodillo
-      const cx = px + w / 2; x.strokeStyle = '#2a8a2a'; x.lineWidth = w * 0.14; x.lineCap = 'round';
-      x.beginPath(); for (let i = 0; i <= 40; i++) { const t = i / 40; x.lineTo(cx + Math.sin(t * 14 + time * 2) * w * 0.18, py + h * (1 - t)); } x.stroke();
-      x.fillStyle = '#7ae07a';
-      for (let i = 1; i < 12; i++) { const t = i / 12, lx = cx + Math.sin(t * 14 + time * 2) * w * 0.18, d = i % 2 ? 1 : -1; x.beginPath(); x.ellipse(lx + d * w * 0.16, py + h * (1 - t), w * 0.15, w * 0.06, d * 0.5, 0, 7); x.fill(); }
+    const cellH = big ? this.bch : this.ch;
+    if (giant) {
+      // la habichuela sube por todo el rodillo con "WILD" en cada tramo (como la máquina)
+      const seg = w * 2; for (let y = py + h; y > py - seg; y -= seg * 0.96) art(x, 'bean', px, y - seg, w, seg, 1.15);
+      const step = big ? Math.max(1, Math.round(cellH * 3 > w ? 2 : 3)) : 1;
+      for (let r = 0; r < h / cellH - 0.5; r += step) goldText(x, 'WILD', px + w / 2, py + (r + step / 2) * cellH, Math.min(w * 0.26, cellH * step * 0.42, 22), { maxW: w * 0.9, colors: ['#ffffff', '#fff6a0', '#ffc020', '#fff6a0'], stroke: '#1a4a0a' });
+    } else if (big || h / w > 4.2) {
+      // colosal: bustos de Espartaco apilados, cada uno con su "WILD"
+      const seg = Math.max(w * 0.95, cellH * 2), n = Math.max(1, Math.round(h / seg)), sh = h / n;
+      for (let i = 0; i < n; i++) { art(x, 'head', px, py + i * sh, w, sh * 0.8, 0.95); goldText(x, 'WILD', px + w / 2, py + i * sh + sh * 0.84, Math.min(w * 0.24, sh * 0.2, 20), { maxW: w * 0.9 }); }
     } else {
-      const s = Math.min(w, h * 0.5); x.font = s * 0.75 + 'px "Apple Color Emoji","Noto Color Emoji",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText('🛡️', px + w / 2, py + h * 0.42);
+      x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; art(x, 'sparta', px, py + h * 0.02, w, h * 0.86, 1, 0); x.restore();
     }
-    x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.22 + 0.14 * Math.sin(time * 4 + c);
-    x.drawImage(glow(cfg.id === 'giant' ? 'rgba(160,255,160,1)' : 'rgba(255,200,90,1)', 64), px - w * 0.3, py, w * 1.6, h);
+    x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18 + 0.12 * Math.sin(time * 4 + c);
+    x.drawImage(glow(giant ? 'rgba(160,255,160,1)' : 'rgba(255,200,90,1)', 64), px - w * 0.3, py, w * 1.6, h);
     x.restore();
-    x.strokeStyle = '#f5d27a'; x.lineWidth = 3; roundRect(x, px + 2.5, py + 2.5, w - 5, h - 5, 8); x.stroke();
-    goldText(x, mega ? 'MEGA WILD' : 'WILD', px + w / 2, py + h - Math.min(h * 0.12, 26), Math.min(22, w * 0.26), { maxW: w * 0.92 });
+    x.strokeStyle = giant ? '#6ad83a' : '#f5d27a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+    if (!giant && !big && h / w <= 4.2) goldText(x, mega ? (sup ? 'SUPER MEGA WILD' : 'MEGA WILD') : sup ? 'SUPER WILD' : 'WILD', px + w / 2, py + h - Math.min(h * 0.08, 18), Math.min(22, w * (mega ? 0.12 : 0.24)), { maxW: w * 0.94, glowColor: '#ff8a2e' });
   }
   update(dt) { this.time += dt; this.main.update(dt); this.big.update(dt); if (this.wins) this.winT += dt; }
   curWin() { return this.wins && this.wins.length ? this.wins[Math.floor(this.winT / 1.1) % this.wins.length] : null; }
@@ -380,98 +498,140 @@ class Colossal {
     if (!this.W) return;
     if (!this.bgCache) this.bgCache = this.renderBg();
     x.drawImage(this.bgCache, 0, 0, this.W, this.H);
-    const tw = this.side ? this.cw * COLS * 2 + 12 : this.cw * COLS, cfg = this.cfg;
-    const title = this.inFree ? 'GIRO GRATIS ' + this.freeCount + (this.freeMult > 1 ? ' · x' + this.freeMult : cfg.fullWild ? ' · COLOSAL x2' : '') : cfg.name.toUpperCase() + ' · 100 LÍNEAS';
-    goldText(x, title, this.W / 2, this.my - 22, Math.min(15, tw * 0.045), { maxW: tw * 0.95, colors: ['#fff8d0', '#ffe08a', '#e8a020', '#fff0b0'], stroke: '#3a1800' });
+    const cfg = this.cfg;
+    if (this.inFree) {
+      const [bx, by, bw, bh] = this.banner, t = 'GIRO GRATIS ' + this.freeCount + (cfg.eggStack ? ' · COLOSAL x2' : '');
+      x.save(); x.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(x, bx, by + bh - Math.min(30, bh * 0.4), bw, Math.min(30, bh * 0.4), 6); x.fill(); x.restore();
+      goldText(x, t, bx + bw / 2, by + bh - Math.min(15, bh * 0.2), Math.min(16, bh * 0.26), { maxW: bw * 0.94 });
+    }
     this.main.draw(x, (c, r) => this.cellFx(c, r));
-    this.full.forEach(c => { if (this.wildShown(this.main, c)) this.drawTallWild(x, this.mx + c * this.cw, this.my + this.main.columns[c].shift * this.ch, this.cw, this.ch * ROWS, c); });
-    if (this.mega >= 0 && this.wildShown(this.main, this.mega + 1)) this.drawTallWild(x, this.mx + this.mega * this.cw, this.my, this.cw * 2, this.ch * ROWS, this.mega, true);
+    this.full.forEach(c => { if (this.wildShown(this.main, c) && !(this.mega >= 0 && (c === this.mega || c === this.mega + 1))) this.drawTallWild(x, this.mx + c * this.cw, this.my + this.main.columns[c].shift * this.ch, this.cw, this.ch * ROWS, c, false, false, this.superCols && this.superCols.includes(c)); });
+    if (this.mega >= 0 && this.wildShown(this.main, this.mega + 1)) this.drawTallWild(x, this.mx + this.mega * this.cw, this.my, this.cw * 2, this.ch * ROWS, this.mega, false, true, this.megaK === cfg.super);
     this.big.draw(x, null);
     this.drawBigBlocks(x);
     if (this.wins) this.drawWin(x);
   }
   cellFx(c, r) {
     const w = this.curWin(); if (!w) return null;
-    if (w.set !== 'main') return { alpha: 0.45 };
-    return c < w.n && w.line[c] === r ? { scale: 1 + 0.07 * Math.sin(this.winT * 11) } : { alpha: 0.45 };
+    if (w.set !== 'main') return { alpha: 0.4 };
+    return c < w.n && w.line[c] === r ? { scale: 1 + 0.07 * Math.sin(this.winT * 11) } : { alpha: 0.4 };
   }
   drawWin(x) {
     const w = this.curWin(); if (!w) return;
-    const main = w.set === 'main', ox = main ? this.mx : this.bx, oy = main ? this.my : this.by, ch = main ? this.ch : this.bch, cw = this.cw;
+    const main = w.set === 'main', ox = main ? this.mx : this.bx, oy = main ? this.my : this.by, ch = main ? this.ch : this.bch, cw = main ? this.cw : this.bcw;
     x.save(); x.globalCompositeOperation = this.app.light ? 'source-over' : 'lighter'; x.lineJoin = 'round';
     x.beginPath(); w.line.forEach((r, c) => { const px = ox + c * cw + cw / 2, py = oy + r * ch + ch / 2; c ? x.lineTo(px, py) : x.moveTo(ox - 5, py); });
     x.lineTo(ox + cw * COLS + 5, oy + w.line[COLS - 1] * ch + ch / 2);
-    x.strokeStyle = 'rgba(220,80,20,0.5)'; x.lineWidth = 9; x.stroke(); x.strokeStyle = '#fff2b0'; x.lineWidth = 2.5; x.stroke();
+    x.strokeStyle = 'rgba(220,80,20,0.55)'; x.lineWidth = 8; x.stroke(); x.strokeStyle = '#fff2b0'; x.lineWidth = 2.5; x.stroke();
     x.restore();
     const my = oy + (main ? ch * 2 : ch * (w.line[2] + 0.5));
-    goldText(x, this.app.fmt(w.win) + (w.m > 1 ? ' (x' + w.m + ')' : ''), ox + cw * 2.5, my, Math.min(30, cw * 0.4), { glowColor: '#ff8a2e' });
+    goldText(x, this.app.fmt(w.win) + (w.m > 1 ? ' (x' + w.m + ')' : ''), ox + cw * 2.5, my, Math.min(30, cw * 0.42), { glowColor: '#ff8a2e', maxW: cw * 5 });
   }
-  center(set, c, r) { return set === 'main' ? [this.mx + c * this.cw + this.cw / 2, this.my + r * this.ch + this.ch / 2] : [this.bx + c * this.cw + this.cw / 2, this.by + r * this.bch + this.bch / 2]; }
+  center(set, c, r) { return set === 'main' ? [this.mx + c * this.cw + this.cw / 2, this.my + r * this.ch + this.ch / 2] : [this.bx + c * this.bcw + this.bcw / 2, this.by + r * this.bch + this.bch / 2]; }
 
-  async play(bet) {
+  // Un giro (o re-giro) animado. Devuelve el tablero final ya con las transferencias hechas.
+  async spinOnce(hold) {
     const app = this.app, sfx = app.sfx, cfg = this.cfg;
-    this.wins = null; this.full = []; this.mega = -1;
-    const free = this.freeLeft > 0;
-    if (free) this.freeLeft--;
-    app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeCount.toLowerCase() : '');
-    const b = spinBoards(cfg, this.inFree);
+    const b = spinBoards(cfg, this.inFree, hold);
     if (app._forceScat) {
       app._forceScat = 0;
-      [[b.main, 0], [b.big, 2], [b.main, 4]].forEach(([set, c]) => { if (set[c][0].full) return; const r = set === b.main ? 1 : 4; set[c][r] = Object.assign({ blk: 'f' + c }, { k: cfg.scatter }); });
+      [[b.main, 0], [b.big, 2], [b.main, 4]].forEach(([set, c]) => { if (hold.includes(c)) return; const r = set === b.main ? 1 : 4; set[c][r] = { blk: 'f' + c, k: cfg.scatter }; if (set === b.big && cfg.multWild && c === 4) set[c][5] = { blk: 'f' + c, k: cfg.scatter, dbl: true }; });
     }
-    if (app._forceFull && cfg.fullWild) { const n = app._forceFull; app._forceFull = 0; b.full = []; for (let c = 0; c < n; c++) { b.main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.wild, full: true })); b.big[c] = Array.from({ length: BIG_ROWS }, () => ({ k: cfg.wild, full: true })); b.full.push(c); } }
-    if (app._forceMega && cfg.mega) { app._forceMega = 0; b.mega = 1; [1, 2].forEach(c => { b.main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.wild, full: true, mega: true })); }); }
-    // Suspenso si ya van 2 BONUS antes del último rodillo
+    if (app._forceFull) { const n = app._forceFull; app._forceFull = 0; for (let c = 0; c < n; c++) if (!hold.includes(c)) b.main[c] = fullCol(cfg, ROWS, cfg.super && c === 0 ? cfg.super : cfg.wild); }
+    if (app._forceMega && cfg.mega) { app._forceMega = 0; b.mega = 1; [1, 2].forEach(c => { b.main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.super, full: true, mega: true })); }); }
+    const tr = transfers(cfg, b);
     const scatIn = c => (b.main[c].some(s => s.k === cfg.scatter) ? 1 : 0) + (b.big[c].some(s => s.k === cfg.scatter) ? 1 : 0);
     const anticFrom = scatIn(0) + scatIn(2) >= 2 ? 4 : -1;
     sfx.spinStart(app.speed >= 2);
     this.main.start(app.speed); this.big.start(app.speed);
-    // Los WILD transferidos se revelan en el colosal cuando para el rodillo del principal
-    const transfer = [];
-    const bigDone = this.big.stopTo(b.big, { anticFrom, minTime: 0.75 / (app.speed || 1), onStop: (c, last) => {
+    // los rodillos fijos del re-giro no giran
+    hold.forEach(c => { [this.main, this.big].forEach(set => { const col = set.columns[c]; col.state = 'idle'; col.shift = 0; }); });
+    const bigDone = this.big.stopTo(b.big, { anticFrom, minTime: 0.75 / (app.speed || 1), onStop: (c) => {
       sfx.reelStop(c, false);
-      if (b.full.includes(c)) { this.full.includes(c) || this.full.push(c); }
-      b.big[c].forEach((s, r) => { if (s.k === cfg.scatter && (r === 0 || b.big[c][r - 1].k !== cfg.scatter)) { const [px, py] = this.center('big', c, r + 1); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 14, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); } });
-      if (cfg.super && b.big[c].some(s => s.k === cfg.super)) { sfx.multiplier(4); }
+      b.big[c].forEach((s, r) => { if (s.k === cfg.scatter && (r === 0 || b.big[c][r - 1].blk !== s.blk || cfg.eggStack)) { const [px, py] = this.center('big', c, r); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 12, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); } });
+      if (b.big[c].some(s => s.mult)) sfx.multiplier(4);
     } });
     await this.main.stopTo(b.main, { anticFrom, onStop: (c) => {
       sfx.reelStop(c, false);
-      if (b.full.includes(c)) {
-        this.full.push(c); transfer.push(c);
-        const [px, py] = this.center('main', c, 1.5); sfx.whoosh(); sfx.bell(660 + transfer.length * 110, 1, 0.12);
-        app.burst(px, py, 22, { type: 'spark', color: '#a8ffa8', speed: 320, size: 12 }); app.flash('#d8ffd0', 0.2);
+      if (tr.cols.includes(c) && !(b.mega >= 0 && c === b.mega)) {
+        this.full.push(c); if (b.mega >= 0 && c === b.mega + 1) this.full.push(b.mega);
+        if (b.main[c].some(s => s.k === cfg.super)) (this.superCols = this.superCols || []).push(c);
+        const [px, py] = this.center('main', c, 1.5); sfx.whoosh(); sfx.bell(660 + this.full.length * 110, 1, 0.12);
+        app.burst(px, py, 22, { type: 'spark', color: cfg.eggStack ? '#a8ffa8' : '#ffc04a', speed: 320, size: 12 }); app.flash(cfg.eggStack ? '#d8ffd0' : '#ffe0a0', 0.2);
       }
-      if (b.mega >= 0 && b.mega + 1 === c) { this.mega = b.mega; const [px, py] = this.center('main', c, 1.5); sfx.thunder(0.5); app.shake(true); app.burst(px, py, 30, { type: 'spark', color: '#ffc04a', speed: 360, size: 14 }); app.flash('#ffe0a0', 0.35); }
-      if (b.main[c].some(s => s.k === cfg.scatter)) { const r = b.main[c].findIndex(s => s.k === cfg.scatter), [px, py] = this.center('main', c, r); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 14, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); }
+      if (b.mega >= 0 && b.mega + 1 === c) { this.mega = b.mega; this.megaK = b.main[c][0].k; const [px, py] = this.center('main', c, 1.5); sfx.thunder(0.5); app.shake(true); app.burst(px, py, 30, { type: 'spark', color: '#ffc04a', speed: 360, size: 14 }); app.flash('#ffe0a0', 0.35); }
+      b.main[c].forEach((s, r) => { if (s.k === cfg.scatter) { const [px, py] = this.center('main', c, r); sfx.bell(784 + c * 110, 0.9, 0.12); app.burst(px, py, 12, { type: 'spark', color: '#ffd24a', speed: 240, size: 10 }); } });
     } });
     await bigDone;
     sfx.reelStop(4, true); sfx.anticipation(false);
-    if (transfer.length) app.message('<b>' + transfer.length + ' rodillo' + (transfer.length > 1 ? 's' : '') + ' WILD</b> transferido' + (transfer.length > 1 ? 's' : '') + ' al colosal');
-    const res = settle(cfg, b, bet, this.inFree, this.inFree ? this.freeMult : 1);
-    let total = res.total;
-    if (res.wins.length) {
-      this.wins = res.wins.sort((p, q) => q.win - p.win); this.winT = 0;
-      sfx.win(total >= bet * 5 ? 2 : 0); app.addWin(total);
-      app.flyCoins(this.W / 2, this.H / 2, Math.min(16, 3 + res.wins.length * 2));
-      const nm = res.wins.filter(w => w.set === 'main').length, nb = res.wins.length - nm;
-      app.message('Premio: <b>' + app.fmt(total) + '</b> · ' + (nm ? nm + ' en el principal' : '') + (nm && nb ? ' · ' : '') + (nb ? nb + ' en el colosal' : ''));
-      await app.wait(Math.min(2200, 800 + res.wins.length * 150));
-    } else if (!this.inFree) app.message(this.hint);
-    if (res.jp) { await app.wait(300); total += await app.awardJackpot(res.jp); }
+    return { b, tr };
+  }
+
+  async play(bet) {
+    const app = this.app, sfx = app.sfx, cfg = this.cfg;
+    this.wins = null; this.full = []; this.mega = -1; this.megaK = null; this.superCols = [];
+    const free = this.freeLeft > 0;
+    if (free) this.freeLeft--;
+    app.setSpinLabel(free ? 'GRATIS' : 'PARAR', free ? this.freeCount.toLowerCase() : '');
+    let total = 0, hold = [], respins = 0, transferred = 0, sc = { reels: 0, n: 0 };
+    for (;;) {
+      const { b, tr } = await this.spinOnce(hold);
+      transferred += tr.cols.length;
+      if (tr.cols.length) app.message('<b>' + tr.cols.length + ' rodillo' + (tr.cols.length > 1 ? 's' : '') + ' WILD</b> transferido' + (tr.cols.length > 1 ? 's' : '') + ' al colosal');
+      const res = settle(cfg, b, bet, this.inFree);
+      if (res.scat.reels > sc.reels || (res.scat.reels === sc.reels && res.scat.n > sc.n)) sc = res.scat;
+      if (res.wins.length) {
+        this.wins = res.wins.sort((p, q) => q.win - p.win); this.winT = 0;
+        sfx.win(res.total >= bet * 5 ? 2 : 0); app.addWin(res.total); total += res.total;
+        app.flyCoins(this.W / 2, this.H / 2, Math.min(16, 3 + res.wins.length * 2));
+        const nm = res.wins.filter(w => w.set === 'main').length, nb = res.wins.length - nm;
+        app.message((respins ? 'Re-giro ' + respins + ' · ' : '') + 'Premio: <b>' + app.fmt(res.total) + '</b> · ' + (nm ? nm + ' en el principal' : '') + (nm && nb ? ' · ' : '') + (nb ? nb + ' en el colosal' : ''));
+        await app.wait(Math.min(2200, 800 + res.wins.length * 150));
+      } else if (!this.inFree && !respins && !tr.cols.length) app.message(this.hint);
+      // Super Espartaco transferido → re-giro con los WILD fijos (hasta 9 seguidos)
+      if (!tr.respin || respins >= 9) break;
+      respins++; hold = hold.concat(tr.cols, b.mega >= 0 && tr.cols.includes(b.mega + 1) && !tr.cols.includes(b.mega) ? [b.mega] : []).filter((c, i, a) => a.indexOf(c) === i);
+      await app.wait(300); this.wins = null;
+      sfx.featureStart(); app.flash('#ffe0a0', 0.3);
+      await app.banner('RE-GIRO', 'Super Espartaco: los WILD quedan fijos', { color: '#ffb03a', ms: 1300, voice: false });
+      this.superCols = [];
+      hold.forEach(c => { this.setColumn(this.main, c, fullCol(cfg, ROWS)); this.setColumn(this.big, c, fullCol(cfg, BIG_ROWS)); });
+      this.full = hold.slice(); this.mega = -1;
+    }
+    const jp = jackpotFor(transferred);
+    if (jp) { await app.wait(300); total += await app.awardJackpot(jp); }
+    // BONO SORPRESA: rayos que completan el bono en un giro pagado
+    if (!free && !this.inFree && sc.reels < 3 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+      app._forceMystery = false; await app.wait(300); this.wins = null;
+      await app.mysteryIntro(cfg.eggStack ? 'Los rayos traen huevos de oro' : 'Los rayos levantan coliseos');
+      const opts = []; SCAT_REELS.forEach(c => { opts.push(['main', c], ['big', c]); });
+      for (let i = opts.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [opts[i], opts[j]] = [opts[j], opts[i]]; }
+      let reels = 0, n = 0; const has = ([set, c]) => (set === 'main' ? this.main : this.big).grid[c].some(s => s.k === cfg.scatter);
+      opts.forEach(o => { if (has(o)) { reels++; n += (o[0] === 'main' ? this.main : this.big).grid[o[1]].filter(s => s.k === cfg.scatter).length; } });
+      for (const o of opts) {
+        if (reels >= 3) break; if (has(o) || this.full.includes(o[1])) continue;
+        const [set, c] = o, rs = set === 'main' ? this.main : this.big, r = set === 'main' ? 1 : (cfg.multWild && c === 4 ? 4 : 5);
+        const s = { k: cfg.scatter, blk: 'm' + c }; rs.setCell(c, r, s); if (set === 'big' && cfg.multWild && c === 4) rs.setCell(c, 5, Object.assign({ dbl: true }, s)), s.dbl = true;
+        reels++; n++;
+        const [px, py] = this.center(set, c, r); app.strike(px, py, '#ffd24a'); sfx.bell(784 + reels * 110, 0.9, 0.12);
+        await app.wait(320);
+      }
+      sc = { reels, n };
+    }
     if (this.inFree) this.fsTotal += total;
-    if (res.scat >= 3) {
+    if (sc.reels >= 3) {
       await app.wait(500); this.wins = null;
-      { const v = await app.bonusPay(res.scat, bet, cfg.scatName); total += v; if (this.inFree) this.fsTotal += v; }
+      { const v = await app.bonusPay(sc.reels, bet, cfg.scatName); total += v; if (this.inFree) this.fsTotal += v; }
       sfx.featureStart(); app.flash('#ffd27a', 0.5); app.shake(true);
-      const n = cfg.spins(res.scat);
-      if (this.inFree) { this.freeLeft += n; this.freeTotal += n; await app.banner('+' + n + ' GIROS', 'Vuelven los ' + cfg.scatName, { color: '#ffb03a', ms: 1800 }); }
-      else await this.startFree(res.scat);
+      const n = spinsFor(cfg, sc);
+      if (this.inFree) { this.freeLeft += n; this.freeTotal += n; await app.banner('+' + n + ' GIROS', cfg.eggStack ? sc.n + ' huevos de oro' : 'Vuelven los coliseos', { color: '#ffb03a', ms: 1800 }); }
+      else await this.startFree(n, sc);
     }
     const celebrated = this.inFree;
     if (this.inFree && this.freeLeft === 0 && free) {
       await app.wait(400);
       const fs = this.fsTotal;
-      this.inFree = false; this.wins = null; this.freeMult = 1;
+      this.inFree = false; this.wins = null; this.bgCache = null;
       if (fs > 0) await app.celebrate(fs, bet, cfg.name.toUpperCase());
       sfx.stopMusic(); sfx.music(cfg.music);
       app.message('Giros gratis: <b>' + app.fmt(fs) + '</b>');
@@ -479,21 +639,20 @@ class Colossal {
     app.setSpinLabel(this.freeLeft ? 'GRATIS' : 'GIRAR', this.freeLeft ? (this.freeTotal - this.freeLeft + 1) + ' de ' + this.freeTotal : '');
     return { win: total, celebrated };
   }
-  async startFree(nScat = 3) {
-    const app = this.app, sfx = app.sfx, cfg = this.cfg, n = cfg.spins(nScat);
+  async startFree(n, sc) {
+    const app = this.app, sfx = app.sfx, cfg = this.cfg;
     this.inFree = true; this.freeLeft = n; this.freeTotal = n; this.fsTotal = 0;
-    this.freeMult = cfg.freeMult ? cfg.freeMult(nScat) : 1;
     sfx.stopMusic();
-    await app.banner(n + ' GIROS GRATIS', cfg.freeMult ? 'Todo paga x' + this.freeMult + ' · Super Espartaco hasta x100' : 'Premios del colosal x2 · wilds reforzados', { color: '#ff9a2e', ms: 2400 });
+    await app.banner(n + ' GIROS GRATIS', cfg.eggStack ? (sc ? sc.n + ' huevos de oro · ' : '') + 'el colosal paga x2' : 'WILD x2 a x100 en el rodillo 5 del colosal', { color: '#ff9a2e', ms: 2400 });
     sfx.music(cfg.bonusMusic);
     app.setSpinLabel('GRATIS', '1 de ' + this.freeTotal);
   }
-  async buyFree() { this.app.sfx.featureStart(); await this.startFree(3); return { win: 0, celebrated: true }; }
+  async buyFree() { this.app.sfx.featureStart(); await this.startFree(this.cfg.eggStack ? 10 : 10); return { win: 0, celebrated: true }; }
   slam() { this.main.slam(); this.big.slam(); }
   info(bet, fmt) {
-    const cfg = this.cfg, lb = bet / 100, img = k => '<img class="ico" src="' + symIcon(cfg, k, 96).toDataURL('image/png') + '" alt="">';
+    const cfg = this.cfg, lb = bet / 100, img = k => '<img class="ico" src="' + symIcon(cfg, k, 96, k === 'mw' ? 5 : 0).toDataURL('image/png') + '" alt="">';
     return '<h3>Cómo se juega</h3><ul>' + this.rules() +
-      '<li><b>BONO</b>: compra los giros gratis por 50× la apuesta.</li></ul>' +
+      '<li><b>BONO</b>: compra 10 giros gratis por 50× la apuesta.</li></ul>' +
       '<h3>Pagos por línea (apuesta ' + fmt(bet) + ') · 3 / 4 / 5</h3><table>' +
       Object.keys(cfg.pay).map(k => '<tr><td>' + img(k) + '</td><td>' + cfg.names[k] + '</td><td>' + [3, 4, 5].map(n => fmt(cfg.pay[k][n] * cfg.scale * lb)).join(' · ') + '</td></tr>').join('') + '</table>';
   }
@@ -504,33 +663,20 @@ export class GiantGold extends Colossal {
   static name = 'Oro del Gigante';
   static music = 'fairy';
   static bonusMusic = 'fairyBonus';
-  static iconStyle = iconStyleFor(GIANT);
+  static iconStyle = colossalIconStyle;
   static lobby = {
-    icons: ['giant', 'egg', 'bean'], c1: '#6ad86a', c2: '#1a3a5a', mechanic: 'Rodillos colosales · 100 líneas · estilo Giant\'s Gold',
-    desc: 'Jack y las habichuelas: tablero de 5×4 y otro colosal de 5×12. Los rodillos llenos de WILD se transfieren al colosal. Hasta 50 giros gratis con el colosal x2.'
+    icons: ['girl', 'egg', 'giant'], c1: '#6ad86a', c2: '#1a3a5a', mechanic: 'Rodillos colosales · 100 líneas · como Giant\'s Gold',
+    desc: 'Jack y las habichuelas mágicas: tablero de 5×4 y colosal de 5×12. Los rodillos llenos de habichuelas WILD se transfieren al colosal. Huevos de oro: de 5 a 100 giros gratis con el colosal x2.'
   };
   constructor(app) {
     super(app, GIANT);
-    this.hint = 'La <b>habichuela</b> es WILD apilado: un rodillo lleno se <b>transfiere al colosal</b>. 3+ huevos de oro = <b>giros gratis</b>.';
-  }
-  scenery(x, W, H, L) {
-    let g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, L ? '#bfe8ff' : '#1a2a6a'); g.addColorStop(0.6, L ? '#e8f6ff' : '#4a6ab0'); g.addColorStop(1, L ? '#a8d890' : '#1a3a1a');
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    // nubes
-    x.fillStyle = L ? 'rgba(255,255,255,0.9)' : 'rgba(220,230,255,0.35)';
-    for (let i = 0; i < 9; i++) { const cx = rand(0, W), cy = rand(10, H * 0.5), r = rand(18, 40); [0, 1, 2].forEach(k => { x.beginPath(); x.arc(cx + (k - 1) * r * 0.9, cy + (k === 1 ? -r * 0.35 : 0), r * (k === 1 ? 1 : 0.75), 0, 7); x.fill(); }); }
-    // castillo del gigante en las nubes
-    x.fillStyle = L ? 'rgba(150,130,190,0.6)' : 'rgba(40,30,80,0.7)';
-    const cx = W * 0.82, cy = H * 0.2; x.fillRect(cx - 30, cy - 20, 60, 30); [-30, -8, 16].forEach(d => { x.fillRect(cx + d, cy - 42, 14, 24); x.beginPath(); x.moveTo(cx + d - 3, cy - 42); x.lineTo(cx + d + 7, cy - 58); x.lineTo(cx + d + 17, cy - 42); x.fill(); });
-    // habichuela gigante al costado
-    x.strokeStyle = L ? '#3a9a3a' : '#1a6a2a'; x.lineWidth = 14; x.lineCap = 'round';
-    x.beginPath(); for (let i = 0; i <= 30; i++) { const t = i / 30; x.lineTo(W * 0.06 + Math.sin(t * 10) * 12, H * (1 - t)); } x.stroke();
-    x.fillStyle = L ? '#6ad86a' : '#2a8a3a'; for (let i = 1; i < 12; i++) { const t = i / 12, d = i % 2 ? 1 : -1; x.beginPath(); x.ellipse(W * 0.06 + Math.sin(t * 10) * 12 + d * 16, H * (1 - t), 16, 6, d * 0.5, 0, 7); x.fill(); }
+    this.hint = 'La <b>habichuela</b> es WILD apilado: un rodillo lleno se <b>transfiere al colosal</b>. Huevos de oro en 3 rodillos = <b>5 a 100 giros gratis</b>.';
   }
   rules() {
-    return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. En el colosal los símbolos caen en <b>bloques gigantes</b>.</li>' +
-      '<li><b>Habichuela mágica = WILD</b> apilado. Si llena un rodillo del principal, se <b>transfiere entero</b> al mismo rodillo del colosal.</li>' +
-      '<li><b>Huevo de oro BONUS</b> solo en los rodillos 1, 3 y 5 de ambos tableros: <b>3 = 5 · 4 = 10 · 5 = 20 · 6 = 50 giros gratis</b>. En los giros gratis los premios del colosal pagan <b>x2</b> y salen más habichuelas.</li>' +
+    return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. Los dos giran a la vez y en el colosal los símbolos caen en <b>pilas</b>.</li>' +
+      '<li><b>Habichuela mágica = WILD</b> apilado; sustituye a todo menos al huevo de oro. Si un rodillo del principal queda <b>lleno de WILD</b>, se <b>transfiere entero</b> al mismo rodillo del colosal.</li>' +
+      '<li><b>Huevo de oro BONUS</b>, apilado, solo en los rodillos 1, 3 y 5 de ambos tableros. Con huevos en <b>3 o más rodillos</b> se ganan giros gratis según los huevos a la vista: <b>3 = 5 · 5 = 8 · 8 = 15 · 10 = 20 · 16 = 30 · 25 = 50 · 40 o más = 100 giros</b>.</li>' +
+      '<li>En los giros gratis <b>todo lo que se gana en el colosal paga x2</b>, salen más habichuelas y los huevos pueden dar más giros.</li>' +
       '<li><b>Progresivos</b>: rodillos WILD transferidos a la vez · <b>2 = MINI · 3 = MINOR · 4 = MAJOR · 5 = GRAND</b>.</li>';
   }
 }
@@ -539,31 +685,22 @@ export class Spartacus extends Colossal {
   static name = 'Espartaco Coloso';
   static music = 'arena';
   static bonusMusic = 'arenaBonus';
-  static iconStyle = iconStyleFor(SPARTA);
+  static iconStyle = colossalIconStyle;
   static lobby = {
-    icons: ['sparta', 'colis', 'lion'], c1: '#e84a2a', c2: '#3a1a08', mechanic: 'Rodillos colosales · 100 líneas · estilo Spartacus',
-    desc: 'Gladiadores en el Coliseo: tablero de 5×4 y otro colosal de 5×12. MEGA WILD de 2 rodillos, Super Espartaco con multiplicador hasta x100 y giros gratis x2/x3/x5.'
+    icons: ['warrior', 'colis', 'lion'], c1: '#e84a2a', c2: '#3a1a08', mechanic: 'Súper rodillos colosales · 100 líneas · como Spartacus',
+    desc: 'Gladiadores en el Coliseo: tablero de 5×4 y colosal de 5×12. Super Espartaco, MEGA WILD de 2 rodillos, transferencias con re-giro y WILD x2…x100 en el rodillo 5 del colosal.'
   };
   constructor(app) {
     super(app, SPARTA);
-    this.hint = '<b>Espartaco</b> es WILD; el <b>Super Espartaco</b> multiplica la línea hasta <b>x25</b>. 3+ coliseos = <b>giros gratis</b>.';
-  }
-  scenery(x, W, H, L) {
-    let g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, L ? '#ffd8a0' : '#3a0a08'); g.addColorStop(0.55, L ? '#f0a860' : '#8a2a10'); g.addColorStop(1, L ? '#e8c890' : '#2a1406');
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    // arcos del Coliseo en dos pisos
-    x.fillStyle = L ? 'rgba(160,100,50,0.45)' : 'rgba(20,6,2,0.55)';
-    [H * 0.22, H * 0.4].forEach((y0, k) => { const aw = 34 - k * 4; x.fillRect(0, y0, W, 4); for (let px = -10; px < W + aw; px += aw + 10) { x.beginPath(); x.moveTo(px, y0 + 60); x.lineTo(px, y0 + 22); x.arc(px + aw / 2, y0 + 22, aw / 2, Math.PI, 0); x.lineTo(px + aw, y0 + 60); x.fill(); } });
-    // estandartes rojos
-    for (let i = 0; i < 6; i++) { const px = W * (i + 0.5) / 6; x.fillStyle = i % 2 ? '#b8231a' : '#d8a020'; x.beginPath(); x.moveTo(px - 10, 0); x.lineTo(px + 10, 0); x.lineTo(px + 10, 46); x.lineTo(px, 38); x.lineTo(px - 10, 46); x.fill(); }
-    // arena
-    x.fillStyle = L ? 'rgba(230,190,120,0.7)' : 'rgba(90,50,20,0.6)'; x.fillRect(0, H * 0.86, W, H * 0.14);
+    this.hint = '<b>Espartaco</b> es WILD. Un rodillo lleno se transfiere al colosal; con <b>Super Espartaco</b> da <b>re-giro</b>. 3+ coliseos = <b>giros gratis</b>.';
   }
   rules() {
-    return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. En el colosal los símbolos caen en <b>bloques gigantes</b>.</li>' +
-      '<li><b>Espartaco = WILD</b>. <b>Super Espartaco</b> también es WILD y <b>multiplica</b> la línea x2, x3, x5, x10 o x25 (en giros gratis hasta <b>x100</b>).</li>' +
-      '<li><b>MEGA WILD</b>: a veces cae un Espartaco gigante de <b>2 rodillos de ancho</b> en los rodillos 1 a 4 del principal (uno por giro).</li>' +
-      '<li><b>Coliseo BONUS</b> solo en los rodillos 1, 3 y 5 de ambos tableros: <b>3 = 8 giros x2 · 4 = 12 giros x3 · 5 o 6 = 20 giros x5</b>.</li>' +
-      '<li><b>Progresivos</b>: Super Espartacos a la vez · <b>3 = MINI · 4 = MINOR · 5 = MAJOR · 6+ = GRAND</b>.</li>';
+    return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. El <b>rodillo 5 del colosal</b> tiene <b>símbolos dobles</b>.</li>' +
+      '<li><b>Espartaco = WILD</b> apilado. Antes de cada giro, hasta 4 Espartacos de los rodillos 1 a 4 del principal pueden volverse <b>Super Espartaco</b>.</li>' +
+      '<li><b>MEGA WILD</b>: un Espartaco (o Super Espartaco) gigante de <b>2 rodillos de ancho</b> puede caer sobre los rodillos 1 a 4 del principal (uno por giro).</li>' +
+      '<li><b>Transferencia</b>: un rodillo del principal <b>lleno de WILD</b> pasa entero al mismo rodillo del colosal. Si llevaba un <b>Super Espartaco</b>, hay un <b>RE-GIRO</b> con esos WILD fijos, hasta <b>9 re-giros</b> seguidos.</li>' +
+      '<li><b>WILD con multiplicador</b> x2, x3, x5, x10 o x25 en el rodillo 5 del colosal; multiplica la línea. En los giros gratis también hay <b>x50 y x100</b>.</li>' +
+      '<li><b>Coliseo BONUS</b> solo en los rodillos 1, 3 y 5 de ambos tableros: en <b>3 rodillos = 10 · 4 = 15 · 5 o 6 = 20 giros gratis</b>, que se pueden volver a ganar.</li>' +
+      '<li><b>Progresivos</b>: rodillos transferidos al colosal en la jugada (con sus re-giros) · <b>2 = MINI · 3 = MINOR · 4 = MAJOR · 5 = GRAND</b>.</li>';
   }
 }
