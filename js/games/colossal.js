@@ -10,8 +10,8 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=69';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=69';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=70';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=70';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -426,7 +426,7 @@ class Colossal {
   renderBg() {
     const { W, H, cfg } = this, dpr = this.app.dpr, L = this.app.light, cnv = makeCanvas(W * dpr, H * dpr), x = cnv.getContext('2d'); x.scale(dpr, dpr);
     if (cfg.id === 'giant') { x.fillStyle = '#2a5a1a'; x.fillRect(0, 0, W, H); cover(x, this.inFree ? IMG.sky : IMG.gscene, 0, 0, W, H, 0.4, 0.5); }
-    else { x.fillStyle = '#6a4a2a'; x.fillRect(0, 0, W, H); cover(x, IMG.spscene, 0, 0, W, H, 0.3, 0.3); }
+    else { x.fillStyle = '#6a4a2a'; x.fillRect(0, 0, W, H); cover(x, IMG.spscene, 0, 0, W, H, 0.3, 0.3); if (this.inFree) this.nightTint(x, 0, 0, W, H); }
     x.fillStyle = L ? 'rgba(255,250,240,0.2)' : 'rgba(10,4,20,0.35)'; x.fillRect(0, 0, W, H);
     const v = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
     v.addColorStop(0, L ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.25)'); v.addColorStop(1, L ? 'rgba(255,250,235,0.35)' : 'rgba(0,0,0,0.7)');
@@ -442,7 +442,7 @@ class Colossal {
     if (!giant) {
       // escenario de la máquina: cortina, brasero encendido, muro de piedra y el logo, sin marco
       x.save(); x.shadowColor = 'rgba(0,0,0,0.5)'; x.shadowBlur = 10; x.fillStyle = '#6a4a2a'; x.fillRect(bx, by, bw, bh); x.restore();
-      x.save(); x.beginPath(); x.rect(bx, by, bw, bh); x.clip(); const im = IMG.spscene; if (im) { const sc = Math.max(bw / im.width, bh / im.height), ax = im.width * sc > bw + 1 ? Math.max(0, Math.min(1, (430 * sc - bw / 2) / (im.width * sc - bw))) : 0.5; cover(x, im, bx, by, bw, bh, ax, 0.4); } x.restore();
+      x.save(); x.beginPath(); x.rect(bx, by, bw, bh); x.clip(); const im = IMG.spscene; if (im) { const sc = Math.max(bw / im.width, bh / im.height), ax = im.width * sc > bw + 1 ? Math.max(0, Math.min(1, (430 * sc - bw / 2) / (im.width * sc - bw))) : 0.5; cover(x, im, bx, by, bw, bh, ax, 0.4); } if (this.inFree) this.nightTint(x, bx, by, bw, bh); x.restore();
       return;
     }
     x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 12; roundRect(x, bx - 6, by - 6, bw + 12, bh + 12, 10);
@@ -612,14 +612,16 @@ class Colossal {
     x.strokeStyle = giant ? '#6ad83a' : '#f5d27a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
     if (!giant && mega) goldText(x, mega ? (sup ? 'SUPER MEGA WILD' : 'MEGA WILD') : sup ? 'SUPER WILD' : 'WILD', px + w / 2, py + h - Math.min(h * 0.08, 18), Math.min(22, w * (mega ? 0.12 : 0.24)), { maxW: w * 0.94, glowColor: '#ff8a2e' });
   }
-  update(dt) { this.time += dt; this.main.update(dt); this.big.update(dt); if (this.wins) this.winT += dt; }
-  curWin() { return this.wins && this.wins.length ? this.wins[Math.floor(this.winT / 1.1) % this.wins.length] : null; }
+  update(dt) { if (this.fsIntro) this.fsIntro.t += dt; this.time += dt; this.main.update(dt); this.big.update(dt); if (this.wins) this.winT += dt; }
+  get allLines() { return this.wins && this.wins.length > 1 && this.winT < 1.6; }
+  curWin() { return this.wins && this.wins.length && !this.allLines ? this.wins[Math.floor((this.winT - (this.wins.length > 1 ? 1.6 : 0)) / 1.1) % this.wins.length] : null; }
   draw(x) {
     if (!this.W) return;
     if (!this.bgCache) this.bgCache = this.renderBg();
     x.drawImage(this.bgCache, 0, 0, this.W, this.H);
     const cfg = this.cfg;
-    if (this.inFree) {
+    if (this.inFree && !cfg.eggStack) this.drawFsCounter(x);
+    else if (this.inFree) {
       const [bx, by, bw, bh] = this.banner, t = 'GIRO GRATIS ' + this.freeCount + (cfg.eggStack ? ' · COLOSAL x2' : '');
       x.save(); x.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(x, bx, by + bh - Math.min(30, bh * 0.4), bw, Math.min(30, bh * 0.4), 6); x.fill(); x.restore();
       goldText(x, t, bx + bw / 2, by + bh - Math.min(15, bh * 0.2), Math.min(16, bh * 0.26), { maxW: bw * 0.94 });
@@ -631,7 +633,63 @@ class Colossal {
     if (this.mega >= 0 && this.wildShown(this.main, this.mega + 1)) this.drawTallWild(x, this.mx + this.mega * this.cw, this.my, this.cw * 2, this.ch * ROWS, this.mega, false, true, this.megaK === cfg.super);
     this.big.draw(x, null);
     this.drawBigBlocks(x);
+    this.drawElectric(x);
     if (this.wins) this.drawWin(x);
+    if (this.fsIntro) this.drawFsIntro(x);
+  }
+  // En los giros gratis de Espartaco el cielo del atardecer pasa a azul de noche (el fuego se mantiene cálido)
+  nightTint(x, px, py, w, h) {
+    x.save(); x.globalCompositeOperation = 'hue'; x.fillStyle = 'rgba(40,90,220,0.85)'; x.fillRect(px, py, w, h);
+    x.globalCompositeOperation = 'multiply'; x.fillStyle = 'rgba(120,150,230,0.6)'; x.fillRect(px, py, w, h); x.restore();
+  }
+  // Medallón azul con laureles y los giros gratis que quedan (abajo a la derecha del escenario)
+  drawFsCounter(x) {
+    const [bx, by, bw, bh] = this.banner, r = Math.min(bh * 0.2, bw * 0.13, 44), cx = bx + bw - r - 10, cy = by + bh - r - 10;
+    x.save();
+    const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 1, cx, cy, r); g.addColorStop(0, '#5aa0ff'); g.addColorStop(1, '#0a2a8a');
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); x.lineWidth = r * 0.12; x.strokeStyle = '#e8f4ff'; x.stroke();
+    goldText(x, String(this.freeLeft), cx, cy, r * 0.95, { colors: ['#ffffff', '#fff8e0', '#e8d8a0', '#ffffff'], stroke: '#0a1a5a' });
+    x.font = '800 ' + Math.max(8, r * 0.28) + 'px ' + FONT; x.textAlign = 'right'; x.textBaseline = 'middle'; x.fillStyle = '#fff4c0';
+    x.fillText('GIROS', cx - r - 6, cy - r * 0.2); x.fillText('GRATIS', cx - r - 6, cy + r * 0.2);
+    x.restore();
+  }
+  // Marco eléctrico azul alrededor de los rodillos que siguen girando con suspenso (como la máquina)
+  drawElectric(x) {
+    [[this.main, this.mx, this.my, this.cw, this.ch * ROWS], [this.big, this.bx, this.by, this.bcw, this.bch * BIG_ROWS]].forEach(([set, ox, oy, cw, h]) => {
+      set.columns.forEach((col, c) => {
+        if (!col.antic || (col.state !== 'spin' && col.state !== 'feeding')) return;
+        const px = ox + c * cw, a = 0.7 + 0.3 * Math.sin(this.time * 30 + c);
+        x.save(); x.globalCompositeOperation = 'lighter';
+        x.fillStyle = 'rgba(80,160,255,0.16)'; x.fillRect(px, oy, cw, h);
+        [[px, oy, px, oy + h], [px + cw, oy, px + cw, oy + h], [px, oy, px + cw, oy], [px, oy + h, px + cw, oy + h]].forEach(([x1, y1, x2, y2]) => {
+          const pts = boltPoints(x1, y1, x2, y2, Math.max(6, cw * 0.12), 5); drawBolt(x, pts, 3.5, '#6ab8ff', a); drawBolt(x, pts, 1.3, '#ffffff', a);
+        });
+        x.restore();
+      });
+    });
+  }
+  // Entrada a giros gratis de Espartaco: destello blanco, estallido de brasas y medallón azul con laureles
+  drawFsIntro(x) {
+    const { W, H } = this, f = this.fsIntro, t = f.t;
+    x.save();
+    if (t < 0.9) { x.fillStyle = 'rgba(255,255,255,' + Math.min(1, t < 0.3 ? t / 0.3 : 1 - (t - 0.3) / 0.6 * 0.4) + ')'; x.fillRect(0, 0, W, H); }
+    else {
+      x.fillStyle = 'rgba(20,10,10,0.82)'; x.fillRect(0, 0, W, H);
+      f.emb = f.emb || Array.from({ length: 90 }, () => ({ x: Math.random(), y: 0.55 + Math.random() * 0.5, v: 0.05 + Math.random() * 0.15, s: 1 + Math.random() * 3 }));
+      f.emb.forEach(e => { const yy = (e.y - (t - 0.9) * e.v) * H; x.fillStyle = 'rgba(255,' + (120 + (e.s * 30 | 0)) + ',40,' + (0.5 + 0.5 * Math.sin(t * 8 + e.x * 20)) + ')'; x.beginPath(); x.arc(e.x * W, yy, e.s, 0, 7); x.fill(); });
+      const k = Math.min(1, (t - 0.9) / 0.35), sc = 0.4 + 0.6 * (1 - Math.pow(1 - k, 3)), r = Math.min(W, H) * 0.17 * sc, cx = W / 2, cy = H * 0.42;
+      x.drawImage(glow('rgba(140,190,255,1)', 64), cx - r * 2, cy - r * 2, r * 4, r * 4);
+      const g = x.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); g.addColorStop(0, '#5aa0ff'); g.addColorStop(1, '#0a2a8a');
+      x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+      x.lineWidth = r * 0.12; x.strokeStyle = '#e8f4ff'; x.stroke(); x.lineWidth = r * 0.04; x.strokeStyle = '#6a9ad8'; x.beginPath(); x.arc(cx, cy, r * 0.84, 0, 7); x.stroke();
+      // laureles
+      x.fillStyle = '#e8f0ff';
+      for (let side = -1; side <= 1; side += 2) for (let i = 0; i < 7; i++) { const a = Math.PI / 2 + side * (0.5 + i * 0.3), lx = cx + Math.cos(a) * r * 0.68, ly = cy + Math.sin(a) * r * 0.68; x.save(); x.translate(lx, ly); x.rotate(a + side * 0.9); x.beginPath(); x.ellipse(0, 0, r * 0.1, r * 0.04, 0, 0, 7); x.fill(); x.restore(); }
+      goldText(x, String(f.n), cx, cy + r * 0.04, r * 0.95, { colors: ['#ffffff', '#fff8e0', '#e8d8a0', '#ffffff'], stroke: '#0a1a5a' });
+      goldText(x, 'GIROS GRATIS', cx, cy + r * 1.55, Math.min(W * 0.1, r * 0.5), { maxW: W * 0.9, colors: ['#ffffff', '#fff4c0', '#e0b050', '#fff4c0'], stroke: '#3a1a00', glowColor: '#ff7a2a' });
+      goldText(x, 'OTORGADOS', cx, cy + r * 2.1, Math.min(W * 0.08, r * 0.4), { maxW: W * 0.9, colors: ['#ffffff', '#fff4c0', '#e0b050', '#fff4c0'], stroke: '#3a1a00' });
+    }
+    x.restore();
   }
   cellFx(c, r) {
     const w = this.curWin(); if (!w) return null;
@@ -639,6 +697,17 @@ class Colossal {
     return c < w.n && w.line[c] === r ? { scale: 1 + 0.07 * Math.sin(this.winT * 11) } : { alpha: 0.4 };
   }
   drawWin(x) {
+    if (this.allLines) {
+      // como la máquina: primero todas las líneas ganadoras juntas, cada una de un color
+      x.save(); x.lineJoin = 'round';
+      this.wins.slice(0, 40).forEach((w, i) => {
+        const main = w.set === 'main', ox = main ? this.mx : this.bx, oy = main ? this.my : this.by, ch = main ? this.ch : this.bch, cw = main ? this.cw : this.bcw;
+        x.beginPath(); w.line.forEach((r, c) => { const px = ox + c * cw + cw / 2, py = oy + r * ch + ch / 2; c ? x.lineTo(px, py) : x.moveTo(ox - 5, py); });
+        x.lineTo(ox + cw * COLS + 5, oy + w.line[COLS - 1] * ch + ch / 2);
+        x.strokeStyle = 'rgba(0,0,0,0.5)'; x.lineWidth = 4.5; x.stroke(); x.strokeStyle = 'hsl(' + (i * 47 % 360) + ',95%,60%)'; x.lineWidth = 2.5; x.stroke();
+      });
+      x.restore(); return;
+    }
     const w = this.curWin(); if (!w) return;
     const main = w.set === 'main', ox = main ? this.mx : this.bx, oy = main ? this.my : this.by, ch = main ? this.ch : this.bch, cw = main ? this.cw : this.bcw;
     x.save(); x.globalCompositeOperation = this.app.light ? 'source-over' : 'lighter'; x.lineJoin = 'round';
@@ -666,6 +735,7 @@ class Colossal {
     const anticFrom = scatIn(0) + scatIn(2) >= 2 ? 4 : -1;
     sfx.spinStart(app.speed >= 2);
     this.main.start(app.speed); this.big.start(app.speed);
+    if (anticFrom >= 0 && !cfg.eggStack) sfx.play('sparta_antic', { vol: 0.55, at: 0.6 });
     // los rodillos fijos del re-giro no giran
     hold.forEach(c => { [this.main, this.big].forEach(set => { const col = set.columns[c]; col.state = 'idle'; col.shift = 0; }); });
     const bigDone = this.big.stopTo(b.big, { anticFrom, minTime: 0.75 / (app.speed || 1), onStop: (c) => {
@@ -765,7 +835,10 @@ class Colossal {
     const app = this.app, sfx = app.sfx, cfg = this.cfg;
     this.inFree = true; this.bgCache = null; this.freeLeft = n; this.freeTotal = n; this.fsTotal = 0;
     sfx.stopMusic();
-    await app.banner(n + ' GIROS GRATIS', cfg.eggStack ? (sc ? sc.n + ' huevos de oro · ' : '') + 'el colosal paga x2' : 'WILD x2 a x100 en el rodillo 5 del colosal', { color: '#ff9a2e', ms: 2400 });
+    if (!cfg.eggStack) {
+      sfx.play('sparta_fs', { vol: 0.9 }); this.fsIntro = { t: 0, n }; app.shake(true);
+      await app.wait(3600); this.fsIntro = null;
+    } else await app.banner(n + ' GIROS GRATIS', cfg.eggStack ? (sc ? sc.n + ' huevos de oro · ' : '') + 'el colosal paga x2' : 'WILD x2 a x100 en el rodillo 5 del colosal', { color: '#ff9a2e', ms: 2400 });
     sfx.music(cfg.bonusMusic);
     app.setSpinLabel('GRATIS', '1 de ' + this.freeTotal);
   }

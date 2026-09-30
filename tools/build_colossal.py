@@ -55,9 +55,19 @@ for n, (k, im, box) in enumerate(SP):
     c = flood_key(c, cream) if k in ('chariot', 'sword', 'K', 'J', 'Q', 'A') else c.convert('RGBA')
     sheet.alpha_composite(c, (n * T + (T - c.width) // 2, (T - c.height) // 2))
 sheet.save('assets/sparta_sym.webp', 'WEBP', quality=90, method=6)
-A.crop((345, 385, 452, 686)).save('assets/sparta_tall.webp', 'WEBP', quality=92, method=6)
-A.crop((682, 225, 757, 630)).save('assets/sparta_wtall.webp', 'WEBP', quality=92, method=6)
-A.crop((0, 0, 600, 372)).save('assets/sparta_scene.webp', 'WEBP', quality=90, method=6)
+def dewatermark(im, boxes, thr=7):
+    """Borra la marca de agua semitransparente (texto claro) dentro de las cajas: detecta los píxeles
+    más claros que su entorno y los rellena con inpainting."""
+    import numpy as np, cv2
+    a = cv2.cvtColor(np.array(im), cv2.COLOR_RGB2BGR); g = cv2.cvtColor(a, cv2.COLOR_BGR2GRAY)
+    diff = cv2.subtract(g, cv2.medianBlur(g, 15)); mask = np.zeros_like(g)
+    for x0, y0, x1, y1 in boxes: mask[y0:y1, x0:x1] = (diff[y0:y1, x0:x1] > thr) * 255
+    mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
+    a = cv2.inpaint(a, mask, 4, cv2.INPAINT_TELEA)
+    return Image.fromarray(cv2.cvtColor(a, cv2.COLOR_BGR2RGB))
+dewatermark(A.crop((345, 385, 452, 686)), [(8, 40, 50, 88)], thr=5).save('assets/sparta_tall.webp', 'WEBP', quality=92, method=6)
+dewatermark(A.crop((682, 225, 757, 630)), [(45, 320, 75, 365)]).save('assets/sparta_wtall.webp', 'WEBP', quality=92, method=6)
+dewatermark(A.crop((0, 0, 592, 372)), [(280, 60, 352, 135)]).save('assets/sparta_scene.webp', 'WEBP', quality=90, method=6)
 print('escenarios listos', [k for k, _, _ in SP])
 
 # Oro del Gigante: símbolos y escenario sacados de las capturas de la máquina que compartió el usuario.

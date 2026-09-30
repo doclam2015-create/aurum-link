@@ -221,7 +221,7 @@ class Sfx {
   // Sonidos grabados (assets/sfx): entrada a bono, subida de nivel, "you win", jackpot, monedas
   // y 15 grabaciones de máquinas reales (real_1…real_15). Si aún no cargan, queda lo sintetizado.
   loadSfxPack(base = 'assets/sfx/') {
-    ['bonus_in1', 'bonus_in2', 'levelup2', 'levelup3', 'coin_loop', 'jackpot2', 'jackpot3', 'youwin1', 'youwin2', 'youwin3']
+    ['bonus_in1', 'bonus_in2', 'levelup2', 'levelup3', 'coin_loop', 'jackpot2', 'jackpot3', 'youwin1', 'youwin2', 'youwin3', 'sparta_fs', 'sparta_antic']
       .forEach(k => this.preload(k, base + k + '.mp3'));
     for (let i = 1; i <= 15; i++) this.preload('real_' + i, base + 'real_' + i + '.mp3');
   }

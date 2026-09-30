@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **69**, visible al final de Ajustes.
+- La versión actual es la **70**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -75,6 +75,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
   - "+N giros": `levelup`.
   - BIG/AWESOME/SUPER: `youwin` + `coin_loop` + `realMachine`.
   - Jackpots: `jackpot2/3`.
+  - Espartaco: `sparta_antic` (suspenso) y `sparta_fs` (entrada a giros gratis), recortados de videos de la máquina que subió el usuario.
 
 ## Flujo de trabajo estándar (seguirlo en cada pedido)
 
@@ -124,6 +125,7 @@ No poner identificadores de modelo en commits ni PRs.
   - Los personajes apilados (gigante, heroína, guerrera, Espartaco) se muestran como una figura alta, como en la máquina.
 - La v68 ([PR 40](https://github.com/doclam2015-create/aurum-link/pull/40)) rehízo el arte de Espartaco con las capturas de la máquina: escenario de piedra con brasero, marcos rojos, celdas crema, letras A/K/Q/J, gladiador con mayal como símbolo nuevo y símbolos repetidos por celda en el colosal. RTP ~94,5 %.
 - La v69 ([PR 41](https://github.com/doclam2015-create/aurum-link/pull/41)) hizo lo mismo con Oro del Gigante (símbolos y escenario de capturas de la máquina, sin el «10») y agregó el Coliseo BONUS de Espartaco al estilo de la máquina. RTP ~94 % en ambos.
+- La v70 ([PR 42](https://github.com/doclam2015-create/aurum-link/pull/42)) sumó la dinámica de los videos de Espartaco: marco eléctrico, medallón de giros gratis, fondo nocturno en giros gratis, todas las líneas juntas al ganar, sonidos grabados, y borró la marca de agua «BETO» (inpainting con OpenCV en `build_colossal.py`).
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
