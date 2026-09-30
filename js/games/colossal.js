@@ -10,9 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=63';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=63';
-import { spartaScene } from './scenes.js?v=63';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=64';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=64';
+import { spartaScene } from './scenes.js?v=64';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -66,8 +66,8 @@ export const SPARTA = {
     warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#ffe0a0', '#a86a10'], helm: ['#ffd0a0', '#8a3a0a'], chariot: ['#ffe8a0', '#a8761a'], sword: ['#e0e8f0', '#5a6a80'],
     heart: ['#ff6a6a', '#8a0a14'], spade: ['#7ab8ff', '#0a2a8a'], diamond: ['#ffc050', '#a84a04'], club: ['#6ae08a', '#0a5a24']
   },
-  badge: { lion: ['#c080ff', '#3a0a6a'], helm: ['#c8d0e0', '#2a3040'] }, tall: ['warrior'],
-  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD, da re-giro al transferirse)', mw: 'WILD x2…x25 (solo rodillo 5 del colosal)', warrior: 'Guerrera', lion: 'León', helm: 'Gladiador del yelmo', chariot: 'Carro de guerra', sword: 'Gladius', colis: 'Coliseo (BONUS)', heart: 'Corazón', spade: 'Pica', diamond: 'Diamante', club: 'Trébol' }
+  badge: { lion: ['#c080ff', '#3a0a6a'] }, tall: ['warrior', 'helm'],
+  names: { sparta: 'Espartaco (WILD)', super: 'Super Espartaco (WILD, da re-giro al transferirse)', mw: 'WILD x2…x25 (solo rodillo 5 del colosal)', warrior: 'Guerrera', lion: 'León', helm: 'Espartaco gladiador', chariot: 'Carro de guerra', sword: 'Gladius', colis: 'Coliseo (BONUS)', heart: 'Corazón', spade: 'Pica', diamond: 'Diamante', club: 'Trébol' }
 };
 
 // ---------- Lógica pura (se puede simular sin pantalla) ----------
@@ -200,7 +200,7 @@ const TALL = { bean: 3000, sparta: 3100 };
 function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 export function loadColossalArt() {
   const one = (k, f) => loadImg('assets/' + f).then(i => { IMG[k] = i; }).catch(() => { });
-  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('shero', 'sparta_hero.webp')]).then(() => cache.clear());
+  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('shero', 'sparta_hero.webp'), one('sheroine', 'sparta_heroine.webp'), one('sbg', 'sparta_bg.webp')]).then(() => cache.clear());
 }
 // Recorte de la hoja: [sx, sy, sw, sh]
 function src(k) { if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
@@ -252,6 +252,9 @@ function rankIcon(cfg, k, s, x) {
 }
 const SUITS = { heart: 1, spade: 1, diamond: 1, club: 1 };
 const isLow = (cfg, k) => cfg.low.includes(k);
+// Personajes con imagen de cuerpo entero: [imagen, posición horizontal de la cara (0–1)]
+const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], warrior: ['sheroine', 0.55, [48, 0, 156, 156]], helm: ['shero', 0.6, [76, 6, 148, 148]] };
+const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
 function suitPath(x, k, s) {
   const c = s / 2; x.beginPath();
   if (k === 'heart') { x.moveTo(c, s * 0.84); x.bezierCurveTo(s * 0.1, s * 0.5, s * 0.08, s * 0.16, c - s * 0.18, s * 0.16); x.bezierCurveTo(c - s * 0.06, s * 0.16, c, s * 0.26, c, s * 0.3); x.bezierCurveTo(c, s * 0.26, c + s * 0.06, s * 0.16, c + s * 0.18, s * 0.16); x.bezierCurveTo(s * 0.92, s * 0.16, s * 0.9, s * 0.5, c, s * 0.84); }
@@ -296,6 +299,14 @@ export function symIcon(cfg, k, size, mult) {
     if (k === 'bean') { tile(x, s, s, '#9aeaa0', '#1a6a2a'); x.restore(); art(x, 'bean', 0, 0, s, s * 0.86, 1.05); label(x, s / 2, 'WILD', s * 0.8, s * 0.26, s * 0.92); return; }
     if (k === 'mw') { tile(x, s, s, '#ffd870', '#6a2a04'); x.restore(); art(x, 'shield', 0, s * 0.02, s, s * 0.66, 0.95); label(x, s / 2, 'x' + (mult || 2), s * 0.76, s * 0.3, s * 0.92, ['#fff', '#ff5a2a']); return; }
     if (k === 'colis') { tile(x, s, s, '#ffe0a0', '#8a3a0a'); x.restore(); x.drawImage(glow('rgba(255,210,80,1)', 64), 0, 0, s, s); art(x, 'colis', 0, s * 0.04, s, s * 0.72, 0.95); label(x, s / 2, 'BONUS', s * 0.84, s * 0.19, s * 0.9); return; }
+    if (heroOf(k)) {
+      // retrato recortado de la misma imagen del personaje, en un marco de retrato
+      const [key, , [sx, sy, sw, sh]] = heroOf(k), m = s * 0.05, r = s * 0.12;
+      roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.fillStyle = '#000'; x.fill(); x.restore();
+      x.save(); roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.clip(); x.imageSmoothingQuality = 'high'; x.drawImage(IMG[key], sx, sy, sw, sh, m, m, s - 2 * m, s - 2 * m); x.restore();
+      x.lineWidth = s * 0.045; x.strokeStyle = k === 'giant' ? '#ffd24a' : '#e8a050'; roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.stroke();
+      return;
+    }
     if (cfg.badge && cfg.badge[k]) {
       // óvalo de color detrás de la figura, como en la máquina
       const [c1, c2] = cfg.badge[k], g = x.createRadialGradient(s * 0.45, s * 0.38, 1, s / 2, s / 2, s * 0.5);
@@ -453,25 +464,26 @@ class Colossal {
     } else {
       // Espartaco de cuerpo entero a la izquierda y el logo dorado
       // sin agrandar la figura más allá de su tamaño original (se vería borrosa)
-      spartaScene(x, bx, by, bw, bh, true);
-      const sh = IMG.shero, fh = Math.min(bh, 240 * 1.6 / this.app.dpr), fw = sh ? Math.max(fh * sh.width / sh.height, bw * 0.22) : bw * 0.22;
-      if (sh) {
-        // la figura se funde con el fondo por arriba y por la derecha (sin bordes rectos)
-        const hw = fh * sh.width / sh.height, d = this.app.dpr, t = makeCanvas(hw * d, fh * d), tx = t.getContext('2d');
-        tx.imageSmoothingQuality = 'high'; tx.drawImage(sh, 0, 0, t.width, t.height); tx.globalCompositeOperation = 'destination-in';
-        const gr = tx.createLinearGradient(0, 0, t.width, 0); gr.addColorStop(0.55, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); tx.fillStyle = gr; tx.fillRect(0, 0, t.width, t.height);
-        const gt = tx.createLinearGradient(0, 0, 0, t.height * 0.25); gt.addColorStop(0, 'rgba(0,0,0,0)'); gt.addColorStop(1, 'rgba(0,0,0,1)'); tx.fillStyle = gt; tx.fillRect(0, 0, t.width, t.height);
-        x.drawImage(t, bx, by + bh - fh, hw, fh);
-      }
-      const cs = Math.min(bh * 0.5, 196 * 1.2 / this.app.dpr, bw * 0.3); if (bh > 90) { x.globalAlpha = 0.9; art(x, 'colis', bx + bw - cs - 6, by + bh - cs - 4, cs, cs); x.globalAlpha = 1; }
-      const lx = bx + fw + (bw - fw) / 2, fs = Math.min(bh * 0.3, (bw - fw) * 0.16, 40);
-      goldText(x, 'ESPARTACO', lx, by + bh * (bh > 90 ? 0.4 : 0.36), fs, { maxW: (bw - fw) * 0.92, stroke: '#3a0400', glowColor: '#ff6a2a' });
+      x.fillStyle = '#1a6a8a'; x.fillRect(bx, by, bw, bh); if (IMG.sbg) cover(x, IMG.sbg, bx, by, bw, bh, 0.5, 0.6); else spartaScene(x, bx, by, bw, bh, true);
+      const d = this.app.dpr, fh = Math.min(bh, 500 * 1.6 / d);
+      // figura fundida con el fondo por el lado de adentro (sin bordes rectos)
+      const figure = (img, left) => {
+        if (!img) return 0;
+        const hw = fh * img.width / img.height, t = makeCanvas(hw * d, fh * d), tx = t.getContext('2d');
+        tx.imageSmoothingQuality = 'high'; tx.drawImage(img, 0, 0, t.width, t.height); tx.globalCompositeOperation = 'destination-in';
+        const gr = tx.createLinearGradient(0, 0, t.width, 0); if (left) { gr.addColorStop(0.7, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); } else { gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, 'rgba(0,0,0,1)'); }
+        tx.fillStyle = gr; tx.fillRect(0, 0, t.width, t.height);
+        x.drawImage(t, left ? bx : bx + bw - hw, by + bh - fh, hw, fh); return hw;
+      };
+      figure(IMG.shero, true); if (bh > 60) figure(IMG.sheroine, false);
+      const lx = bx + bw / 2, fs = Math.min(bh * 0.3, bw * 0.13, 40);
+      goldText(x, 'ESPARTACO', lx, by + bh * (bh > 90 ? 0.4 : 0.36), fs, { maxW: bw * 0.6, stroke: '#3a0400', glowColor: '#ff6a2a' });
       const sf = Math.max(9, fs * 0.42);
       x.font = '900 ' + sf + 'px ' + FONT; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const tw = Math.min((bw - fw) * 0.8, x.measureText('SUPER COLOSO').width + sf * 2), ty = by + bh * (bh > 90 ? 0.4 : 0.36) + fs * 0.85;
+      const tw = Math.min(bw * 0.5, x.measureText('SUPER COLOSO').width + sf * 2), ty = by + bh * (bh > 90 ? 0.4 : 0.36) + fs * 0.85;
       x.fillStyle = '#12306a'; roundRect(x, lx - tw / 2, ty - sf * 0.8, tw, sf * 1.6, sf * 0.5); x.fill(); x.strokeStyle = '#f5d27a'; x.lineWidth = 1.5; x.stroke();
       x.fillStyle = '#ffe07a'; x.fillText('SUPER COLOSO', lx, ty, tw * 0.9);
-      if (bh > 120) { x.fillStyle = '#fff4d8'; x.font = '700 ' + Math.min(14, bh * 0.07) + 'px ' + FONT; x.fillText('3+ coliseos = 10, 15 o 20 giros gratis', lx, by + bh - 18, (bw - fw) * 0.92); }
+      if (bh > 120) { x.fillStyle = '#fff4d8'; x.font = '700 ' + Math.min(14, bh * 0.07) + 'px ' + FONT; x.fillText('3+ coliseos = 10, 15 o 20 giros gratis', lx, by + bh - 18, bw * 0.5); }
     }
     x.restore();
   }
@@ -505,19 +517,19 @@ class Colossal {
       const px = this.mx + c * this.cw, py = this.my + (r + this.main.columns[c].shift) * this.ch, pw = this.cw, ph = n * this.ch;
       let hit = false; if (w && w.set === 'main' && c < w.n && w.line[c] >= r && w.line[c] < r + n) hit = true;
       x.globalAlpha = w && !hit ? 0.4 : 1;
-      if (k === 'giant' && IMG.hero) this.heroPanel(x, px, py, pw, ph, n / 4, 1);
+      if (heroOf(k)) this.heroPanel(x, px, py, pw, ph, n / 4, k);
       else this.charPanel(x, k, px, py, pw, ph);
       x.globalAlpha = 1;
     });
   }
   // Gigante de cuerpo entero: se ve la parte de arriba si la pila es corta
-  heroPanel(x, px, py, w, h, frac) {
-    const img = IMG.hero; x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip();
+  heroPanel(x, px, py, w, h, frac, k, rim) {
+    const [key, fx] = heroOf(k), img = IMG[key]; x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip();
     let sh = img.height * Math.max(0.3, frac), sw = sh * w / h;
     if (sw > img.width) { sw = img.width; sh = sw * h / w; }
-    const sx = Math.max(0, Math.min(img.width - sw, img.width * 0.4 - sw / 2));
+    const sx = Math.max(0, Math.min(img.width - sw, img.width * fx - sw / 2));
     x.imageSmoothingQuality = 'high'; x.drawImage(img, sx, 0, sw, sh, px, py, w, h);
-    x.restore(); x.strokeStyle = '#ffd24a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+    x.restore(); x.strokeStyle = rim || '#ffd24a'; x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
   charPanel(x, k, px, py, w, h) {
@@ -568,13 +580,13 @@ class Colossal {
           }
         } else {
           // figura colosal: panel de la pila + imagen grande
-          if (hh > bch * 1.5 && !s.mult && !isWild(cfg, s.k) && s.k !== cfg.scatter && !isLow(cfg, s.k) && !(s.k === 'giant' && IMG.hero)) {
+          if (hh > bch * 1.5 && !s.mult && !isWild(cfg, s.k) && s.k !== cfg.scatter && !isLow(cfg, s.k) && !heroOf(s.k)) {
             const [c1, c2] = cfg.colors[s.k] || ['#fff', '#888'], pg = x.createLinearGradient(0, py, 0, py + hh);
             pg.addColorStop(0, c1); pg.addColorStop(1, c2); x.globalAlpha *= 0.35; x.fillStyle = pg; roundRect(x, px + 2, py + 2, bcw - 4, hh - 4, 6); x.fill(); x.globalAlpha = w && !hit ? 0.4 : 1;
           }
           const cx = px + bcw / 2, cy = py + hh / 2;
           if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, bcw, hh);
-          if (s.k === 'giant' && IMG.hero && hh > bch * 1.5) this.heroPanel(x, px, py, bcw, hh, Math.min(1, (e - r) / 4), hit ? pulse : 1);
+          if (heroOf(s.k) && hh > bch * 1.5) this.heroPanel(x, px, py, bcw, hh, Math.min(1, (e - r) / 4), s.k);
           else if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || isLow(cfg, s.k) || cfg.badge[s.k]) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
           else { const f = 0.96 * pulse, cap = 250 / dpr * pulse, ww = Math.min(bcw * f, cap), h2 = Math.min(hh * f, cap); x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
         }
@@ -603,7 +615,8 @@ class Colossal {
       const per = Math.max(1, Math.round(w * 0.85 / cellH)), n = Math.max(1, Math.round(h / (cellH * per))), sh = h / n, sz = Math.min(w, sh) * 0.98;
       for (let i = 0; i < n; i++) x.drawImage(symIcon(cfg, sup ? cfg.super : cfg.wild, sz * this.app.dpr), px + (w - sz) / 2, py + i * sh + (sh - sz) / 2, sz, sz);
     } else {
-      const bs = Math.min(w * 0.92, h * 0.62); x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; art(x, 'bust', px + (w - bs) / 2, py + h * 0.08, bs, bs, 1); x.restore();
+      if (IMG.shero) { const img = IMG.shero, s2 = Math.max(w / img.width, h / img.height); x.imageSmoothingQuality = 'high'; x.drawImage(img, px + (w - img.width * s2) * 0.35, py, img.width * s2, img.height * s2); if (sup) { x.globalCompositeOperation = 'overlay'; x.fillStyle = 'rgba(255,200,60,0.45)'; x.fillRect(px, py, w, h); x.globalCompositeOperation = 'source-over'; } }
+      else { const bs = Math.min(w * 0.92, h * 0.62); art(x, 'bust', px + (w - bs) / 2, py + h * 0.08, bs, bs, 1); }
     }
     x.globalCompositeOperation = 'lighter'; x.globalAlpha = 0.18 + 0.12 * Math.sin(time * 4 + c);
     x.drawImage(glow(giant ? 'rgba(160,255,160,1)' : 'rgba(255,200,90,1)', 64), px - w * 0.3, py, w * 1.6, h);
