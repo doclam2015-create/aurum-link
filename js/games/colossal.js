@@ -10,9 +10,9 @@
 //    llevaba un Super Espartaco, da un RE-GIRO con los WILD fijos (hasta 9 seguidos). El rodillo 5
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos = 10/15/20 giros gratis.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=64';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=64';
-import { spartaScene } from './scenes.js?v=64';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas } from '../gfx.js?v=65';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=65';
+import { spartaScene } from './scenes.js?v=65';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -345,31 +345,18 @@ class Colossal {
   get locked() { return this.inFree; }
   get animating() { return true; }
 
-  // Como la máquina real: principal a la izquierda con el escenario encima y colosal a la derecha.
-  // En pantallas angostas (iPhone en vertical) el colosal va debajo del principal.
+  // Como la máquina real: SIEMPRE lado a lado, el principal a la izquierda (con el escenario
+  // encima) y el colosal a la derecha, ocupando todo el alto. También en el iPhone en vertical.
   resize(W, H) {
     this.W = W; this.H = H;
-    const pad = 10, gap = 18;
-    this.side = W / H >= 0.78;
-    if (this.side) {
-      const b = (W - 2 * pad - gap) / 12.5, cw = b * 1.5;
-      const tabs = this.cfg.id === 'giant' ? 0 : 14;
-      let bch = Math.min((H - 2 * pad - tabs) / BIG_ROWS, b * 1.15), bcw = b;
-      const tot = bch * BIG_ROWS, ch = Math.min(cw * 0.86, (tot - gap - 40) / ROWS);
-      const tw = cw * COLS + gap + bcw * COLS, x0 = (W - tw) / 2, y0 = (H - tot + tabs) / 2;
-      Object.assign(this, { cw, ch, bcw, bch, mx: x0, my: y0 + tot - ch * ROWS, bx: x0 + cw * COLS + gap, by: y0 });
-      this.banner = [x0, y0, cw * COLS, this.my - gap - y0];
-    } else {
-      const cw = (W - 2 * pad) / COLS; let ch = cw * 0.74;
-      const bannerH = Math.max(40, Math.min(cw * 0.9, H * 0.11));
-      let bch = (H - 2 * pad - bannerH - ch * ROWS - 2 * gap) / BIG_ROWS;
-      if (bch < cw * 0.3) { ch = cw * 0.62; bch = (H - 2 * pad - bannerH - ch * ROWS - 2 * gap) / BIG_ROWS; }
-      bch = Math.max(12, Math.min(bch, cw * 0.55));
-      const tot = bannerH + gap + ch * ROWS + gap + bch * BIG_ROWS, y0 = Math.max(pad, (H - tot) / 2);
-      Object.assign(this, { cw, ch, bcw: cw, bch, mx: pad, my: y0 + bannerH + gap });
-      this.bx = pad; this.by = this.my + ch * ROWS + gap;
-      this.banner = [pad, y0, cw * COLS, bannerH];
-    }
+    const narrow = W / H < 0.78, pad = narrow ? 6 : 10, gap = narrow ? 10 : 18, tabs = this.cfg.id === 'giant' ? 0 : 14;
+    this.side = true;
+    const b = (W - 2 * pad - gap) / 12.5, cw = b * 1.5, bcw = b;
+    const bch = Math.min((H - 2 * pad - tabs) / BIG_ROWS, b * (narrow ? 1.7 : 1.15));
+    const tot = bch * BIG_ROWS, ch = Math.min(cw * (narrow ? 1.05 : 0.86), (tot - gap - 40) / ROWS);
+    const tw = cw * COLS + gap + bcw * COLS, x0 = (W - tw) / 2, y0 = (H - tot + tabs) / 2;
+    Object.assign(this, { cw, ch, bcw, bch, mx: x0, my: y0 + tot - ch * ROWS, bx: x0 + cw * COLS + gap, by: y0 });
+    this.banner = [x0, y0, cw * COLS, this.my - gap - y0];
     this.main.layout(this.mx, this.my, this.cw, this.ch);
     this.big.layout(this.bx, this.by, this.bcw, this.bch);
     this.bgCache = null;
@@ -465,11 +452,11 @@ class Colossal {
       // Espartaco de cuerpo entero a la izquierda y el logo dorado
       // sin agrandar la figura más allá de su tamaño original (se vería borrosa)
       x.fillStyle = '#1a6a8a'; x.fillRect(bx, by, bw, bh); if (IMG.sbg) cover(x, IMG.sbg, bx, by, bw, bh, 0.5, 0.6); else spartaScene(x, bx, by, bw, bh, true);
-      const d = this.app.dpr, fh = Math.min(bh, 500 * 1.6 / d);
+      const d = this.app.dpr, fhOf = img => Math.min(bh, 500 * 1.6 / d, bw * 0.5 * img.height / img.width);
       // figura fundida con el fondo por el lado de adentro (sin bordes rectos)
       const figure = (img, left) => {
         if (!img) return 0;
-        const hw = fh * img.width / img.height, t = makeCanvas(hw * d, fh * d), tx = t.getContext('2d');
+        const fh = fhOf(img), hw = fh * img.width / img.height, t = makeCanvas(hw * d, fh * d), tx = t.getContext('2d');
         tx.imageSmoothingQuality = 'high'; tx.drawImage(img, 0, 0, t.width, t.height); tx.globalCompositeOperation = 'destination-in';
         const gr = tx.createLinearGradient(0, 0, t.width, 0); if (left) { gr.addColorStop(0.7, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); } else { gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, 'rgba(0,0,0,1)'); }
         tx.fillStyle = gr; tx.fillRect(0, 0, t.width, t.height);
