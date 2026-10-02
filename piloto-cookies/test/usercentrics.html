@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Usercentrics shadow</title></head>
+<body><h1>Usercentrics en shadow DOM</h1><div id="usercentrics-root"></div>
+<script>
+const r=document.getElementById('usercentrics-root').attachShadow({mode:'open'});
+r.innerHTML='<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;padding:30px;border-top:1px solid">Privacidad: usamos cookies <button data-testid="uc-deny-all-button">Denegar</button><button data-testid="uc-accept-all-button">Aceptar todo</button></div>';
+r.querySelector('[data-testid=uc-deny-all-button]').onclick=()=>{window.RESULT='reject';document.getElementById('usercentrics-root').remove()};
+</script></body></html>

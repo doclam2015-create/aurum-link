@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Piloto de Cookies · Panel</title>
+<link rel="icon" href="../icons/icon-32.png">
+<link rel="stylesheet" href="../shared/ui.css">
+<link rel="stylesheet" href="options.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><img src="../icons/icon-96.png" alt=""><div><strong>Piloto de Cookies</strong><span class="faint">Privacidad sin interrupciones</span></div></div>
+    <nav id="nav">
+      <a href="#inicio" data-i="M3 12l9-8 9 8M5 10v10h14V10">Inicio</a>
+      <a href="#preferencias" data-i="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4">Preferencias</a>
+      <a href="#proteccion" data-i="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z">Protección</a>
+      <a href="#sitios" data-i="M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18">Sitios</a>
+      <a href="#ocultos" data-i="M3 3l18 18M10.6 6.1A10 10 0 0122 12s-1.2 2.4-3.5 4.4M6.1 6.9C3.6 8.8 2 12 2 12s3.6 7 10 7c1.6 0 3-.4 4.3-1">Elementos ocultos</a>
+      <a href="#historial" data-i="M12 7v5l3 2M3 12a9 9 0 109-9 9 9 0 00-7 3.3M3 4v4h4">Historial</a>
+      <a href="#compatibilidad" data-i="M9 12l2 2 4-4M7 3h10l4 4v10l-4 4H7l-4-4V7z">Compatibilidad</a>
+      <a href="#respaldo" data-i="M12 3v12M7 10l5 5 5-5M4 17v3h16v-3">Respaldo</a>
+      <a href="#ayuda" data-i="M12 17h0M9.1 9a3 3 0 015.8 1c0 2-3 2.5-3 4M12 3a9 9 0 100 18 9 9 0 000-18z">Ayuda</a>
+    </nav>
+    <div class="sideFoot">
+      <label class="row"><span>Activo</span><span class="switch"><input type="checkbox" id="enabled"><span></span></span></label>
+      <div class="faint ver" id="ver"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- INICIO -->
+    <section id="v-inicio" class="view">
+      <header class="vh"><h1>Hola 👋</h1><p class="muted" id="hello">Así ha trabajado tu piloto.</p></header>
+      <div class="kpis">
+        <div class="card kpi"><span>Avisos respondidos</span><b id="kTotal">0</b><small id="kSince" class="faint"></small></div>
+        <div class="card kpi"><span>Hoy</span><b id="kToday">0</b><small id="kWeek" class="faint"></small></div>
+        <div class="card kpi"><span>Tiempo ahorrado</span><b id="kTime">0 s</b><small class="faint">estimado</small></div>
+        <div class="card kpi"><span>Enlaces limpiados</span><b id="kStrip">0</b><small class="faint">parámetros de rastreo</small></div>
+      </div>
+      <div class="two">
+        <div class="card pad">
+          <div class="ch"><h3>Últimos 30 días</h3><span class="faint" id="chartSum"></span></div>
+          <div id="chart" class="chart"></div>
+        </div>
+        <div class="card pad">
+          <div class="ch"><h3>Cómo respondió</h3></div>
+          <div class="donutWrap"><svg id="donut" viewBox="0 0 120 120"></svg><div id="donutLeg" class="leg"></div></div>
+        </div>
+      </div>
+      <div class="two">
+        <div class="card pad"><div class="ch"><h3>Plataformas más vistas</h3></div><ol id="topCmp" class="rank"></ol></div>
+        <div class="card pad"><div class="ch"><h3>Sitios con más avisos</h3></div><ol id="topSites" class="rank"></ol></div>
+      </div>
+    </section>
+
+    <!-- PREFERENCIAS -->
+    <section id="v-preferencias" class="view">
+      <header class="vh"><h1>Preferencias de cookies</h1><p class="muted">Elige qué responde el piloto cuando un sitio te pregunta por las cookies.</p></header>
+      <div class="modes" id="modes">
+        <button class="card mode" data-v="reject"><span class="mi">🛡️</span><b>Sólo necesarias</b><small>Rechaza todo lo opcional. La opción más privada.</small></button>
+        <button class="card mode" data-v="custom"><span class="mi">🎛️</span><b>Personalizado</b><small>Tú eliges cada categoría.</small></button>
+        <button class="card mode" data-v="accept"><span class="mi">✅</span><b>Aceptar todo</b><small>Acepta y cierra el aviso sin preguntar.</small></button>
+      </div>
+      <div class="card list" id="catList"></div>
+      <p class="note muted">Cuando un sitio no permite elegir categorías, el piloto elige la opción más privada (sólo necesarias). Puedes fijar una preferencia distinta para cada sitio en <a href="#sitios">Sitios</a>.</p>
+    </section>
+
+    <!-- PROTECCIÓN -->
+    <section id="v-proteccion" class="view">
+      <header class="vh"><h1>Protección extra</h1><p class="muted">Funciones adicionales para navegar más tranquilo.</p></header>
+      <div class="card list" id="protList"></div>
+      <div class="card list">
+        <div class="item"><div><b>Tiempo por aviso</b><small>Segundos que estimas ahorrar cada vez (para la estadística).</small></div><input type="number" id="secs" min="1" max="60" style="width:80px"></div>
+        <div class="item"><div><b>Apariencia</b><small>Claro, oscuro o según el sistema.</small></div>
+          <div class="seg" id="theme" style="min-width:220px"><button data-v="auto">Auto</button><button data-v="light">Claro</button><button data-v="dark">Oscuro</button></div></div>
+      </div>
+    </section>
+
+    <!-- SITIOS -->
+    <section id="v-sitios" class="view">
+      <header class="vh"><h1>Preferencias por sitio</h1><p class="muted">Excepciones a la preferencia general: pausa el piloto en un banco o acepta todo en un sitio de confianza.</p></header>
+      <form class="card addRow" id="addSite">
+        <input type="text" id="siteHost" placeholder="ejemplo.cl" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+        <select id="siteMode"><option value="reject">Sólo necesarias</option><option value="custom">Personalizado</option><option value="accept">Aceptar todo</option><option value="off">Desactivado</option></select>
+        <button class="btn primary">Agregar</button>
+      </form>
+      <input type="search" id="siteSearch" placeholder="Buscar sitio…" class="search">
+      <div class="card list" id="siteList"></div>
+    </section>
+
+    <!-- OCULTOS -->
+    <section id="v-ocultos" class="view">
+      <header class="vh"><h1>Elementos ocultos</h1><p class="muted">Desde la ventana del piloto toca «Ocultar elemento» y elige cualquier aviso, barra o ventana molesta. Queda oculto siempre en ese sitio.</p></header>
+      <form class="card addRow" id="addHide">
+        <input type="text" id="hideHost" placeholder="sitio.com" autocapitalize="off" spellcheck="false" required>
+        <input type="text" id="hideSel" placeholder="Selector CSS, por ejemplo .newsletter-popup" autocapitalize="off" spellcheck="false" required>
+        <button class="btn primary">Agregar</button>
+      </form>
+      <div class="card list" id="hideList"></div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="v-historial" class="view">
+      <header class="vh"><h1>Historial</h1><p class="muted">Los últimos avisos que respondió el piloto. Se guarda sólo en este dispositivo.</p></header>
+      <div class="tools">
+        <input type="search" id="logSearch" placeholder="Filtrar por sitio o plataforma…" class="search">
+        <select id="logAction"><option value="">Todas las acciones</option><option value="reject">Sólo necesarias</option><option value="custom">Personalizado</option><option value="accept">Aceptado</option><option value="hidden">Oculto</option></select>
+        <button class="btn" id="logCsv">Exportar CSV</button>
+        <button class="btn danger" id="logClear">Borrar</button>
+      </div>
+      <div class="card"><table class="tbl"><thead><tr><th>Cuándo</th><th>Sitio</th><th>Plataforma</th><th>Acción</th><th>Tiempo</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    </section>
+
+    <!-- COMPATIBILIDAD -->
+    <section id="v-compatibilidad" class="view">
+      <header class="vh"><h1>Compatibilidad</h1><p class="muted" id="compatIntro"></p></header>
+      <div class="chips" id="cmpChips"></div>
+      <div class="card pad note2">
+        <h3>¿Y si el aviso no es de una plataforma conocida?</h3>
+        <p class="muted">El piloto analiza el texto del aviso en español, inglés, alemán, francés, italiano, portugués y otros idiomas, y busca el botón de «Rechazar», «Sólo necesarias» o «Aceptar» según tu preferencia. Si no encuentra cómo responder, lo oculta y te devuelve el desplazamiento de la página.</p>
+      </div>
+    </section>
+
+    <!-- RESPALDO -->
+    <section id="v-respaldo" class="view">
+      <header class="vh"><h1>Respaldo</h1><p class="muted">Lleva tu configuración del Mac al iPhone o iPad, o guárdala por si acaso.</p></header>
+      <div class="card list">
+        <div class="item"><div><b>Exportar configuración</b><small>Preferencias, sitios y elementos ocultos en un archivo .json.</small></div><button class="btn" id="exp">Exportar</button></div>
+        <div class="item"><div><b>Importar configuración</b><small>Reemplaza la configuración actual por la del archivo.</small></div><label class="btn">Importar<input type="file" id="imp" accept="application/json,.json" hidden></label></div>
+        <div class="item"><div><b>Copiar como texto</b><small>Útil para pegarla en Notas y abrirla en otro equipo.</small></div><button class="btn" id="copyCfg">Copiar</button></div>
+        <div class="item"><div><b>Pegar desde texto</b><small>Pega aquí una configuración copiada.</small></div><button class="btn" id="pasteCfg">Pegar</button></div>
+        <div class="item"><div><b>Reiniciar estadísticas</b><small>Borra contadores e historial.</small></div><button class="btn danger" id="resetStats">Reiniciar</button></div>
+        <div class="item"><div><b>Restablecer todo</b><small>Vuelve a la configuración de fábrica.</small></div><button class="btn danger" id="resetAll">Restablecer</button></div>
+      </div>
+    </section>
+
+    <!-- AYUDA -->
+    <section id="v-ayuda" class="view">
+      <header class="vh"><h1>Ayuda</h1></header>
+      <div class="card pad prose">
+        <h3>Activar en Safari</h3>
+        <p><b>Mac:</b> Safari → Ajustes → Extensiones → marca <i>Piloto de Cookies</i> y en «Permitir en» elige <i>Todos los sitios web</i>.</p>
+        <p><b>iPhone y iPad:</b> Ajustes → Apps → Safari → Extensiones → <i>Piloto de Cookies</i> → actívala y permite «Todos los sitios web». En Safari, toca el botón <i>aA</i> o el ícono de extensiones de la barra para abrir la ventana del piloto.</p>
+        <h3>¿Qué hace exactamente?</h3>
+        <ul>
+          <li>Responde los avisos de cookies por ti según tu preferencia, usando la API oficial de la plataforma cuando existe o pulsando los botones correctos.</li>
+          <li>Si no puede responder, oculta el aviso y vuelve a permitir el desplazamiento.</li>
+          <li>Envía la señal <i>Global Privacy Control</i> (no vender ni compartir mis datos).</li>
+          <li>Quita de los enlaces los parámetros de rastreo (utm, fbclid, gclid…).</li>
+          <li>Te muestra qué cookies tiene cada sitio y te deja borrarlas.</li>
+        </ul>
+        <h3>Los botones de la ventana rápida</h3>
+        <ul>
+          <li><b>Responder de nuevo:</b> vuelve a buscar el aviso de la página y lo responde.</li>
+          <li><b>Ver el aviso:</b> recarga la página sin el piloto, una sola vez, para que respondas tú.</li>
+          <li><b>Ocultar elemento:</b> toca cualquier ventana o barra molesta; «Ampliar» toma el contenedor mayor y «Ocultar siempre» lo guarda para ese sitio.</li>
+          <li><b>Cookies:</b> muestra las cookies del sitio clasificadas por colores (necesarias, preferencias, estadísticas, publicidad, otras).</li>
+          <li><b>Borrar datos:</b> elimina las cookies y datos guardados del sitio (puede cerrar tu sesión ahí).</li>
+          <li><b>En este sitio:</b> General, Necesarias, Elegir, Todas o Pausa, sólo para la página actual.</li>
+        </ul>
+        <h3>Qué significa el ícono</h3>
+        <p>✓ verde: rechazó o personalizó · ✓ naranjo: aceptó · • azul: lo ocultó · ❚❚: en pausa.</p>
+        <h3>Un sitio dejó de funcionar</h3>
+        <p>Abre la ventana del piloto en ese sitio y elige <b>Pausa</b> en «En este sitio», o toca <b>Ver el aviso</b> para mostrarlo una vez y responderlo tú.</p>
+        <h3>Privacidad</h3>
+        <p>Todo ocurre en tu dispositivo. El piloto no envía datos a ningún servidor, no tiene cuentas ni publicidad.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="welcome" id="welcome" hidden>
+  <div class="card wcard">
+    <img src="../icons/icon-256.png" alt="" class="wlogo">
+    <h1>Bienvenido a Piloto de Cookies</h1>
+    <p class="muted">Desde ahora respondo los avisos de cookies por ti. ¿Qué prefieres?</p>
+    <div class="wopts">
+      <button class="card mode" data-v="reject"><span class="mi">🛡️</span><b>Sólo necesarias</b><small>Recomendado</small></button>
+      <button class="card mode" data-v="custom"><span class="mi">🎛️</span><b>Personalizado</b><small>Elegir categorías</small></button>
+      <button class="card mode" data-v="accept"><span class="mi">✅</span><b>Aceptar todo</b><small>Sólo cerrar avisos</small></button>
+    </div>
+    <p class="faint small">Recuerda permitir la extensión en «Todos los sitios web» en los ajustes de Safari.</p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../shared/common.js"></script>
+<script src="../content/rules.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

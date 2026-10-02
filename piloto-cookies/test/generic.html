@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Genérico</title>
+<style>.aviso{position:fixed;bottom:20px;left:20px;right:20px;background:#222;color:#fff;padding:20px;border-radius:12px}</style></head>
+<body><h1>Sitio con aviso propio</h1><p>Contenido</p>
+<script>setTimeout(()=>{const d=document.createElement('div');d.className='aviso';d.innerHTML='<p>Utilizamos cookies propias y de terceros para analizar el tráfico. Puedes aceptar o rechazar su uso.</p><a href="#" class="b1">Configurar</a> <button class="b2">Rechazar todo</button> <button class="b3">Aceptar todo</button>';document.body.appendChild(d);d.querySelector('.b2').onclick=()=>{window.RESULT='reject';d.remove()};d.querySelector('.b3').onclick=()=>{window.RESULT='accept';d.remove()};},1200);</script>
+</body></html>

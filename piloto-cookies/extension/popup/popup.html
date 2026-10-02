@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piloto de Cookies</title>
+<link rel="stylesheet" href="../shared/ui.css">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <img src="../icons/icon-96.png" alt="" class="logo">
+    <div class="ttl"><strong>Piloto de Cookies</strong><span id="globalState" class="faint">Activo en todos los sitios</span></div>
+    <label class="switch" title="Activar o pausar en todos los sitios"><input type="checkbox" id="enabled"><span></span></label>
+  </header>
+
+  <section class="card site">
+    <div class="siteHead">
+      <div class="fav" id="fav">?</div>
+      <div class="siteInfo">
+        <div class="host" id="host">—</div>
+        <div class="detail" id="detail"><span class="pill">Revisando…</span></div>
+      </div>
+    </div>
+    <div class="label">En este sitio</div>
+    <div class="seg" id="siteMode">
+      <button data-v="global">General</button>
+      <button data-v="reject">Necesarias</button>
+      <button data-v="custom">Elegir</button>
+      <button data-v="accept">Todas</button>
+      <button data-v="off">Pausa</button>
+    </div>
+    <div class="cats" id="siteCats" hidden></div>
+  </section>
+
+  <section class="grid">
+    <button class="tile" id="reapply"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg><span>Responder de nuevo</span></button>
+    <button class="tile" id="showOnce"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg><span>Ver el aviso</span></button>
+    <button class="tile" id="pick"><svg viewBox="0 0 24 24"><path d="M3 3l7.5 18 2.6-7.4L20.5 11 3 3Z" /></svg><span>Ocultar elemento</span></button>
+    <button class="tile" id="inspect"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="9" cy="10" r="1.2" /><circle cx="14.5" cy="14" r="1.2" /><circle cx="14" cy="8.5" r="1" /></svg><span>Cookies <b id="ckCount"></b></span></button>
+    <button class="tile" id="clear"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg><span>Borrar datos</span></button>
+    <button class="tile" id="panel"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg><span>Panel</span></button>
+  </section>
+
+  <section class="card inspector" id="inspector" hidden>
+    <div class="inspHead"><strong>Cookies de este sitio</strong><span class="faint" id="inspNote"></span></div>
+    <div class="bars" id="ckBars"></div>
+    <ul id="ckList"></ul>
+  </section>
+
+  <section class="card modeCard">
+    <div class="label">Preferencia general</div>
+    <div class="seg" id="globalMode">
+      <button data-v="reject">Sólo necesarias</button>
+      <button data-v="custom">Personalizado</button>
+      <button data-v="accept">Aceptar todo</button>
+    </div>
+    <div class="cats" id="globalCats" hidden></div>
+  </section>
+
+  <footer class="stats">
+    <div><b id="stToday">0</b><span>hoy</span></div>
+    <div><b id="stTotal">0</b><span>en total</span></div>
+    <div><b id="stTime">0 s</b><span>ahorrado</span></div>
+  </footer>
+</main>
+<div class="toast" id="toast"></div>
+<script src="../shared/common.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
