@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=76';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=76';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=77';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=77';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -27,9 +27,8 @@ export const LINES = mainLines();
 // cada banda de 4 filas del colosal usa 20 líneas que pasan por sus 4 filas (también la de abajo)
 const BAND = [0, 1, 2, 20, 3, 4, 21, 22, 5, 6, 23, 24, 7, 8, 25, 26, 9, 10, 13, 14].map(i => LINES[i]);
 export const BIG_LINES = [0, 4, 8].flatMap(b => BAND.map(L => L.map(r => r + b)));
-// Personajes (gigante/heroína, Espartaco/guerrera): nunca en una sola casilla. En el principal ocupan
-// el rodillo entero (4 filas) y en el colosal una pila de 6 filas, siempre de cuerpo completo.
-const HERO_H = 6;
+// Personajes (gigante/heroína, Espartaco/guerrera): nunca en una sola casilla. Como en la máquina,
+// cuando caen ocupan el rodillo entero (4 filas en el principal, 12 en el colosal), de cuerpo completo.
 const SCAT_REELS = [0, 2, 4];
 // Huevos de oro a la vista → giros gratis (3 huevos = 5 giros … 40 o más = 100 giros)
 const EGG_SPINS = [[40, 100], [35, 80], [30, 65], [25, 50], [20, 40], [16, 30], [13, 25], [10, 20], [8, 15], [7, 12], [6, 10], [5, 8], [4, 6], [3, 5]];
@@ -46,8 +45,8 @@ export const GIANT = {
     cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 10, K: 10, Q: 11, J: 13, bean: 0.8, egg: 1.4 },
-  scale: 0.94,
-  fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35, eggFull: 0.12, eggFullBig: 0.004, heroCol: 0.06,
+  scale: 1.06,
+  fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35, eggFull: 0.12, eggFullBig: 0.004, heroCol: 0.06, heroColBig: 0.05,
   colors: {
     giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
     A: ['#b02ad8', '#3a0a5a'], K: ['#f08a1a', '#6a2a04'], Q: ['#e0b010', '#6a4a04'], J: ['#2a7ae0', '#0a2a6a']
@@ -64,8 +63,8 @@ export const SPARTA = {
     chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { helm: 3, warrior: 3.3, lion: 3.5, net: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
-  scale: 0.66,
-  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, heroCol: 0.06, freeExpand: true, freeWild: 0.1,
+  scale: 0.74,
+  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, heroCol: 0.06, heroColBig: 0.05, freeExpand: true, freeWild: 0.1,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
   colors: {
     warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#c080ff', '#3a0a6a'], helm: ['#ffd0a0', '#8a3a0a'], net: ['#8ab0e0', '#0a1a3a'], chariot: ['#fff4d0', '#c8a050'], sword: ['#fff4d0', '#c8a050'],
@@ -113,10 +112,10 @@ export function mainColumn(cfg, c, free) {
 // 6 símbolos dobles (2 filas cada uno).
 export function bigColumn(cfg, c, free) {
   const col = []; let sc = false;
+  if (Math.random() < cfg.heroColBig) { const k = Math.random() < 0.5 ? cfg.tall[0] : cfg.tall[1], id = 'h' + Math.random(); return Array.from({ length: BIG_ROWS }, () => ({ blk: id, k })); }
   if (cfg.multWild && c === 4) {
     while (col.length < BIG_ROWS) {
-      let s = pickSym(cfg, c, free, true, true); const id = Math.random(), rem = BIG_ROWS - col.length;
-      if (cfg.tall.includes(s.k)) { if (rem < HERO_H) continue; for (let i = 0; i < HERO_H; i++) col.push({ blk: id, k: s.k }); continue; }
+      const s = pickSym(cfg, c, free, true), id = Math.random(), rem = BIG_ROWS - col.length;
       // un solo coliseo por rodillo, y en una sola casilla
       if (s.k === cfg.scatter) { if (sc) continue; sc = true; col.push({ blk: id, k: s.k }); continue; }
       col.push(Object.assign({ blk: id, dbl: true }, s)); if (rem > 1) col.push(Object.assign({ blk: id, dbl: true }, s));
@@ -125,12 +124,11 @@ export function bigColumn(cfg, c, free) {
   }
   if (cfg.eggStack && SCAT_REELS.includes(c) && Math.random() < cfg.eggFullBig) return Array.from({ length: BIG_ROWS }, () => ({ blk: 'egg' + c, k: cfg.scatter }));
   while (col.length < BIG_ROWS) {
-    let s = pickSym(cfg, c, free, true, true);
+    const s = pickSym(cfg, c, free, true);
     if (s.k === cfg.scatter) { if (sc) continue; sc = true; }
-    const rem = BIG_ROWS - col.length, hero = cfg.tall.includes(s.k);
-    if (hero && rem < HERO_H) continue;
-    let h = hero ? HERO_H : s.k === cfg.scatter ? (cfg.eggStack ? (Math.random() < 0.15 ? 4 + (Math.random() * 5 | 0) : 1 + (Math.random() * 3 | 0)) : 1) : Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4;
-    h = Math.min(h, rem); if (rem - h === 1 && !hero && !(s.k === cfg.scatter && !cfg.eggStack)) h = h < 4 ? h + 1 : h - 1;
+    const rem = BIG_ROWS - col.length;
+    let h = s.k === cfg.scatter ? (cfg.eggStack ? (Math.random() < 0.15 ? 4 + (Math.random() * 5 | 0) : 1 + (Math.random() * 3 | 0)) : 1) : Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 3 : 4;
+    h = Math.min(h, rem); if (rem - h === 1 && !(s.k === cfg.scatter && !cfg.eggStack)) h = h < 4 ? h + 1 : h - 1;
     const id = Math.random();
     for (let i = 0; i < h; i++) col.push(Object.assign({ blk: id }, s));
   }
@@ -581,12 +579,18 @@ class Colossal {
   heroPanel(x, px, py, w, h, frac, k, rim) {
     const img = IMG[TALLIMG[k]] || IMG[heroOf(k)[0]], giant = this.cfg.id === 'giant';
     x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip(); x.imageSmoothingQuality = 'high';
-    // fondo: cielo con nubes (Gigante) o azul de la máquina (Espartaco)
-    if (giant && IMG.sky) { x.fillStyle = '#8ad0ff'; x.fillRect(px, py, w, h); cover(x, IMG.sky, px, py, w, h, 0.3, 0.5); }
-    else { const g = x.createLinearGradient(0, py, 0, py + h); g.addColorStop(0, '#0a1a4a'); g.addColorStop(0.5, '#1a3a8a'); g.addColorStop(1, '#0a1a4a'); x.fillStyle = g; x.fillRect(px, py, w, h); }
-    // el personaje completo, de pies a cabeza (se estira un poco a lo alto para llenar la pila)
-    const s = Math.min(w / img.width, h / img.height), sy = Math.min(s * 1.25, h / img.height), dw = img.width * s, dh = img.height * sy;
-    x.drawImage(img, px + (w - dw) / 2, py + (h - dh) / 2, dw, dh);
+    // fondo: cielo con nubes (Gigante) o el Coliseo bajo el cielo (Espartaco); en un rodillo alto el
+    // personaje queda de pie abajo, de cuerpo completo, con el escenario encima
+    if (giant && IMG.sky) { x.fillStyle = '#8ad0ff'; x.fillRect(px, py, w, h); cover(x, IMG.sky, px, py, w, h, 0.25, 0.5); }
+    else { const g = x.createLinearGradient(0, py, 0, py + h); g.addColorStop(0, '#2a5aa8'); g.addColorStop(1, '#0a1a4a'); x.fillStyle = g; x.fillRect(px, py, w, h);
+    }
+    // en el rodillo entero del colosal el personaje se ve más grande (se recortan un poco los costados)
+    const big = h > w * 6, cf = big ? (k === 'giant' ? 1.9 : k === 'helm' ? 1.6 : 1.3) : 1.25;
+    const sx = Math.min(w / img.width * cf, h / img.height), sy = Math.min(sx * 1.2, h / img.height), dw = img.width * sx, dh = img.height * sy;
+    const tall = h > dh * 1.25, dy = tall ? py + h - dh : py + (h - dh) / 2;
+    if (tall && !giant && IMG.spsym) { const ch = dy - py + dh * 0.15; x.save(); x.beginPath(); x.rect(px, py, w, ch); x.clip(); const cz = Math.max(w, ch) / 152; x.drawImage(IMG.spsym, SPT.colis * 200 + 24, 24, 152, 152, px + (w - 152 * cz) / 2, py + (ch - 152 * cz) / 2, 152 * cz, 152 * cz); x.restore(); }
+    if (tall) { const sh = x.createLinearGradient(0, dy - h * 0.08, 0, dy + dh * 0.3); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, giant ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,20,0.5)'); x.fillStyle = sh; x.fillRect(px, dy - h * 0.08, w, dh * 0.38 + h * 0.08); }
+    x.drawImage(img, px + (w - dw) / 2, dy, dw, dh);
     x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
@@ -1010,7 +1014,7 @@ export class GiantGold extends Colossal {
   rules() {
     return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. Los dos giran a la vez y en el colosal los símbolos caen en <b>pilas</b>.</li>' +
       '<li><b>Habichuela mágica = WILD</b> apilado; sustituye a todo menos al huevo de oro. Si un rodillo del principal queda <b>lleno de WILD</b>, se <b>transfiere entero</b> al mismo rodillo del colosal.</li>' +
-      '<li><b>El gigante y la heroína</b> caen siempre de cuerpo completo: el rodillo entero del principal y pilas de 6 filas en el colosal. Son los símbolos que más pagan (5 en línea = 2000 y 1500 créditos por línea).</li>' +
+      '<li><b>El gigante y la heroína</b> caen siempre de cuerpo completo: el rodillo entero del principal y el rodillo entero del colosal (12 filas). Son los símbolos que más pagan (5 en línea = 2000 y 1500 créditos por línea).</li>' +
       '<li><b>Huevo de oro BONUS</b>, apilado (puede llenar un rodillo entero del principal o del colosal), solo en los rodillos 1, 3 y 5 de ambos tableros. Con huevos en <b>3 o más rodillos</b> se ganan giros gratis según los huevos a la vista: <b>3 = 5 · 5 = 8 · 8 = 15 · 10 = 20 · 16 = 30 · 25 = 50 · 40 o más = 100 giros</b>.</li>' +
       '<li>En los giros gratis <b>todo lo que se gana en el colosal paga x2</b>, salen más habichuelas y los huevos pueden dar más giros.</li>' +
       '<li><b>Progresivos</b>: rodillos WILD transferidos a la vez · <b>2 = MINI · 3 = MINOR · 4 = MAJOR · 5 = GRAND</b>.</li>';
@@ -1032,7 +1036,7 @@ export class Spartacus extends Colossal {
   }
   rules() {
     return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. El <b>rodillo 5 del colosal</b> tiene <b>símbolos dobles</b>.</li>' +
-      '<li><b>Espartaco y la guerrera</b> caen siempre de cuerpo completo: el rodillo entero del principal y pilas de 6 filas en el colosal. Son los símbolos que más pagan (5 en línea = 2000 y 1500 créditos por línea).</li>' +
+      '<li><b>Espartaco y la guerrera</b> caen siempre de cuerpo completo: el rodillo entero del principal y el rodillo entero del colosal (12 filas). Son los símbolos que más pagan (5 en línea = 2000 y 1500 créditos por línea).</li>' +
       '<li><b>Espartaco = WILD</b> apilado. Antes de cada giro, hasta 4 Espartacos de los rodillos 1 a 4 del principal pueden volverse <b>Super Espartaco</b>.</li>' +
       '<li><b>MEGA WILD</b>: un Espartaco (o Super Espartaco) gigante de <b>2 rodillos de ancho</b> puede caer sobre los rodillos 1 a 4 del principal (uno por giro).</li>' +
       '<li><b>Transferencia</b>: un rodillo del principal <b>lleno de WILD</b> pasa entero al mismo rodillo del colosal. Si llevaba un <b>Super Espartaco</b>, hay un <b>RE-GIRO</b> con esos WILD fijos, hasta <b>9 re-giros</b> seguidos.</li>' +
