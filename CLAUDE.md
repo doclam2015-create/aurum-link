@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **79**, visible al final de Ajustes.
+- La versión actual es la **80**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -135,6 +135,7 @@ No poner identificadores de modelo en commits ni PRs.
 - La v77: como en la máquina, los personajes que caen en el colosal ocupan el rodillo entero de 12 filas (`heroColBig`), de pie abajo con el Coliseo o el cielo encima. Escalas 1,06 (Gigante) y 0,74 (Espartaco).
 - La v78: según capturas del juego real, los personajes son franjas (`heroStrip`/`withStrip`; cada casilla guarda `st`/`hs`) del largo del rodillo que llenan el ancho de la columna (`HERO_FX`/`HERO_FY` ubican la cara) y caen enteras o asomando en parte. Escalas 1,05 (Gigante) y 0,73 (Espartaco).
 - La v79: Espartaco en el colosal usa su figura alta de la máquina (`sparta_ctall.webp`, franjas de 8 filas `heroLenBig`); las figuras bajan enteras al girar (`spinPick`/`heroSlice`); figuras y símbolos mejorados con Real-ESRGAN en numpy (`tools/upscale_esrgan.py`, `tools/enhance_colossal.py`; los recortes en píxeles se escalan con `BASEW`/`sf`); ánimo de la máquina (`mood`, `moodTick`, rachas frías/normales/calientes y bono garantizado tras 140–210 giros). Más huevos/coliseos en giros gratis (`FREE_RETRIG` 1,6). Escalas 0,83 (Gigante) y 0,59 (Espartaco), RTP ~94 %, bono ~1/65.
+- La v80: símbolos de Oro del Gigante devueltos a los de antes del filtro (se mantienen nítidos el gigante y la heroína); huevos → giros = n + 2 + n/10, máximo 100 (`eggSpins`). Escala del Gigante 1,0.
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
