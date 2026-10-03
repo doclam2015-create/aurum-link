@@ -35,6 +35,8 @@ ref.crop((0, 292, 410, 599)).save('assets/giant_sky.webp', 'WEBP', quality=88, m
 # heroína de Oro del Gigante, trepando la habichuela
 # (portada nítida de 500×500: solo la parte de arriba, antes del logo)
 Image.open(SRC + 'ref_giant2.png').convert('RGB').crop((140, 0, 340, 205)).save('assets/giant_heroine.webp', 'WEBP', quality=92, method=6)
+# heroína de cuerpo entero sobre la habichuela, como cae apilada en el rodillo colosal de la máquina
+Image.open(SRC + 'ref_giant_p12.webp').convert('RGB').crop((663, 72, 710, 405)).save('assets/giant_girltall.webp', 'WEBP', quality=92, method=6)
 # Espartaco Coloso: todo sale de las capturas de la máquina que compartió el usuario.
 #   sparta_sym.webp   hoja de 2400×200: lion, chariot, sword (escudo+gladius), net (gladiador con mayal),
 #                     K, J, Q, A, sparta (placa WILD), super (placa azul), mw (marco del multiplicador),
