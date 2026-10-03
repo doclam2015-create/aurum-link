@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=77';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=77';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=78';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=78';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -27,8 +27,15 @@ export const LINES = mainLines();
 // cada banda de 4 filas del colosal usa 20 líneas que pasan por sus 4 filas (también la de abajo)
 const BAND = [0, 1, 2, 20, 3, 4, 21, 22, 5, 6, 23, 24, 7, 8, 25, 26, 9, 10, 13, 14].map(i => LINES[i]);
 export const BIG_LINES = [0, 4, 8].flatMap(b => BAND.map(L => L.map(r => r + b)));
-// Personajes (gigante/heroína, Espartaco/guerrera): nunca en una sola casilla. Como en la máquina,
-// cuando caen ocupan el rodillo entero (4 filas en el principal, 12 en el colosal), de cuerpo completo.
+// Personajes (gigante/heroína, Espartaco/guerrera): como en la máquina son una FRANJA alta del largo del
+// rodillo (4 filas en el principal, 12 en el colosal) que llena el ancho de la columna. Cae entera o
+// asomando por arriba o por abajo (se ve solo una parte). Cada casilla guarda su fila dentro de la franja.
+function heroStrip(cfg, n, minH) {
+  const k = cfg.tall[Math.random() < 0.5 ? 0 : 1], id = 'h' + Math.random();
+  const h = Math.random() < 0.45 ? n : minH + (Math.random() * (n - minH) | 0), atTop = Math.random() < 0.5;
+  return { atTop, cells: Array.from({ length: h }, (_, i) => ({ k, blk: id, hs: n, st: (atTop ? n - h : 0) + i })) };
+}
+const withStrip = (col, { atTop, cells }) => atTop ? cells.concat(col.slice(cells.length)) : col.slice(0, col.length - cells.length).concat(cells);
 const SCAT_REELS = [0, 2, 4];
 // Huevos de oro a la vista → giros gratis (3 huevos = 5 giros … 40 o más = 100 giros)
 const EGG_SPINS = [[40, 100], [35, 80], [30, 65], [25, 50], [20, 40], [16, 30], [13, 25], [10, 20], [8, 15], [7, 12], [6, 10], [5, 8], [4, 6], [3, 5]];
@@ -45,7 +52,7 @@ export const GIANT = {
     cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 10, K: 10, Q: 11, J: 13, bean: 0.8, egg: 1.4 },
-  scale: 1.06,
+  scale: 1.05,
   fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35, eggFull: 0.12, eggFullBig: 0.004, heroCol: 0.06, heroColBig: 0.05,
   colors: {
     giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
@@ -63,7 +70,7 @@ export const SPARTA = {
     chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { helm: 3, warrior: 3.3, lion: 3.5, net: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
-  scale: 0.74,
+  scale: 0.73,
   fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, heroCol: 0.06, heroColBig: 0.05, freeExpand: true, freeWild: 0.1,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
   colors: {
@@ -94,8 +101,6 @@ export function mainColumn(cfg, c, free) {
   if (Math.random() < (free ? cfg.fullWild.free : cfg.fullWild.base)) return fullCol(cfg, ROWS);
   const col = []; let sc = false;
   for (let r = 0; r < ROWS; r++) { let s = pickSym(cfg, c, free, false); if (s.k === cfg.scatter && sc && !cfg.eggStack) s = { k: cfg.low[0] }; if (s.k === cfg.scatter) sc = true; col.push(s); }
-  // personaje en todo el rodillo
-  if (!sc && Math.random() < cfg.heroCol) { const k = Math.random() < 0.5 ? cfg.tall[0] : cfg.tall[1]; return Array.from({ length: ROWS }, () => ({ k })); }
   if (Math.random() < cfg.stackP) {
     const hi = cfg.high.filter(k => !cfg.tall.includes(k)), k = Math.random() < cfg.wildStack ? cfg.wild : hi[Math.random() * hi.length | 0];
     const h = 2 + (Math.random() * 3 | 0), r0 = Math.random() * (ROWS - h + 1) | 0;
@@ -106,13 +111,18 @@ export function mainColumn(cfg, c, free) {
     const full = Math.random() < cfg.eggFull, r = full ? 0 : col.findIndex(s => s.k === cfg.scatter), h = full ? ROWS : 1 + (Math.random() * 3 | 0);
     for (let i = r; i < Math.min(ROWS, r + h); i++) col[i] = { k: cfg.scatter };
   }
+  // franja de un personaje (nunca encima de un BONUS)
+  if (Math.random() < cfg.heroCol) { const st = heroStrip(cfg, ROWS, 2), out = withStrip(col, st); if (out.filter(s => s.k === cfg.scatter).length === col.filter(s => s.k === cfg.scatter).length) return out; }
   return col;
 }
 // Rodillo colosal: pilas de 2 a 4 filas del mismo símbolo. En Espartaco el rodillo 5 lleva
 // 6 símbolos dobles (2 filas cada uno).
 export function bigColumn(cfg, c, free) {
+  const col = plainBig(cfg, c, free);
+  return Math.random() < cfg.heroColBig ? withStrip(col, heroStrip(cfg, BIG_ROWS, 4)) : col;
+}
+function plainBig(cfg, c, free) {
   const col = []; let sc = false;
-  if (Math.random() < cfg.heroColBig) { const k = Math.random() < 0.5 ? cfg.tall[0] : cfg.tall[1], id = 'h' + Math.random(); return Array.from({ length: BIG_ROWS }, () => ({ blk: id, k })); }
   if (cfg.multWild && c === 4) {
     while (col.length < BIG_ROWS) {
       const s = pickSym(cfg, c, free, true), id = Math.random(), rem = BIG_ROWS - col.length;
@@ -287,6 +297,10 @@ const isLow = (cfg, k) => cfg.low.includes(k);
 const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.5, [55, 30, 100, 100]], warrior: ['wartall', 0.5, [0, 14, 75, 75]], helm: ['sptall', 0.5, [4, 0, 100, 100]] };
 // figura alta de cada personaje (pilas del principal y del colosal)
 const TALLIMG = { giant: 'hero', girl: 'gtall', warrior: 'wartall', helm: 'sptall' };
+// dónde está la cara en cada imagen (0 = izquierda, 1 = derecha) para centrarla al recortar los costados
+const HERO_FX = { giant: 0.42, girl: 0.5, warrior: 0.45, helm: 0.4 };
+// y a qué altura (si la imagen es más alta que la franja): la heroína está a media habichuela
+const HERO_FY = { giant: 0, girl: 0.5, warrior: 0.05, helm: 0.05 };
 const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
 function suitPath(x, k, s) {
   const c = s / 2; x.beginPath();
@@ -560,38 +574,32 @@ class Colossal {
     for (let c = 0; c < COLS; c++) {
       const col = this.main.columns[c]; if ((col.state !== 'idle' && col.state !== 'bounce') || this.wildShown(this.main, c)) continue;
       const g = this.main.grid[c]; let r = 0;
-      while (r < ROWS) { let e = r + 1; while (e < ROWS && g[e].k === g[r].k) e++; if (e - r >= 2 && cfg.tall.includes(g[r].k)) { out.push({ c, r, n: e - r, k: g[r].k }); for (let i = r; i < e; i++) cells.add(c * 10 + i); } r = e; }
+      while (r < ROWS) { let e = r + 1; while (e < ROWS && g[e].k === g[r].k) e++; if (e - r >= 2 && cfg.tall.includes(g[r].k)) { out.push({ c, r, n: e - r, k: g[r].k, st: g[r].st || 0, hs: g[r].hs || 0 }); for (let i = r; i < e; i++) cells.add(c * 10 + i); } r = e; }
     }
     this.stacks = out; this.stackCells = cells;
   }
   drawStacks(x) {
     const w = this.curWin();
-    (this.stacks || []).forEach(({ c, r, n, k }) => {
+    (this.stacks || []).forEach(({ c, r, n, k, st, hs }) => {
       const px = this.mx + c * this.cw, py = this.my + (r + this.main.columns[c].shift) * this.ch, pw = this.cw, ph = n * this.ch;
       let hit = false; if (w && w.set === 'main' && c < w.n && w.line[c] >= r && w.line[c] < r + n) hit = true;
       x.globalAlpha = w && !hit ? 0.4 : 1;
-      if (heroOf(k)) this.heroPanel(x, px, py, pw, ph, n / 4, k);
+      if (heroOf(k)) this.heroPanel(x, px, py, pw, ph, n / 4, k, null, st, hs, this.ch);
       else this.charPanel(x, k, px, py, pw, ph);
       x.globalAlpha = 1;
     });
   }
   // Gigante de cuerpo entero: se ve la parte de arriba si la pila es corta
-  heroPanel(x, px, py, w, h, frac, k, rim) {
-    const img = IMG[TALLIMG[k]] || IMG[heroOf(k)[0]], giant = this.cfg.id === 'giant';
+  // Franja del personaje: la imagen llena el ancho de la columna con la cara arriba (como la máquina);
+  // si la franja asoma solo en parte, se ve el trozo que corresponde (st = fila de la franja, hs = largo)
+  heroPanel(x, px, py, w, h, frac, k, rim, st = 0, hs = 0, cellH = 0) {
+    const img = IMG[TALLIMG[k]] || IMG[heroOf(k)[0]], fx = HERO_FX[k] == null ? 0.5 : HERO_FX[k];
+    const sy0 = hs ? py - st * cellH : py, sh = hs ? hs * cellH : h;
     x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip(); x.imageSmoothingQuality = 'high';
-    // fondo: cielo con nubes (Gigante) o el Coliseo bajo el cielo (Espartaco); en un rodillo alto el
-    // personaje queda de pie abajo, de cuerpo completo, con el escenario encima
-    if (giant && IMG.sky) { x.fillStyle = '#8ad0ff'; x.fillRect(px, py, w, h); cover(x, IMG.sky, px, py, w, h, 0.25, 0.5); }
-    else { const g = x.createLinearGradient(0, py, 0, py + h); g.addColorStop(0, '#2a5aa8'); g.addColorStop(1, '#0a1a4a'); x.fillStyle = g; x.fillRect(px, py, w, h);
-    }
-    // en el rodillo entero del colosal el personaje se ve más grande (se recortan un poco los costados)
-    const big = h > w * 6, cf = big ? (k === 'giant' ? 1.9 : k === 'helm' ? 1.6 : 1.3) : 1.25;
-    const sx = Math.min(w / img.width * cf, h / img.height), sy = Math.min(sx * 1.2, h / img.height), dw = img.width * sx, dh = img.height * sy;
-    const tall = h > dh * 1.25, dy = tall ? py + h - dh : py + (h - dh) / 2;
-    if (tall && !giant && IMG.spsym) { const ch = dy - py + dh * 0.15; x.save(); x.beginPath(); x.rect(px, py, w, ch); x.clip(); const cz = Math.max(w, ch) / 152; x.drawImage(IMG.spsym, SPT.colis * 200 + 24, 24, 152, 152, px + (w - 152 * cz) / 2, py + (ch - 152 * cz) / 2, 152 * cz, 152 * cz); x.restore(); }
-    if (tall) { const sh = x.createLinearGradient(0, dy - h * 0.08, 0, dy + dh * 0.3); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, giant ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,20,0.5)'); x.fillStyle = sh; x.fillRect(px, dy - h * 0.08, w, dh * 0.38 + h * 0.08); }
-    x.drawImage(img, px + (w - dw) / 2, dy, dw, dh);
-    x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+    x.fillStyle = this.cfg.id === 'giant' ? '#3a7ab0' : '#0a1a4a'; x.fillRect(px, py, w, h);
+    const s = Math.max(w / img.width, sh / img.height), dw = img.width * s, dh = img.height * s;
+    x.drawImage(img, px + (w - dw) * fx, sy0 + (sh - dh) * (HERO_FY[k] || 0), dw, dh);
+    x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : k === 'giant' ? '#2ab08a' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
   charPanel(x, k, px, py, w, h) {
@@ -643,7 +651,7 @@ class Colossal {
         } else {
           const cx = px + bcw / 2, cy = py + hh / 2;
           if (s.k === cfg.scatter) this.scatGlow(x, cx, cy, bcw, hh);
-          if (heroOf(s.k) && hh > bch * 1.5) this.heroPanel(x, px, py, bcw, hh, Math.min(1, (e - r) / 4), s.k);
+          if (heroOf(s.k) && hh > bch * 1.5) this.heroPanel(x, px, py, bcw, hh, Math.min(1, (e - r) / 4), s.k, null, s.st || 0, s.hs || 0, bch);
           else if (s.mult || isWild(cfg, s.k) || s.k === cfg.scatter || isLow(cfg, s.k) || tilesOf(cfg)[1][s.k] != null) { const size = Math.min(bcw, hh) * 0.96 * pulse; x.drawImage(symIcon(cfg, s.k, Math.min(bcw, hh) * 0.96 * dpr, s.mult), cx - size / 2, cy - size / 2, size, size); }
           else { const f = 0.96 * pulse, cap = 250 / dpr * pulse, ww = Math.min(bcw * f, cap), h2 = Math.min(hh * f, cap); x.save(); x.shadowColor = 'rgba(0,0,0,0.4)'; x.shadowBlur = 6; art(x, s.k, cx - ww / 2, cy - h2 / 2, ww, h2, 1); x.restore(); }
         }
@@ -850,7 +858,7 @@ class Colossal {
     const b = spinBoards(cfg, this.inFree, hold);
     if (app._forceScat) {
       app._forceScat = 0;
-      [[b.main, 0], [b.big, 2], [b.main, 4]].forEach(([set, c]) => { if (hold.includes(c)) return; const r = set === b.main ? 1 : 4; if (set === b.main && cfg.tall.includes(set[c][0].k)) set[c] = set[c].map((x, i) => ({ k: cfg.low[i % 4] })); set[c][r] = { blk: 'f' + c, k: cfg.scatter }; });
+      [[b.main, 0], [b.big, 2], [b.main, 4]].forEach(([set, c]) => { if (hold.includes(c)) return; const r = set === b.main ? 1 : 4; if (set === b.main && set[c].some(x => cfg.tall.includes(x.k))) set[c] = set[c].map((x, i) => ({ k: cfg.low[i % 4] })); set[c][r] = { blk: 'f' + c, k: cfg.scatter }; });
     }
     if (app._forceFull) { const n = app._forceFull; app._forceFull = 0; for (let c = 0; c < n; c++) if (!hold.includes(c)) b.main[c] = fullCol(cfg, ROWS, cfg.super && c === 0 ? cfg.super : cfg.wild); }
     if (app._forceMega && cfg.mega) { app._forceMega = 0; b.mega = 1; [1, 2].forEach(c => { b.main[c] = Array.from({ length: ROWS }, () => ({ k: cfg.super, full: true, mega: true })); }); }
@@ -945,7 +953,7 @@ class Colossal {
         if (reels >= 3) break; if (has(o) || this.full.includes(o[1])) continue;
         const [set, c] = o, rs = set === 'main' ? this.main : this.big, g = rs.grid[c];
         // nunca encima de un personaje: en el principal el rodillo del personaje pasa a cartas; en el colosal se busca otra fila
-        if (set === 'main' && cfg.tall.includes(g[0].k)) for (let i = 0; i < ROWS; i++) rs.setCell(c, i, { k: cfg.low[i] });
+        if (set === 'main' && g.some(x => cfg.tall.includes(x.k))) for (let i = 0; i < ROWS; i++) rs.setCell(c, i, { k: cfg.low[i] });
         let r = set === 'main' ? 1 : 5; if (set === 'big') { const ok = [5, 4, 6, 3, 7, 2, 8, 1, 9, 0, 10, 11].find(i => !cfg.tall.includes(g[i].k)); if (ok == null) continue; r = ok; }
         const s = { k: cfg.scatter, blk: 'm' + c }; rs.setCell(c, r, s);
         reels++; n++;
