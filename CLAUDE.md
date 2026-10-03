@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **78**, visible al final de Ajustes.
+- La versión actual es la **79**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -29,7 +29,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 | `js/audio.js` | `sfx`, con efectos sintetizados en Web Audio, muestras decodificadas (`preload`/`play`), estilos de música por juego, locutor, `loadSfxPack`, `realMachine`, `bigWin`, `jackpot`, `winJingle` y `bonusFanfare` |
 | `js/games/*.js` | Un archivo por juego. Ver la lista más abajo. |
 | `assets/` | `symbols.webp`, `themes.webp`, `wolf.webp`, `colossal.webp` (símbolos de los juegos colosales), `giant_hero/sky/heroine/sym/scene.webp` y `sparta_sym/tall/wtall/scene.webp` (escenarios, personajes y símbolos de Espartaco), `voice/` (locutor Piper), `sfx/` (sonidos grabados) y `src/` (fuentes) |
-| `tools/` | Scripts Python: `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `build_colossal.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
+| `tools/` | Scripts Python: `upscale_esrgan.py` y `enhance_colossal.py` (nitidez con Real-ESRGAN), `bump_version.py`, `build_atlas.py`, `build_themes.py`, `build_wolf.py`, `build_colossal.py`, `make_howl.py`, `make_voice.py` y `make_machine_sfx.py` |
 
 ### Juegos (orden de `GAMES` en `js/app.js`)
 
@@ -134,6 +134,7 @@ No poner identificadores de modelo en commits ni PRs.
 - La v76: corregidas las líneas del colosal (antes no pasaban por las filas 4, 8 y 12, por eso algunas combinaciones no pagaban); personajes siempre apilados de cuerpo completo (`heroCol` en el principal, pilas `HERO_H`=6 en el colosal, `giant_girltall.webp`) y con premios altos; rodillo 5 de Espartaco con símbolo en cada fila y un solo coliseo; huevos que llenan rodillos (`eggFull`, `eggFullBig`). Escalas 0,94 (Gigante) y 0,66 (Espartaco), RTP ~94–95 %.
 - La v77: como en la máquina, los personajes que caen en el colosal ocupan el rodillo entero de 12 filas (`heroColBig`), de pie abajo con el Coliseo o el cielo encima. Escalas 1,06 (Gigante) y 0,74 (Espartaco).
 - La v78: según capturas del juego real, los personajes son franjas (`heroStrip`/`withStrip`; cada casilla guarda `st`/`hs`) del largo del rodillo que llenan el ancho de la columna (`HERO_FX`/`HERO_FY` ubican la cara) y caen enteras o asomando en parte. Escalas 1,05 (Gigante) y 0,73 (Espartaco).
+- La v79: Espartaco en el colosal usa su figura alta de la máquina (`sparta_ctall.webp`, franjas de 8 filas `heroLenBig`); las figuras bajan enteras al girar (`spinPick`/`heroSlice`); figuras y símbolos mejorados con Real-ESRGAN en numpy (`tools/upscale_esrgan.py`, `tools/enhance_colossal.py`; los recortes en píxeles se escalan con `BASEW`/`sf`); ánimo de la máquina (`mood`, `moodTick`, rachas frías/normales/calientes y bono garantizado tras 140–210 giros). Más huevos/coliseos en giros gratis (`FREE_RETRIG` 1,6). Escalas 0,83 (Gigante) y 0,59 (Espartaco), RTP ~94 %, bono ~1/65.
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
