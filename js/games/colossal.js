@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=78';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=78';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=79';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=79';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -30,17 +30,36 @@ export const BIG_LINES = [0, 4, 8].flatMap(b => BAND.map(L => L.map(r => r + b))
 // Personajes (gigante/heroína, Espartaco/guerrera): como en la máquina son una FRANJA alta del largo del
 // rodillo (4 filas en el principal, 12 en el colosal) que llena el ancho de la columna. Cae entera o
 // asomando por arriba o por abajo (se ve solo una parte). Cada casilla guarda su fila dentro de la franja.
-function heroStrip(cfg, n, minH) {
+// L = largo de la franja (en Espartaco el colosal usa franjas de 8 filas, como la máquina)
+function heroStrip(cfg, n, minH, L = n) {
   const k = cfg.tall[Math.random() < 0.5 ? 0 : 1], id = 'h' + Math.random();
-  const h = Math.random() < 0.45 ? n : minH + (Math.random() * (n - minH) | 0), atTop = Math.random() < 0.5;
-  return { atTop, cells: Array.from({ length: h }, (_, i) => ({ k, blk: id, hs: n, st: (atTop ? n - h : 0) + i })) };
+  let o; // fila del rodillo donde empieza la franja (puede ser negativa: asoma por arriba)
+  if (Math.random() < 0.45) o = Math.random() * (n - L + 1) | 0;
+  else { const cut = minH + (Math.random() * (L - minH) | 0); o = Math.random() < 0.5 ? cut - L : n - cut; }
+  const r0 = Math.max(0, o), r1 = Math.min(n, o + L);
+  return { r0, cells: Array.from({ length: r1 - r0 }, (_, i) => ({ k, blk: id, hs: L, st: r0 + i - o })) };
 }
-const withStrip = (col, { atTop, cells }) => atTop ? cells.concat(col.slice(cells.length)) : col.slice(0, col.length - cells.length).concat(cells);
+const withStrip = (col, { r0, cells }) => col.slice(0, r0).concat(cells, col.slice(r0 + cells.length));
 const SCAT_REELS = [0, 2, 4];
 // Huevos de oro a la vista → giros gratis (3 huevos = 5 giros … 40 o más = 100 giros)
 const EGG_SPINS = [[40, 100], [35, 80], [30, 65], [25, 50], [20, 40], [16, 30], [13, 25], [10, 20], [8, 15], [7, 12], [6, 10], [5, 8], [4, 6], [3, 5]];
 export const eggSpins = n => (EGG_SPINS.find(([m]) => n >= m) || [0, 5])[1];
 export const MYSTERY_P = 1 / 260;
+// ÁNIMO DE LA MÁQUINA (como una máquina real de casino): en el juego base se alternan rachas FRÍAS
+// (pocas figuras apiladas y pocos bonos), NORMALES y CALIENTES (más personajes, pilas, WILD y bonos),
+// cada 25 a 75 giros pagados. Si pasa mucho sin bono (140–210 giros) la máquina lo "suelta" con los rayos
+// del bono sorpresa. f = figuras/pilas/WILD, s = bonos.
+export const MOODS = { cold: { f: 0.7, s: 0.75 }, normal: { f: 1, s: 1 }, hot: { f: 1.5, s: 1.4 } };
+export const mood = { name: 'normal', cur: MOODS.normal, left: 40, drought: 0, pity: 170 };
+export function moodTick() {
+  mood.drought++;
+  if (--mood.left > 0) return;
+  const r = Math.random(); mood.name = r < 0.4 ? 'cold' : r < 0.8 ? 'normal' : 'hot'; mood.cur = MOODS[mood.name]; mood.left = 25 + (Math.random() * 51 | 0);
+}
+export const moodBonus = () => { mood.drought = 0; mood.pity = 140 + (Math.random() * 71 | 0); };
+// en los giros gratis caen más huevos / coliseos, para volver a ganar giros con más frecuencia
+export const FREE_RETRIG = 1.6;
+const MF = free => free ? 1 : mood.cur.f, MS = free => free ? FREE_RETRIG : mood.cur.s;
 
 // ---------- Configuración de cada juego ----------
 export const GIANT = {
@@ -52,7 +71,7 @@ export const GIANT = {
     cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 10, K: 10, Q: 11, J: 13, bean: 0.8, egg: 1.4 },
-  scale: 1.05,
+  scale: 0.83,
   fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35, eggFull: 0.12, eggFullBig: 0.004, heroCol: 0.06, heroColBig: 0.05,
   colors: {
     giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
@@ -70,8 +89,8 @@ export const SPARTA = {
     chariot: [0, 0, 0, 20, 75, 250], sword: [0, 0, 0, 20, 60, 200], A: [0, 0, 0, 10, 30, 100], K: [0, 0, 0, 10, 25, 100], Q: [0, 0, 0, 5, 20, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { helm: 3, warrior: 3.3, lion: 3.5, net: 4, chariot: 5, sword: 5, A: 8, K: 8, Q: 9, J: 10, sparta: 0.8, colis: 1.1, mw: 0.5 },
-  scale: 0.73,
-  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, heroCol: 0.06, heroColBig: 0.05, freeExpand: true, freeWild: 0.1,
+  scale: 0.59,
+  fullWild: { base: 0.002, free: 0.012 }, mega: { base: 0.0025, free: 0.012 }, stackP: 0.3, wildStack: 0.1, superP: 0.25, heroCol: 0.06, heroColBig: 0.05, heroLenBig: 8, freeExpand: true, freeWild: 0.1,
   mults: [[2, 40], [3, 25], [5, 18], [10, 10], [25, 4]], freeMults: [[2, 30], [3, 25], [5, 20], [10, 12], [25, 6], [50, 2], [100, 1]],
   colors: {
     warrior: ['#ffb0a0', '#8a1a0a'], lion: ['#c080ff', '#3a0a6a'], helm: ['#ffd0a0', '#8a3a0a'], net: ['#8ab0e0', '#0a1a3a'], chariot: ['#fff4d0', '#c8a050'], sword: ['#fff4d0', '#c8a050'],
@@ -87,7 +106,8 @@ function pickMult(cfg, free) { const t = {}; (free ? cfg.freeMults : cfg.mults).
 export function pickSym(cfg, c, free, big, hero) {
   const w = Object.assign({}, cfg.weights);
   if (!hero) cfg.tall.forEach(k => { w[k] = 0; });
-  if (!SCAT_REELS.includes(c)) w[cfg.scatter] = 0;
+  if (!SCAT_REELS.includes(c)) w[cfg.scatter] = 0; else w[cfg.scatter] *= MS(free);
+  w[cfg.wild] *= MF(free);
   if (cfg.multWild && !(big && c === 4)) w[cfg.multWild] = 0;
   if (free) w[cfg.wild] *= cfg.freeWild || 1.4;
   const k = weighted(w);
@@ -98,28 +118,28 @@ const fullCol = (cfg, n, k) => Array.from({ length: n }, () => ({ k: k || cfg.wi
 // Rodillo del tablero principal: sueltos + (a veces) una pila de un símbolo alto o de WILD.
 // Los huevos de oro también caen apilados; los coliseos, de a uno por rodillo.
 export function mainColumn(cfg, c, free) {
-  if (Math.random() < (free ? cfg.fullWild.free : cfg.fullWild.base)) return fullCol(cfg, ROWS);
+  if (Math.random() < (free ? cfg.fullWild.free : cfg.fullWild.base * MF(free))) return fullCol(cfg, ROWS);
   const col = []; let sc = false;
   for (let r = 0; r < ROWS; r++) { let s = pickSym(cfg, c, free, false); if (s.k === cfg.scatter && sc && !cfg.eggStack) s = { k: cfg.low[0] }; if (s.k === cfg.scatter) sc = true; col.push(s); }
-  if (Math.random() < cfg.stackP) {
+  if (Math.random() < cfg.stackP * MF(free)) {
     const hi = cfg.high.filter(k => !cfg.tall.includes(k)), k = Math.random() < cfg.wildStack ? cfg.wild : hi[Math.random() * hi.length | 0];
     const h = 2 + (Math.random() * 3 | 0), r0 = Math.random() * (ROWS - h + 1) | 0;
     for (let r = r0; r < r0 + h; r++) if (col[r].k !== cfg.scatter) col[r] = { k };
   }
   if (cfg.eggStack && sc && Math.random() < cfg.eggStack) {
     // huevos apilados: a veces llenan el rodillo entero
-    const full = Math.random() < cfg.eggFull, r = full ? 0 : col.findIndex(s => s.k === cfg.scatter), h = full ? ROWS : 1 + (Math.random() * 3 | 0);
+    const full = Math.random() < cfg.eggFull * MS(free), r = full ? 0 : col.findIndex(s => s.k === cfg.scatter), h = full ? ROWS : 1 + (Math.random() * 3 | 0);
     for (let i = r; i < Math.min(ROWS, r + h); i++) col[i] = { k: cfg.scatter };
   }
   // franja de un personaje (nunca encima de un BONUS)
-  if (Math.random() < cfg.heroCol) { const st = heroStrip(cfg, ROWS, 2), out = withStrip(col, st); if (out.filter(s => s.k === cfg.scatter).length === col.filter(s => s.k === cfg.scatter).length) return out; }
+  if (Math.random() < cfg.heroCol * MF(free)) { const st = heroStrip(cfg, ROWS, 2), out = withStrip(col, st); if (out.filter(s => s.k === cfg.scatter).length === col.filter(s => s.k === cfg.scatter).length) return out; }
   return col;
 }
 // Rodillo colosal: pilas de 2 a 4 filas del mismo símbolo. En Espartaco el rodillo 5 lleva
 // 6 símbolos dobles (2 filas cada uno).
 export function bigColumn(cfg, c, free) {
   const col = plainBig(cfg, c, free);
-  return Math.random() < cfg.heroColBig ? withStrip(col, heroStrip(cfg, BIG_ROWS, 4)) : col;
+  return Math.random() < cfg.heroColBig * MF(free) ? withStrip(col, heroStrip(cfg, BIG_ROWS, 4, cfg.heroLenBig || BIG_ROWS)) : col;
 }
 function plainBig(cfg, c, free) {
   const col = []; let sc = false;
@@ -225,12 +245,16 @@ export const spinsFor = (cfg, sc) => cfg.eggStack ? eggSpins(sc.n) : sc.reels >=
 
 // ---------- Arte (assets/colossal.webp y las imágenes de escenario, ver tools/build_colossal.py) ----------
 let SHEET = null; const IMG = {};
+// ancho original de las imágenes de personajes (los recortes en píxeles están en esa escala; las imágenes
+// nítidas, ampliadas con tools/enhance_colossal.py, son más grandes)
+const BASEW = { hero: 306, gheroine: 200, wartall: 75, sptall: 107 };
+const sf = img => img && img._base ? img.width / img._base : 1;
 const POS = { giant: 0, girl: 1, harp: 2, cow: 3, goose: 4, sack: 5, egg: 6, lion: 7, warrior: 8, helm: 9, chariot: 10, sword: 11, colis: 12, shield: 13, bust: 14 };
 const TALL = { bean: 3000, sparta: 3100 };
 function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.decoding = 'async'; i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
 export function loadColossalArt() {
-  const one = (k, f) => loadImg('assets/' + f).then(i => { IMG[k] = i; }).catch(() => { });
-  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('gheroine', 'giant_heroine.webp'), one('gtall', 'giant_girltall.webp'), one('gsym', 'giant_sym.webp'), one('gscene', 'giant_scene.webp'), one('spsym', 'sparta_sym.webp'), one('sptall', 'sparta_tall.webp'), one('wartall', 'sparta_wtall.webp'), one('spscene', 'sparta_scene.webp')]).then(() => cache.clear());
+  const one = (k, f) => loadImg('assets/' + f).then(i => { i._base = BASEW[k]; IMG[k] = i; }).catch(() => { });
+  return Promise.all([loadImg('assets/colossal.webp').then(i => { SHEET = i; }), one('hero', 'giant_hero.webp'), one('sky', 'giant_sky.webp'), one('gheroine', 'giant_heroine.webp'), one('gtall', 'giant_girltall.webp'), one('gsym', 'giant_sym.webp'), one('gscene', 'giant_scene.webp'), one('spsym', 'sparta_sym.webp'), one('sptall', 'sparta_tall.webp'), one('spctall', 'sparta_ctall.webp'), one('wartall', 'sparta_wtall.webp'), one('spscene', 'sparta_scene.webp')]).then(() => cache.clear());
 }
 // Recorte de la hoja: [sx, sy, sw, sh]
 function src(k) { if (TALL[k] != null) return [TALL[k], 0, 100, 200]; return [POS[k] * 200 + 2, 2, 196, 196]; }
@@ -297,8 +321,10 @@ const isLow = (cfg, k) => cfg.low.includes(k);
 const HEROES = { giant: ['hero', 0.4, [30, 0, 176, 176]], girl: ['gheroine', 0.5, [55, 30, 100, 100]], warrior: ['wartall', 0.5, [0, 14, 75, 75]], helm: ['sptall', 0.5, [4, 0, 100, 100]] };
 // figura alta de cada personaje (pilas del principal y del colosal)
 const TALLIMG = { giant: 'hero', girl: 'gtall', warrior: 'wartall', helm: 'sptall' };
+// en el colosal Espartaco usa su figura alta de la máquina (como la guerrera)
+const TALLBIG = { helm: 'spctall' };
 // dónde está la cara en cada imagen (0 = izquierda, 1 = derecha) para centrarla al recortar los costados
-const HERO_FX = { giant: 0.42, girl: 0.5, warrior: 0.45, helm: 0.4 };
+const HERO_FX = { giant: 0.42, girl: 0.5, warrior: 0.5, helm: 0.4, helmBig: 0.6 };
 // y a qué altura (si la imagen es más alta que la franja): la heroína está a media habichuela
 const HERO_FY = { giant: 0, girl: 0.5, warrior: 0.05, helm: 0.05 };
 const heroOf = k => HEROES[k] && IMG[HEROES[k][0]] ? HEROES[k] : null;
@@ -364,7 +390,7 @@ export function symIcon(cfg, k, size, mult) {
       // retrato recortado de la misma imagen del personaje, en un marco de retrato
       const [key, , [sx, sy, sw, sh]] = heroOf(k), m = s * 0.05, r = s * 0.12;
       roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.fillStyle = '#000'; x.fill(); x.restore();
-      x.save(); roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.clip(); x.imageSmoothingQuality = 'high'; x.drawImage(IMG[key], sx, sy, sw, sh, m, m, s - 2 * m, s - 2 * m); x.restore();
+      x.save(); roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.clip(); x.imageSmoothingQuality = 'high'; const q = sf(IMG[key]); x.drawImage(IMG[key], sx * q, sy * q, sw * q, sh * q, m, m, s - 2 * m, s - 2 * m); x.restore();
       x.lineWidth = s * 0.045; x.strokeStyle = k === 'giant' ? '#ffd24a' : k === 'girl' ? '#ff8ad0' : '#e8a050'; roundRect(x, m, m, s - 2 * m, s - 2 * m, r); x.stroke();
       return;
     }
@@ -392,8 +418,8 @@ function grad2(x, y0, y1, c0, c1) { const g = x.createLinearGradient(0, y0, 0, y
 class Colossal {
   constructor(app, cfg) {
     this.app = app; this.cfg = cfg; this.id = cfg.id;
-    this.main = new ReelSet({ cols: COLS, rows: ROWS, pick: c => pickSym(cfg, c, this.inFree, false), drawSym: (x, s, px, py, w, h, o) => this.drawMain(x, s, px, py, w, h, o) });
-    this.big = new ReelSet({ cols: COLS, rows: BIG_ROWS, pick: c => pickSym(cfg, c, this.inFree, true), drawSym: (x, s, px, py, w, h, o) => this.drawBigCell(x, s, px, py, w, h, o) });
+    this.main = new ReelSet({ cols: COLS, rows: ROWS, pick: c => this.spinPick(c, false), drawSym: (x, s, px, py, w, h, o) => this.drawMain(x, s, px, py, w, h, o) });
+    this.big = new ReelSet({ cols: COLS, rows: BIG_ROWS, pick: c => this.spinPick(c, true), drawSym: (x, s, px, py, w, h, o) => this.drawBigCell(x, s, px, py, w, h, o) });
     // Al abrir, el colosal ya muestra sus pilas
     for (let c = 0; c < COLS; c++) this.setColumn(this.big, c, bigColumn(cfg, c, false));
     this.freeLeft = 0; this.freeTotal = 0; this.inFree = false; this.fsTotal = 0;
@@ -550,7 +576,7 @@ class Colossal {
   portrait(x, img, sr, px, py, w, h, col) {
     if (!img) return;
     x.save(); x.shadowColor = 'rgba(0,0,0,0.6)'; x.shadowBlur = 10; x.fillStyle = '#0a1a4a'; roundRect(x, px, py, w, h, 6); x.fill(); x.restore();
-    x.save(); roundRect(x, px, py, w, h, 6); x.clip(); const [sx, sy, sw, sh] = sr, s2 = Math.max(w / sw, h / sh);
+    x.save(); roundRect(x, px, py, w, h, 6); x.clip(); const q = sf(img), [sx, sy, sw, sh] = sr.map(v => v * q), s2 = Math.max(w / sw, h / sh);
     x.imageSmoothingQuality = 'high'; x.drawImage(img, sx, sy, sw, sh, px + (w - sw * s2) / 2, py, sw * s2, sh * s2); x.restore();
     x.strokeStyle = col; x.lineWidth = 2.5; roundRect(x, px + 1, py + 1, w - 2, h - 2, 6); x.stroke();
   }
@@ -559,6 +585,7 @@ class Colossal {
     if (!s) return;
     if (s.full && o && this.wildShown(this.main, o.c)) return;
     if (o && o.r >= 0 && this.stackCells && this.stackCells.has(o.c * 10 + o.r)) return;
+    if (s.hs && this.cfg.tall.includes(s.k)) return this.heroSlice(x, s, px, py, w, h);
     const dpr = this.app.dpr, size = Math.min(w, h) * 0.96;
     let sc = 1, a = 1; if (o && o.fx) { sc = o.fx.scale || 1; a = o.fx.alpha == null ? 1 : o.fx.alpha; }
     const d = size * sc, cx = px + w / 2, cy = py + h / 2;
@@ -593,13 +620,42 @@ class Colossal {
   // Franja del personaje: la imagen llena el ancho de la columna con la cara arriba (como la máquina);
   // si la franja asoma solo en parte, se ve el trozo que corresponde (st = fila de la franja, hs = largo)
   heroPanel(x, px, py, w, h, frac, k, rim, st = 0, hs = 0, cellH = 0) {
-    const img = IMG[TALLIMG[k]] || IMG[heroOf(k)[0]], fx = HERO_FX[k] == null ? 0.5 : HERO_FX[k];
-    const sy0 = hs ? py - st * cellH : py, sh = hs ? hs * cellH : h;
     x.save(); roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.clip(); x.imageSmoothingQuality = 'high';
     x.fillStyle = this.cfg.id === 'giant' ? '#3a7ab0' : '#0a1a4a'; x.fillRect(px, py, w, h);
-    const s = Math.max(w / img.width, sh / img.height), dw = img.width * s, dh = img.height * s;
-    x.drawImage(img, px + (w - dw) * fx, sy0 + (sh - dh) * (HERO_FY[k] || 0), dw, dh);
+    this.stripImg(x, k, px, hs ? py - st * cellH : py, w, hs ? hs * cellH : h, hs);
     x.restore(); x.strokeStyle = rim || (k === 'girl' ? '#ff8ad0' : k === 'giant' ? '#2ab08a' : '#ffd24a'); x.lineWidth = 2.5; roundRect(x, px + 1.5, py + 1.5, w - 3, h - 3, 6); x.stroke();
+  }
+  // Imagen del personaje en toda su franja (sy0 = arriba de la franja, sh = largo); quien llama recorta
+  stripImg(x, k, px, sy0, w, sh, hs) {
+    const bigS = hs > ROWS + 1 && IMG[TALLBIG[k]], img = bigS ? IMG[TALLBIG[k]] : IMG[TALLIMG[k]] || IMG[heroOf(k)[0]], fx = HERO_FX[bigS ? k + 'Big' : k] == null ? 0.5 : HERO_FX[bigS ? k + 'Big' : k];
+    if (!img) return;
+    // si la franja es mucho más alta que la imagen, se estira un poco a lo alto (hasta 1,35) y el resto se
+    // resuelve acercando (recortando los costados), para no agrandar tanto la cara
+    const mis = (sh / w) / (img.height / img.width);
+    let sx, sy;
+    if (mis <= 1) { sx = sy = Math.max(w / img.width, sh / img.height); }
+    else { const st = Math.min(1.35, Math.sqrt(mis)); sx = w / img.width * mis / st; sy = sx * st; }
+    const dw = img.width * sx, dh = img.height * sy;
+    x.drawImage(img, px + (w - dw) * fx, sy0 + (sh - dh) * (HERO_FY[k] || 0), dw, dh);
+  }
+  // Trozo de la franja que cae en una casilla mientras el rodillo gira: las casillas seguidas forman la
+  // figura completa (baja entera, no partida en cuadros)
+  heroSlice(x, s, px, py, w, h) {
+    x.save(); x.beginPath(); x.rect(px, py - 0.5, w, h + 1); x.clip(); x.imageSmoothingQuality = 'high';
+    x.fillStyle = this.cfg.id === 'giant' ? '#3a7ab0' : '#0a1a4a'; x.fillRect(px, py - 0.5, w, h + 1);
+    this.stripImg(x, s.k, px + 1, py - s.st * h, w - 2, s.hs * h, s.hs);
+    x.restore();
+  }
+  // Relleno de los rodillos que giran: a veces pasa una franja entera de personaje (de abajo hacia arriba
+  // se van entregando sus filas, así baja como una figura completa)
+  spinPick(c, big) {
+    const q = (this.spinQ = this.spinQ || { main: [], big: [] })[big ? 'big' : 'main'];
+    q[c] = q[c] || [];
+    if (!q[c].length && Math.random() < (big ? 0.025 : 0.035)) {
+      const cfg = this.cfg, k = cfg.tall[Math.random() < 0.5 ? 0 : 1], hs = big ? (cfg.heroLenBig || BIG_ROWS) : ROWS, id = 'sp' + Math.random();
+      for (let i = hs - 1; i >= 0; i--) q[c].push({ k, blk: id, hs, st: i });
+    }
+    return q[c].length ? q[c].shift() : pickSym(this.cfg, c, this.inFree, big);
   }
   // Heroína (marco rosado) o guerrera (arco de bronce) de tamaño completo en la pila
   charPanel(x, k, px, py, w, h) {
@@ -624,6 +680,7 @@ class Colossal {
   drawBigCell(x, s, px, py, w, h, o) {
     if (!s || !o || !o.spinning) return;
     if (this.big.columns[o.c].state === 'bounce') return;
+    if (s.hs && this.cfg.tall.includes(s.k)) return this.heroSlice(x, s, px, py, w, h);
     const size = Math.min(w, h) * 0.92;
     x.globalAlpha = 0.8; x.drawImage(symIcon(this.cfg, s.k, size * this.app.dpr, s.mult), px + (w - size) / 2, py + h / 2 - size * 0.6, size, size * 1.2); x.globalAlpha = 1;
   }
@@ -942,7 +999,8 @@ class Colossal {
     const jp = jackpotFor(transferred);
     if (jp) { await app.wait(300); total += await app.awardJackpot(jp); }
     // BONO SORPRESA: rayos que completan el bono en un giro pagado
-    if (!free && !this.inFree && sc.reels < 3 && (Math.random() < MYSTERY_P || app._forceMystery)) {
+    if (!free && !this.inFree) moodTick();
+    if (!free && !this.inFree && sc.reels < 3 && (Math.random() < MYSTERY_P * MS(false) || mood.drought >= mood.pity || app._forceMystery)) {
       app._forceMystery = false; await app.wait(300); this.wins = null;
       await app.mysteryIntro(cfg.eggStack ? 'Los rayos traen huevos de oro' : 'Los rayos levantan coliseos');
       const opts = []; SCAT_REELS.forEach(c => { opts.push(['main', c], ['big', c]); });
@@ -964,6 +1022,7 @@ class Colossal {
     }
     if (this.inFree) this.fsTotal += total;
     if (sc.reels >= 3) {
+      if (!this.inFree) moodBonus();
       await app.wait(500); this.wins = null;
       { const v = await app.bonusPay(sc.reels, bet, cfg.scatName); total += v; if (this.inFree) this.fsTotal += v; }
       sfx.featureStart(); app.flash('#ffd27a', 0.5); app.shake(true);
@@ -994,7 +1053,7 @@ class Colossal {
     sfx.music(cfg.bonusMusic);
     app.setSpinLabel('GRATIS', '1 de ' + this.freeTotal);
   }
-  async buyFree() { this.app.sfx.featureStart(); await this.startFree(this.cfg.eggStack ? 10 : 8); return { win: 0, celebrated: true }; }
+  async buyFree() { moodBonus(); this.app.sfx.featureStart(); await this.startFree(this.cfg.eggStack ? 10 : 8); return { win: 0, celebrated: true }; }
   slam() { this.main.slam(); this.big.slam(); }
   info(bet, fmt) {
     const cfg = this.cfg, lb = bet / 100, img = k => '<img class="ico" src="' + symIcon(cfg, k, 96, k === 'mw' ? 5 : 0).toDataURL('image/png') + '" alt="">';
