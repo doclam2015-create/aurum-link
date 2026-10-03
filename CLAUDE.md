@@ -15,7 +15,7 @@ Este archivo resume todo lo trabajado en las sesiones anteriores en la nube, par
 - Es una PWA estática: HTML, CSS y JavaScript con módulos ES, sin bundler ni dependencias npm.
 - GitHub Pages la publica desde `main` mediante `.github/workflows/pages.yml`.
 - Tiene un service worker (`sw.js`) para uso offline.
-- La versión actual es la **76**, visible al final de Ajustes.
+- La versión actual es la **77**, visible al final de Ajustes.
 - El `README.md` describe en detalle cada juego y sus mecánicas. Es la referencia funcional y **hay que mantenerlo al día**.
 
 ### Estructura
@@ -132,6 +132,7 @@ No poner identificadores de modelo en commits ni PRs.
 - La v74: el traslado de rodillos WILD es un arrastre (agarre, estela estirada por la velocidad, encaje con temblor; `FLY_GRAB`/`FLY_LAND`) con sonido propio `sfx.reelDrag` (piedra/metal en Espartaco, hojas/madera en el Gigante).
 - La v75: música de Espartaco (`arena`/`arenaBonus` en `audio.js`) al estilo del Imperio romano: trompetas (`brassM`), coro (`choirM`), lira, tambores de guerra (`warM`), caja militar y gong.
 - La v76: corregidas las líneas del colosal (antes no pasaban por las filas 4, 8 y 12, por eso algunas combinaciones no pagaban); personajes siempre apilados de cuerpo completo (`heroCol` en el principal, pilas `HERO_H`=6 en el colosal, `giant_girltall.webp`) y con premios altos; rodillo 5 de Espartaco con símbolo en cada fila y un solo coliseo; huevos que llenan rodillos (`eggFull`, `eggFullBig`). Escalas 0,94 (Gigante) y 0,66 (Espartaco), RTP ~94–95 %.
+- La v77: como en la máquina, los personajes que caen en el colosal ocupan el rodillo entero de 12 filas (`heroColBig`), de pie abajo con el Coliseo o el cielo encima. Escalas 1,06 (Gigante) y 0,74 (Espartaco).
 - Se descartó el sonido `ElevenLabs_Generation_1.ogg` por decisión del usuario.
 
 ## Ideas / pendientes que pueden surgir
