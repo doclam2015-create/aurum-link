@@ -12,7 +12,8 @@ for f, k in [('giant_girltall', 4), ('sparta_ctall', 4), ('sparta_wtall', 4), ('
     out.save(p, 'WEBP', quality=90, method=6); print(f, out.size, flush=True)
 # hojas de símbolos (casillas de 200 px ampliadas desde recortes chicos): cada casilla se reduce a 100 px,
 # se amplía x4 con la red y vuelve a 200 px; la transparencia se conserva
-for f in ('giant_sym', 'sparta_sym'):
+# (en Oro del Gigante los símbolos quedan como estaban: al usuario le gustaban más sin el filtro)
+for f in ('sparta_sym',):
     p = 'assets/%s.webp' % f; sh = Image.open(p).convert('RGBA'); out = sh.copy()
     for x0 in range(0, sh.width, 200):
         t = sh.crop((x0, 0, x0 + 200, 200)); rgb = Image.new('RGB', t.size, (0, 0, 0)); rgb.paste(t, mask=t.split()[3])

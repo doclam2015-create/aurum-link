@@ -11,8 +11,8 @@
 //    del colosal tiene símbolos dobles y WILD con multiplicador x2…x25 (x50 y x100 en giros gratis).
 //    3/4/5+ coliseos (de a uno por rodillo) = 8/12/20 giros gratis; en ellos un WILD se expande a todo el
 //    rodillo del principal y pasa entero al colosal.
-import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=79';
-import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=79';
+import { glow, goldText, roundRect, rand, FONT, makeCanvas, boltPoints, drawBolt } from '../gfx.js?v=80';
+import { ReelSet, LINES_5x3, weighted } from '../reels.js?v=80';
 
 const COLS = 5, ROWS = 4, BIG_ROWS = 12;
 // 40 líneas del tablero principal y 60 del colosal (20 por cada banda de 4 filas)
@@ -41,9 +41,9 @@ function heroStrip(cfg, n, minH, L = n) {
 }
 const withStrip = (col, { r0, cells }) => col.slice(0, r0).concat(cells, col.slice(r0 + cells.length));
 const SCAT_REELS = [0, 2, 4];
-// Huevos de oro a la vista → giros gratis (3 huevos = 5 giros … 40 o más = 100 giros)
-const EGG_SPINS = [[40, 100], [35, 80], [30, 65], [25, 50], [20, 40], [16, 30], [13, 25], [10, 20], [8, 15], [7, 12], [6, 10], [5, 8], [4, 6], [3, 5]];
-export const eggSpins = n => (EGG_SPINS.find(([m]) => n >= m) || [0, 5])[1];
+// Huevos de oro a la vista → giros gratis: tantos giros como huevos y algo más (n + 2 + n/10),
+// hasta un máximo de 100 (3 = 5 · 5 = 7 · 10 = 13 · 50 = 57 · 80 = 90 · 89 o más = 100)
+export const eggSpins = n => Math.min(100, n + 2 + Math.floor(n / 10));
 export const MYSTERY_P = 1 / 260;
 // ÁNIMO DE LA MÁQUINA (como una máquina real de casino): en el juego base se alternan rachas FRÍAS
 // (pocas figuras apiladas y pocos bonos), NORMALES y CALIENTES (más personajes, pilas, WILD y bonos),
@@ -71,7 +71,7 @@ export const GIANT = {
     cow: [0, 0, 0, 15, 50, 150], goose: [0, 0, 0, 15, 40, 120], A: [0, 0, 0, 8, 25, 100], K: [0, 0, 0, 8, 20, 90], Q: [0, 0, 0, 5, 15, 75], J: [0, 0, 0, 5, 15, 60]
   },
   weights: { giant: 3, girl: 3.5, harp: 4, sack: 4.5, cow: 5, goose: 5, A: 10, K: 10, Q: 11, J: 13, bean: 0.8, egg: 1.4 },
-  scale: 0.83,
+  scale: 1.0,
   fullWild: { base: 0.006, free: 0.05 }, stackP: 0.3, wildStack: 0.14, eggStack: 0.35, eggFull: 0.12, eggFullBig: 0.004, heroCol: 0.06, heroColBig: 0.05,
   colors: {
     giant: ['#e8c89a', '#8a5a2a'], girl: ['#bfe8a8', '#3a7a2a'], harp: ['#fff0b0', '#b8861a'], sack: ['#ffc0b0', '#a82a1a'], cow: ['#d8f0ff', '#3a7ab0'], goose: ['#fff8e0', '#c8a040'],
@@ -421,7 +421,8 @@ class Colossal {
     this.main = new ReelSet({ cols: COLS, rows: ROWS, pick: c => this.spinPick(c, false), drawSym: (x, s, px, py, w, h, o) => this.drawMain(x, s, px, py, w, h, o) });
     this.big = new ReelSet({ cols: COLS, rows: BIG_ROWS, pick: c => this.spinPick(c, true), drawSym: (x, s, px, py, w, h, o) => this.drawBigCell(x, s, px, py, w, h, o) });
     // Al abrir, el colosal ya muestra sus pilas
-    for (let c = 0; c < COLS; c++) this.setColumn(this.big, c, bigColumn(cfg, c, false));
+    for (let c = 0; c < COLS; c++) { this.setColumn(this.main, c, mainColumn(cfg, c, false)); this.setColumn(this.big, c, bigColumn(cfg, c, false)); }
+    this.spinQ = null; // el relleno inicial no deja franjas a medio entregar
     this.freeLeft = 0; this.freeTotal = 0; this.inFree = false; this.fsTotal = 0;
     this.wins = null; this.winT = 0; this.time = 0; this.full = []; this.mega = -1; this.megaK = null;
     this.buy = { label: 'BONO', sub: b => app.fmt(b * 50), cost: b => b * 50, run: () => this.buyFree() };
@@ -1082,7 +1083,7 @@ export class GiantGold extends Colossal {
     return '<li><b>Dos tableros</b>: principal de <b>5×4</b> (40 líneas) y <b>colosal de 5×12</b> (60 líneas) = <b>100 líneas</b>. Los dos giran a la vez y en el colosal los símbolos caen en <b>pilas</b>.</li>' +
       '<li><b>Habichuela mágica = WILD</b> apilado; sustituye a todo menos al huevo de oro. Si un rodillo del principal queda <b>lleno de WILD</b>, se <b>transfiere entero</b> al mismo rodillo del colosal.</li>' +
       '<li><b>El gigante y la heroína</b> caen siempre de cuerpo completo: el rodillo entero del principal y el rodillo entero del colosal (12 filas). Son los símbolos que más pagan (5 en línea = 2000 y 1500 créditos por línea).</li>' +
-      '<li><b>Huevo de oro BONUS</b>, apilado (puede llenar un rodillo entero del principal o del colosal), solo en los rodillos 1, 3 y 5 de ambos tableros. Con huevos en <b>3 o más rodillos</b> se ganan giros gratis según los huevos a la vista: <b>3 = 5 · 5 = 8 · 8 = 15 · 10 = 20 · 16 = 30 · 25 = 50 · 40 o más = 100 giros</b>.</li>' +
+      '<li><b>Huevo de oro BONUS</b>, apilado (puede llenar un rodillo entero del principal o del colosal), solo en los rodillos 1, 3 y 5 de ambos tableros. Con huevos en <b>3 o más rodillos</b> se ganan <b>tantos giros gratis como huevos a la vista y algo más</b>: <b>3 = 5 · 5 = 7 · 10 = 13 · 20 = 24 · 50 = 57 · 80 = 90</b>, hasta un máximo de <b>100 giros</b>.</li>' +
       '<li>En los giros gratis <b>todo lo que se gana en el colosal paga x2</b>, salen más habichuelas y los huevos pueden dar más giros.</li>' +
       '<li><b>Progresivos</b>: rodillos WILD transferidos a la vez · <b>2 = MINI · 3 = MINOR · 4 = MAJOR · 5 = GRAND</b>.</li>';
   }
